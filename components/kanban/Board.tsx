@@ -22,8 +22,15 @@ import { CardDetailModal } from './CardDetailModal'
 import { ArchivePanel } from './ArchivePanel'
 import { QuickCapture } from './QuickCapture'
 import { KeyboardShortcuts } from './KeyboardShortcuts'
+import { Search } from './Search'
 
-export function Board() {
+interface BoardProps {
+  boardId?: string
+  searchOpen?: boolean
+  onSearchClose?: () => void
+}
+
+export function Board({ boardId = 'default', searchOpen, onSearchClose }: BoardProps) {
   const {
     tasks,
     addTask,
@@ -35,16 +42,25 @@ export function Board() {
     addSubtask,
     toggleSubtask,
     deleteSubtask,
+    toggleLabel,
+    searchTasks,
     getTasksByColumn,
     getArchivedTasks,
     getTaskById,
-  } = useKanban()
+  } = useKanban(boardId)
 
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null)
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null)
   const [showArchive, setShowArchive] = useState(false)
   const [showQuickCapture, setShowQuickCapture] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [internalShowSearch, setInternalShowSearch] = useState(false)
+
+  // Support both controlled and uncontrolled search modes
+  const showSearch = searchOpen !== undefined ? searchOpen : internalShowSearch
+  const setShowSearch = onSearchClose
+    ? (show: boolean) => { if (!show) onSearchClose(); else setInternalShowSearch(true); }
+    : setInternalShowSearch
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -76,7 +92,7 @@ export function Board() {
       }
 
       // Don't trigger when modals are open (they handle their own shortcuts)
-      if (selectedTask || showArchive) {
+      if (selectedTask || showArchive || showSearch) {
         return
       }
 
@@ -94,12 +110,15 @@ export function Board() {
       } else if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault()
         setShowArchive(true)
+      } else if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        setShowSearch(true)
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTask, showArchive])
+  }, [selectedTask, showArchive, showSearch])
 
   // Close shortcuts on any key
   useEffect(() => {
@@ -186,6 +205,10 @@ export function Board() {
     addTask(title, 'todo', priority)
   }, [addTask])
 
+  const handleSearchSelect = useCallback((task: KanbanTask) => {
+    setSelectedTask(task)
+  }, [])
+
   const archivedTasks = getArchivedTasks()
 
   // Keep selected task in sync with updates
@@ -267,6 +290,7 @@ export function Board() {
           onAddSubtask={addSubtask}
           onToggleSubtask={toggleSubtask}
           onDeleteSubtask={deleteSubtask}
+          onToggleLabel={toggleLabel}
           onMoveTask={handleMoveTask}
         />
       )}
@@ -291,6 +315,14 @@ export function Board() {
       <KeyboardShortcuts
         isOpen={showShortcuts}
         onClose={() => setShowShortcuts(false)}
+      />
+
+      {/* Search */}
+      <Search
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        onSearch={searchTasks}
+        onSelectTask={handleSearchSelect}
       />
     </>
   )

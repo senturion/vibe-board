@@ -1,12 +1,17 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useLocalStorage } from './useLocalStorage'
-import { KanbanTask, ColumnId, Priority, Subtask } from '@/lib/types'
+import { KanbanTask, ColumnId, Priority, LabelId, Subtask } from '@/lib/types'
 import { generateId } from '@/lib/utils'
 
-export function useKanban() {
-  const [tasks, setTasks] = useLocalStorage<KanbanTask[]>('kanban-tasks', [])
+export function useKanban(boardId: string = 'default') {
+  const [allTasks, setTasks] = useLocalStorage<KanbanTask[]>('kanban-tasks', [])
+
+  // Filter tasks by current board
+  const tasks = useMemo(() => {
+    return allTasks.filter(task => (task.boardId || 'default') === boardId)
+  }, [allTasks, boardId])
 
   const addTask = useCallback((title: string, column: ColumnId = 'todo', priority: Priority = 'medium') => {
     const newTask: KanbanTask = {
@@ -14,13 +19,15 @@ export function useKanban() {
       title,
       column,
       priority,
+      labels: [],
       subtasks: [],
       order: Date.now(),
       createdAt: Date.now(),
+      boardId,
     }
     setTasks(prev => [...prev, newTask])
     return newTask.id
-  }, [setTasks])
+  }, [setTasks, boardId])
 
   const updateTask = useCallback((id: string, updates: Partial<KanbanTask>) => {
     setTasks(prev => prev.map(task =>
@@ -87,6 +94,34 @@ export function useKanban() {
     ))
   }, [setTasks])
 
+  // Label operations
+  const toggleLabel = useCallback((taskId: string, labelId: LabelId) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id !== taskId) return task
+      const labels = task.labels || []
+      const hasLabel = labels.includes(labelId)
+      return {
+        ...task,
+        labels: hasLabel
+          ? labels.filter(l => l !== labelId)
+          : [...labels, labelId],
+      }
+    }))
+  }, [setTasks])
+
+  // Search tasks
+  const searchTasks = useCallback((query: string) => {
+    if (!query.trim()) return []
+    const lowerQuery = query.toLowerCase()
+    return tasks
+      .filter(task => !task.archivedAt)
+      .filter(task =>
+        task.title.toLowerCase().includes(lowerQuery) ||
+        (task.description?.toLowerCase().includes(lowerQuery)) ||
+        (task.subtasks || []).some(st => st.text.toLowerCase().includes(lowerQuery))
+      )
+  }, [tasks])
+
   const getTasksByColumn = useCallback((column: ColumnId) => {
     return tasks
       .filter(task => task.column === column && !task.archivedAt)
@@ -114,6 +149,8 @@ export function useKanban() {
     addSubtask,
     toggleSubtask,
     deleteSubtask,
+    toggleLabel,
+    searchTasks,
     getTasksByColumn,
     getArchivedTasks,
     getTaskById,

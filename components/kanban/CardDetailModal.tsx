@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Flag, Archive, Trash2, Plus, Check, Calendar } from 'lucide-react'
-import { KanbanTask, Priority, PRIORITIES, COLUMNS, Subtask } from '@/lib/types'
+import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock } from 'lucide-react'
+import { KanbanTask, Priority, LabelId, PRIORITIES, COLUMNS, LABELS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface CardDetailModalProps {
@@ -15,6 +15,7 @@ interface CardDetailModalProps {
   onAddSubtask: (taskId: string, text: string) => void
   onToggleSubtask: (taskId: string, subtaskId: string) => void
   onDeleteSubtask: (taskId: string, subtaskId: string) => void
+  onToggleLabel: (taskId: string, labelId: LabelId) => void
   onMoveTask: (taskId: string, column: KanbanTask['column']) => void
 }
 
@@ -35,6 +36,7 @@ export function CardDetailModal({
   onAddSubtask,
   onToggleSubtask,
   onDeleteSubtask,
+  onToggleLabel,
   onMoveTask,
 }: CardDetailModalProps) {
   const [title, setTitle] = useState(task.title)
@@ -42,6 +44,8 @@ export function CardDetailModal({
   const [newSubtask, setNewSubtask] = useState('')
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const [showColumnMenu, setShowColumnMenu] = useState(false)
+  const [showLabelsMenu, setShowLabelsMenu] = useState(false)
+  const [showDueDatePicker, setShowDueDatePicker] = useState(false)
 
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const subtaskInputRef = useRef<HTMLInputElement>(null)
@@ -231,6 +235,99 @@ export function CardDetailModal({
               )}
             </div>
 
+            {/* Labels */}
+            <div className="relative">
+              <button
+                onClick={() => setShowLabelsMenu(!showLabelsMenu)}
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+              >
+                <Tag size={12} />
+                Labels
+                {(task.labels || []).length > 0 && (
+                  <span className="text-[10px] px-1.5 bg-[var(--bg-tertiary)]">
+                    {task.labels.length}
+                  </span>
+                )}
+              </button>
+              {showLabelsMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowLabelsMenu(false)} />
+                  <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[140px]">
+                    {LABELS.map((label) => {
+                      const isActive = (task.labels || []).includes(label.id)
+                      return (
+                        <button
+                          key={label.id}
+                          onClick={() => onToggleLabel(task.id, label.id)}
+                          className="w-full px-3 py-2 text-left text-[11px] flex items-center gap-2 hover:bg-[var(--bg-tertiary)] transition-colors"
+                        >
+                          <span
+                            className={cn(
+                              'w-3 h-3 border flex items-center justify-center shrink-0 transition-all',
+                              isActive ? 'border-[var(--accent)]' : 'border-[var(--text-tertiary)]'
+                            )}
+                            style={{ backgroundColor: isActive ? label.bg : 'transparent' }}
+                          >
+                            {isActive && <Check size={8} style={{ color: label.color }} />}
+                          </span>
+                          <span style={{ color: label.color }}>{label.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Due Date */}
+            <div className="relative">
+              <button
+                onClick={() => setShowDueDatePicker(!showDueDatePicker)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors',
+                  task.dueDate && isOverdue(task.dueDate) && 'text-red-400 border-red-400/30',
+                  task.dueDate && isDueSoon(task.dueDate) && !isOverdue(task.dueDate) && 'text-amber-400 border-amber-400/30',
+                  !task.dueDate && 'text-[var(--text-secondary)]'
+                )}
+              >
+                <Clock size={12} />
+                {task.dueDate
+                  ? new Date(task.dueDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  : 'Due Date'}
+              </button>
+              {showDueDatePicker && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowDueDatePicker(false)} />
+                  <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 p-3">
+                    <input
+                      type="date"
+                      value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value).getTime() : undefined
+                        onUpdate(task.id, { dueDate: date })
+                        setShowDueDatePicker(false)
+                      }}
+                      className="bg-[var(--bg-tertiary)] border border-[var(--border)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none"
+                    />
+                    {task.dueDate && (
+                      <button
+                        onClick={() => {
+                          onUpdate(task.id, { dueDate: undefined })
+                          setShowDueDatePicker(false)
+                        }}
+                        className="mt-2 w-full text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] hover:text-red-400 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Created date */}
             <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
               <Calendar size={12} />
@@ -241,6 +338,23 @@ export function CardDetailModal({
               })}
             </div>
           </div>
+
+          {/* Active Labels Display */}
+          {(task.labels || []).length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {LABELS.filter(l => (task.labels || []).includes(l.id)).map(label => (
+                <span
+                  key={label.id}
+                  className="px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] font-medium cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{ color: label.color, backgroundColor: label.bg }}
+                  onClick={() => onToggleLabel(task.id, label.id)}
+                >
+                  {label.label}
+                  <X size={10} className="inline ml-1.5 -mr-0.5" />
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Description */}
           <div>

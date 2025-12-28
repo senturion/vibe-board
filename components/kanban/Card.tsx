@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Flag, ListChecks } from 'lucide-react'
-import { KanbanTask, Priority, PRIORITIES } from '@/lib/types'
+import { Trash2, Flag, ListChecks, Clock } from 'lucide-react'
+import { KanbanTask, Priority, PRIORITIES, LABELS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface CardProps {
@@ -43,6 +43,12 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0 }: Card
   const subtasks = task.subtasks || []
   const completedSubtasks = subtasks.filter(s => s.completed).length
   const hasSubtasks = subtasks.length > 0
+  const labels = task.labels || []
+  const taskLabels = LABELS.filter(l => labels.includes(l.id))
+  const hasLabels = taskLabels.length > 0
+  const hasDueDate = !!task.dueDate
+  const overdue = hasDueDate && isOverdue(task.dueDate!)
+  const dueSoon = hasDueDate && !overdue && isDueSoon(task.dueDate!)
 
   const handleClick = (e: React.MouseEvent) => {
     // Only open modal if not dragging and not clicking on a button
@@ -81,6 +87,20 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0 }: Card
               <p className="mt-1 text-[11px] text-[var(--text-tertiary)] leading-relaxed line-clamp-2">
                 {task.description}
               </p>
+            )}
+            {/* Labels */}
+            {hasLabels && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {taskLabels.map(label => (
+                  <span
+                    key={label.id}
+                    className="px-1.5 py-0.5 text-[9px] uppercase tracking-[0.05em] font-medium"
+                    style={{ color: label.color, backgroundColor: label.bg }}
+                  >
+                    {label.label}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
           <button
@@ -158,12 +178,30 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0 }: Card
                 {completedSubtasks}/{subtasks.length}
               </span>
             )}
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-              {new Date(task.createdAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
-            </p>
+            {hasDueDate && (
+              <span
+                className={cn(
+                  'flex items-center gap-1 text-[10px] uppercase tracking-[0.1em]',
+                  overdue && 'text-red-400',
+                  dueSoon && 'text-amber-400',
+                  !overdue && !dueSoon && 'text-[var(--text-tertiary)]'
+                )}
+              >
+                <Clock size={10} />
+                {new Date(task.dueDate!).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+            )}
+            {!hasDueDate && (
+              <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                {new Date(task.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </p>
+            )}
           </div>
         </div>
       </div>
