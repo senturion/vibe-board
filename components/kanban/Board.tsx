@@ -17,6 +17,7 @@ import {
 import { Archive } from 'lucide-react'
 import { COLUMNS, ColumnId, KanbanTask, isOverdue, isDueSoon } from '@/lib/types'
 import { useKanban } from '@/hooks/useKanban'
+import { useUndoRedo } from '@/contexts/UndoRedoContext'
 import { Column } from './Column'
 import { CardDetailModal } from './CardDetailModal'
 import { ArchivePanel } from './ArchivePanel'
@@ -36,12 +37,12 @@ interface BoardProps {
 export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort }: BoardProps) {
   const {
     tasks,
-    addTask,
-    updateTask,
-    deleteTask,
-    archiveTask,
-    restoreTask,
-    moveTask,
+    addTask: rawAddTask,
+    updateTask: rawUpdateTask,
+    deleteTask: rawDeleteTask,
+    archiveTask: rawArchiveTask,
+    restoreTask: rawRestoreTask,
+    moveTask: rawMoveTask,
     addSubtask,
     toggleSubtask,
     deleteSubtask,
@@ -51,6 +52,96 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     getArchivedTasks,
     getTaskById,
   } = useKanban(boardId)
+
+  const { pushAction } = useUndoRedo()
+
+  // Wrapped actions with undo/redo support
+  const addTask = useCallback((title: string, column: ColumnId = 'todo', priority: KanbanTask['priority'] = 'medium') => {
+    const taskId = rawAddTask(title, column, priority)
+    pushAction({
+      type: 'add',
+      description: `Added "${title.slice(0, 30)}${title.length > 30 ? '...' : ''}"`,
+      undo: () => rawDeleteTask(taskId),
+      redo: () => rawAddTask(title, column, priority),
+    })
+    return taskId
+  }, [rawAddTask, rawDeleteTask, pushAction])
+
+  const deleteTask = useCallback((id: string) => {
+    const task = getTaskById(id)
+    if (!task) return
+    rawDeleteTask(id)
+    pushAction({
+      type: 'delete',
+      description: `Deleted "${task.title.slice(0, 30)}${task.title.length > 30 ? '...' : ''}"`,
+      undo: () => {
+        // Re-add the task with all its properties
+        const newId = rawAddTask(task.title, task.column, task.priority)
+        if (task.description) rawUpdateTask(newId, { description: task.description })
+        if (task.labels?.length) rawUpdateTask(newId, { labels: task.labels })
+        if (task.dueDate) rawUpdateTask(newId, { dueDate: task.dueDate })
+        if (task.subtasks?.length) rawUpdateTask(newId, { subtasks: task.subtasks })
+        rawUpdateTask(newId, { order: task.order, createdAt: task.createdAt })
+      },
+      redo: () => rawDeleteTask(id),
+    })
+  }, [rawDeleteTask, rawAddTask, rawUpdateTask, getTaskById, pushAction])
+
+  const updateTask = useCallback((id: string, updates: Partial<KanbanTask>) => {
+    const task = getTaskById(id)
+    if (!task) return
+    const previousState = { ...task }
+    rawUpdateTask(id, updates)
+    pushAction({
+      type: 'update',
+      description: `Updated "${task.title.slice(0, 25)}${task.title.length > 25 ? '...' : ''}"`,
+      undo: () => rawUpdateTask(id, previousState),
+      redo: () => rawUpdateTask(id, updates),
+    })
+  }, [rawUpdateTask, getTaskById, pushAction])
+
+  const archiveTask = useCallback((id: string) => {
+    const task = getTaskById(id)
+    if (!task) return
+    rawArchiveTask(id)
+    pushAction({
+      type: 'archive',
+      description: `Archived "${task.title.slice(0, 25)}${task.title.length > 25 ? '...' : ''}"`,
+      undo: () => rawRestoreTask(id),
+      redo: () => rawArchiveTask(id),
+    })
+  }, [rawArchiveTask, rawRestoreTask, getTaskById, pushAction])
+
+  const restoreTask = useCallback((id: string) => {
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
+    rawRestoreTask(id)
+    pushAction({
+      type: 'restore',
+      description: `Restored "${task.title.slice(0, 25)}${task.title.length > 25 ? '...' : ''}"`,
+      undo: () => rawArchiveTask(id),
+      redo: () => rawRestoreTask(id),
+    })
+  }, [rawRestoreTask, rawArchiveTask, tasks, pushAction])
+
+  const moveTask = useCallback((taskId: string, toColumn: ColumnId, newOrder?: number) => {
+    const task = getTaskById(taskId)
+    if (!task) return
+    const previousColumn = task.column
+    const previousOrder = task.order
+    rawMoveTask(taskId, toColumn, newOrder)
+    // Only track column changes (not reordering within column)
+    if (previousColumn !== toColumn) {
+      const fromCol = COLUMNS.find(c => c.id === previousColumn)?.title
+      const toCol = COLUMNS.find(c => c.id === toColumn)?.title
+      pushAction({
+        type: 'move',
+        description: `Moved to ${toCol}`,
+        undo: () => rawMoveTask(taskId, previousColumn, previousOrder),
+        redo: () => rawMoveTask(taskId, toColumn, newOrder),
+      })
+    }
+  }, [rawMoveTask, getTaskById, pushAction])
 
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null)
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null)
@@ -228,6 +319,8 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
+    setActiveTask(null)
+
     if (!over) return
 
     const activeId = active.id as string
@@ -240,16 +333,40 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
 
     if (!activeTaskItem) return
 
+    // Reordering within the same column
     if (overTask && activeTaskItem.column === overTask.column) {
       const columnTasks = getTasksByColumn(activeTaskItem.column)
+      const activeIndex = columnTasks.findIndex(t => t.id === activeId)
       const overIndex = columnTasks.findIndex(t => t.id === overId)
-      const newOrder = overIndex === 0
-        ? columnTasks[0].order - 1
-        : (columnTasks[overIndex - 1].order + columnTasks[overIndex].order) / 2
+
+      if (activeIndex === -1 || overIndex === -1) return
+
+      let newOrder: number
+
+      // Moving down (to a later position)
+      if (activeIndex < overIndex) {
+        // Place after the target
+        if (overIndex === columnTasks.length - 1) {
+          // Moving to the end
+          newOrder = columnTasks[overIndex].order + 1
+        } else {
+          // Place between target and next
+          newOrder = (columnTasks[overIndex].order + columnTasks[overIndex + 1].order) / 2
+        }
+      } else {
+        // Moving up (to an earlier position)
+        // Place before the target
+        if (overIndex === 0) {
+          // Moving to the beginning
+          newOrder = columnTasks[0].order - 1
+        } else {
+          // Place between previous and target
+          newOrder = (columnTasks[overIndex - 1].order + columnTasks[overIndex].order) / 2
+        }
+      }
 
       moveTask(activeId, activeTaskItem.column, newOrder)
     }
-    setActiveTask(null)
   }, [tasks, getTasksByColumn, moveTask])
 
   const handleOpenDetail = useCallback((task: KanbanTask) => {
