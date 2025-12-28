@@ -14,6 +14,7 @@ interface ColumnProps {
   onAddTask: (title: string, columnId: ColumnId, priority?: 'low' | 'medium' | 'high' | 'urgent') => void
   onDeleteTask: (id: string) => void
   onUpdateTask: (id: string, updates: Partial<KanbanTask>) => void
+  onOpenDetail: (task: KanbanTask) => void
   index: number
 }
 
@@ -23,7 +24,7 @@ const COLUMN_ACCENTS: Record<ColumnId, string> = {
   'complete': 'var(--complete)',
 }
 
-export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask, index }: ColumnProps) {
+export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask, onOpenDetail, index }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
@@ -53,12 +54,12 @@ export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask
         />
       </div>
 
-      {/* Cards Container */}
+      {/* Cards Container - Large drop zone */}
       <div
         ref={setNodeRef}
         className={cn(
-          'flex-1 flex flex-col gap-3 p-3 rounded transition-all duration-200 min-h-[200px]',
-          'border border-transparent',
+          'flex-1 flex flex-col gap-3 p-4 rounded-lg transition-all duration-200 min-h-[300px]',
+          'border-2 border-dashed border-transparent',
           isOver && 'bg-[var(--bg-tertiary)] border-[var(--border)]'
         )}
       >
@@ -69,6 +70,7 @@ export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask
               task={task}
               onDelete={onDeleteTask}
               onUpdate={onUpdateTask}
+              onOpenDetail={onOpenDetail}
               index={taskIndex}
             />
           ))}

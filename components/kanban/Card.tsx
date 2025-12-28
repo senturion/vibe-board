@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Flag } from 'lucide-react'
+import { Trash2, Flag, ListChecks } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,7 @@ interface CardProps {
   task: KanbanTask
   onDelete: (id: string) => void
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void
+  onOpenDetail: (task: KanbanTask) => void
   index?: number
 }
 
@@ -21,7 +22,7 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export function Card({ task, onDelete, onUpdate, index = 0 }: CardProps) {
+export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0 }: CardProps) {
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
 
   const {
@@ -39,16 +40,27 @@ export function Card({ task, onDelete, onUpdate, index = 0 }: CardProps) {
   }
 
   const priorityColor = PRIORITY_COLORS[task.priority || 'medium']
+  const subtasks = task.subtasks || []
+  const completedSubtasks = subtasks.filter(s => s.completed).length
+  const hasSubtasks = subtasks.length > 0
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Only open modal if not dragging and not clicking on a button
+    if (!isDragging && !(e.target as HTMLElement).closest('button')) {
+      onOpenDetail(task)
+    }
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      onClick={handleClick}
       className={cn(
-        'group relative bg-[var(--bg-secondary)] border-l-2',
+        'group relative bg-[var(--bg-secondary)] border-l-2 cursor-pointer',
         'hover:bg-[var(--bg-tertiary)]',
-        'transition-all duration-150 cursor-grab active:cursor-grabbing',
-        isDragging && 'opacity-40'
+        'transition-all duration-150',
+        isDragging && 'opacity-40 cursor-grabbing'
       )}
       {...attributes}
       {...listeners}
@@ -66,7 +78,7 @@ export function Card({ task, onDelete, onUpdate, index = 0 }: CardProps) {
               {task.title}
             </p>
             {task.description && (
-              <p className="mt-2 text-[11px] text-[var(--text-secondary)] leading-relaxed break-words">
+              <p className="mt-1 text-[11px] text-[var(--text-tertiary)] leading-relaxed line-clamp-2">
                 {task.description}
               </p>
             )}
@@ -82,9 +94,9 @@ export function Card({ task, onDelete, onUpdate, index = 0 }: CardProps) {
           </button>
         </div>
 
-        {/* Footer with priority and date */}
-        <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
-          {/* Priority selector */}
+        {/* Footer with priority, subtasks, and date */}
+        <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
+          {/* Left side: Priority */}
           <div className="relative">
             <button
               onClick={(e) => {
@@ -138,13 +150,21 @@ export function Card({ task, onDelete, onUpdate, index = 0 }: CardProps) {
             )}
           </div>
 
-          {/* Date */}
-          <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-            {new Date(task.createdAt).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            })}
-          </p>
+          {/* Right side: Subtasks count and date */}
+          <div className="flex items-center gap-3">
+            {hasSubtasks && (
+              <span className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
+                <ListChecks size={11} />
+                {completedSubtasks}/{subtasks.length}
+              </span>
+            )}
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+              {new Date(task.createdAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })}
+            </p>
+          </div>
         </div>
       </div>
     </div>

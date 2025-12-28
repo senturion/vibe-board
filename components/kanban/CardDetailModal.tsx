@@ -1,0 +1,381 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { X, Flag, Archive, Trash2, Plus, Check, Calendar } from 'lucide-react'
+import { KanbanTask, Priority, PRIORITIES, COLUMNS, Subtask } from '@/lib/types'
+import { cn } from '@/lib/utils'
+
+interface CardDetailModalProps {
+  task: KanbanTask
+  isOpen: boolean
+  onClose: () => void
+  onUpdate: (id: string, updates: Partial<KanbanTask>) => void
+  onDelete: (id: string) => void
+  onArchive: (id: string) => void
+  onAddSubtask: (taskId: string, text: string) => void
+  onToggleSubtask: (taskId: string, subtaskId: string) => void
+  onDeleteSubtask: (taskId: string, subtaskId: string) => void
+  onMoveTask: (taskId: string, column: KanbanTask['column']) => void
+}
+
+const PRIORITY_COLORS: Record<Priority, string> = {
+  low: 'var(--text-tertiary)',
+  medium: 'var(--text-secondary)',
+  high: 'var(--accent)',
+  urgent: '#ef4444',
+}
+
+export function CardDetailModal({
+  task,
+  isOpen,
+  onClose,
+  onUpdate,
+  onDelete,
+  onArchive,
+  onAddSubtask,
+  onToggleSubtask,
+  onDeleteSubtask,
+  onMoveTask,
+}: CardDetailModalProps) {
+  const [title, setTitle] = useState(task.title)
+  const [description, setDescription] = useState(task.description || '')
+  const [newSubtask, setNewSubtask] = useState('')
+  const [showPriorityMenu, setShowPriorityMenu] = useState(false)
+  const [showColumnMenu, setShowColumnMenu] = useState(false)
+
+  const titleRef = useRef<HTMLTextAreaElement>(null)
+  const subtaskInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setTitle(task.title)
+    setDescription(task.description || '')
+  }, [task])
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+      titleRef.current?.focus()
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
+  // Keyboard handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return
+
+      if (e.key === 'Escape') {
+        onClose()
+      }
+
+      // Column shortcuts when not in an input
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        if (e.key === '1') {
+          onMoveTask(task.id, 'todo')
+        } else if (e.key === '2') {
+          onMoveTask(task.id, 'in-progress')
+        } else if (e.key === '3') {
+          onMoveTask(task.id, 'complete')
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, task.id, onClose, onMoveTask])
+
+  const handleTitleBlur = () => {
+    if (title.trim() && title !== task.title) {
+      onUpdate(task.id, { title: title.trim() })
+    }
+  }
+
+  const handleDescriptionBlur = () => {
+    if (description !== task.description) {
+      onUpdate(task.id, { description: description || undefined })
+    }
+  }
+
+  const handleAddSubtask = () => {
+    if (newSubtask.trim()) {
+      onAddSubtask(task.id, newSubtask.trim())
+      setNewSubtask('')
+      subtaskInputRef.current?.focus()
+    }
+  }
+
+  const completedSubtasks = (task.subtasks || []).filter(s => s.completed).length
+  const totalSubtasks = (task.subtasks || []).length
+
+  if (!isOpen) return null
+
+  const currentColumn = COLUMNS.find(c => c.id === task.column)
+  const priorityColor = PRIORITY_COLORS[task.priority || 'medium']
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fade-in"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[85vh] bg-[var(--bg-secondary)] border border-[var(--border)] shadow-2xl shadow-black/50 z-50 flex flex-col animate-fade-up overflow-hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 border-b border-[var(--border-subtle)]">
+          <div className="flex-1 min-w-0 pr-4">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-2">
+              Task Details
+            </p>
+            <textarea
+              ref={titleRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleTitleBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleTitleBlur()
+                }
+              }}
+              placeholder="Task title..."
+              rows={1}
+              className="w-full bg-transparent font-display text-2xl text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none leading-tight"
+              style={{ minHeight: '2rem' }}
+            />
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 -m-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Priority */}
+            <div className="relative">
+              <button
+                onClick={() => setShowPriorityMenu(!showPriorityMenu)}
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+                style={{ color: priorityColor }}
+              >
+                <Flag size={12} fill={task.priority === 'urgent' || task.priority === 'high' ? priorityColor : 'none'} />
+                {task.priority || 'Medium'}
+              </button>
+              {showPriorityMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowPriorityMenu(false)} />
+                  <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[120px]">
+                    {PRIORITIES.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          onUpdate(task.id, { priority: p.id })
+                          setShowPriorityMenu(false)
+                        }}
+                        className={cn(
+                          'w-full px-3 py-2 text-left text-[11px] uppercase tracking-[0.1em] flex items-center gap-2 hover:bg-[var(--bg-tertiary)] transition-colors',
+                          task.priority === p.id && 'bg-[var(--bg-tertiary)]'
+                        )}
+                        style={{ color: p.color }}
+                      >
+                        <Flag size={10} fill={p.id === 'urgent' || p.id === 'high' ? p.color : 'none'} />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Column/Status */}
+            <div className="relative">
+              <button
+                onClick={() => setShowColumnMenu(!showColumnMenu)}
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+              >
+                {currentColumn?.title}
+                <span className="text-[9px] text-[var(--text-tertiary)]">1/2/3</span>
+              </button>
+              {showColumnMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
+                  <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[140px]">
+                    {COLUMNS.map((col, idx) => (
+                      <button
+                        key={col.id}
+                        onClick={() => {
+                          onMoveTask(task.id, col.id)
+                          setShowColumnMenu(false)
+                        }}
+                        className={cn(
+                          'w-full px-3 py-2 text-left text-[11px] uppercase tracking-[0.1em] flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-colors',
+                          task.column === col.id ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
+                        )}
+                      >
+                        {col.title}
+                        <span className="text-[var(--text-tertiary)]">{idx + 1}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Created date */}
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+              <Calendar size={12} />
+              {new Date(task.createdAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)] mb-2">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={handleDescriptionBlur}
+              placeholder="Add a description..."
+              rows={4}
+              className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] p-4 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] placeholder:italic outline-none resize-none leading-relaxed focus:border-[var(--text-tertiary)] transition-colors"
+            />
+          </div>
+
+          {/* Subtasks */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">
+                Subtasks
+              </label>
+              {totalSubtasks > 0 && (
+                <span className="text-[10px] text-[var(--text-tertiary)]">
+                  {completedSubtasks}/{totalSubtasks}
+                </span>
+              )}
+            </div>
+
+            {/* Progress bar */}
+            {totalSubtasks > 0 && (
+              <div className="h-1 bg-[var(--bg-tertiary)] mb-4 overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] transition-all duration-300"
+                  style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
+                />
+              </div>
+            )}
+
+            {/* Subtask list */}
+            <div className="space-y-1 mb-3">
+              {(task.subtasks || []).map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className="group flex items-center gap-3 py-2 px-3 -mx-3 hover:bg-[var(--bg-tertiary)] transition-colors"
+                >
+                  <button
+                    onClick={() => onToggleSubtask(task.id, subtask.id)}
+                    className={cn(
+                      'w-4 h-4 border flex items-center justify-center shrink-0 transition-all',
+                      subtask.completed
+                        ? 'bg-[var(--accent)] border-[var(--accent)]'
+                        : 'border-[var(--text-tertiary)] hover:border-[var(--text-secondary)]'
+                    )}
+                  >
+                    {subtask.completed && <Check size={10} className="text-[var(--bg-primary)]" strokeWidth={3} />}
+                  </button>
+                  <span
+                    className={cn(
+                      'flex-1 text-[13px]',
+                      subtask.completed
+                        ? 'text-[var(--text-tertiary)] line-through'
+                        : 'text-[var(--text-primary)]'
+                    )}
+                  >
+                    {subtask.text}
+                  </span>
+                  <button
+                    onClick={() => onDeleteSubtask(task.id, subtask.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add subtask */}
+            <div className="flex items-center gap-2">
+              <input
+                ref={subtaskInputRef}
+                type="text"
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddSubtask()
+                  }
+                }}
+                placeholder="Add a subtask..."
+                className="flex-1 bg-transparent text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none border-b border-[var(--border)] py-2 focus:border-[var(--text-tertiary)] transition-colors"
+              />
+              <button
+                onClick={handleAddSubtask}
+                disabled={!newSubtask.trim()}
+                className="p-2 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between p-6 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onArchive(task.id)
+                onClose()
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+            >
+              <Archive size={14} />
+              Archive
+            </button>
+            <button
+              onClick={() => {
+                onDelete(task.id)
+                onClose()
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] hover:text-red-400 border border-transparent hover:border-red-400/30 transition-colors"
+            >
+              <Trash2 size={14} />
+              Delete
+            </button>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-6 py-2 text-[11px] uppercase tracking-[0.1em] font-medium bg-[var(--accent)] text-[var(--bg-primary)] hover:bg-[var(--accent-muted)] transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
