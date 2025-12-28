@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2 } from 'lucide-react'
+import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database } from 'lucide-react'
 import { Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from './ThemeToggle'
+import { FilterSort, FilterState, SortState } from './FilterSort'
 
 interface HeaderProps {
   boards: Board[]
@@ -13,6 +15,16 @@ interface HeaderProps {
   onDeleteBoard: (id: string) => void
   onUpdateBoard: (id: string, updates: Partial<Board>) => void
   onOpenSearch: () => void
+  onOpenStats: () => void
+  onOpenDataManager: () => void
+  filters: FilterState
+  sort: SortState
+  onFilterChange: (filters: FilterState) => void
+  onSortChange: (sort: SortState) => void
+  activeFilterCount: number
+  isDark: boolean
+  onToggleTheme: () => void
+  themeMounted: boolean
 }
 
 export function Header({
@@ -23,6 +35,16 @@ export function Header({
   onDeleteBoard,
   onUpdateBoard,
   onOpenSearch,
+  onOpenStats,
+  onOpenDataManager,
+  filters,
+  sort,
+  onFilterChange,
+  onSortChange,
+  activeFilterCount,
+  isDark,
+  onToggleTheme,
+  themeMounted,
 }: HeaderProps) {
   const [showBoardMenu, setShowBoardMenu] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -67,7 +89,7 @@ export function Header({
   }
 
   return (
-    <header className="flex items-center justify-between px-8 py-5 border-b border-[var(--border-subtle)]">
+    <header className="flex items-center justify-between px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
       {/* Left: Logo & Board Selector */}
       <div className="flex items-center gap-6">
         {/* Logo */}
@@ -228,15 +250,55 @@ export function Header({
         </div>
       </div>
 
-      {/* Right: Search */}
-      <button
-        onClick={onOpenSearch}
-        className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
-      >
-        <Search size={14} />
-        <span>Search</span>
-        <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-[var(--bg-tertiary)] border border-[var(--border)]">/</kbd>
-      </button>
+      {/* Right: Controls */}
+      <div className="flex items-center gap-3">
+        {/* Filter & Sort */}
+        <FilterSort
+          filters={filters}
+          sort={sort}
+          onFilterChange={onFilterChange}
+          onSortChange={onSortChange}
+          activeFilterCount={activeFilterCount}
+        />
+
+        {/* Search */}
+        <button
+          onClick={onOpenSearch}
+          className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+        >
+          <Search size={14} />
+          <span className="hidden sm:inline">Search</span>
+          <kbd className="px-1.5 py-0.5 text-[10px] bg-[var(--bg-tertiary)] border border-[var(--border)]">/</kbd>
+        </button>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-[var(--border)]" />
+
+        {/* Stats */}
+        <button
+          onClick={onOpenStats}
+          className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+          title="View statistics"
+        >
+          <BarChart3 size={14} />
+        </button>
+
+        {/* Data Manager */}
+        <button
+          onClick={onOpenDataManager}
+          className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+          title="Export/Import data"
+        >
+          <Database size={14} />
+        </button>
+
+        {/* Theme Toggle */}
+        <ThemeToggle
+          isDark={isDark}
+          onToggle={onToggleTheme}
+          mounted={themeMounted}
+        />
+      </div>
     </header>
   )
 }

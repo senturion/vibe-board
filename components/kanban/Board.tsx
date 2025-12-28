@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -15,7 +15,7 @@ import {
   MeasuringStrategy,
 } from '@dnd-kit/core'
 import { Archive } from 'lucide-react'
-import { COLUMNS, ColumnId, KanbanTask } from '@/lib/types'
+import { COLUMNS, ColumnId, KanbanTask, isOverdue, isDueSoon } from '@/lib/types'
 import { useKanban } from '@/hooks/useKanban'
 import { Column } from './Column'
 import { CardDetailModal } from './CardDetailModal'
@@ -23,14 +23,17 @@ import { ArchivePanel } from './ArchivePanel'
 import { QuickCapture } from './QuickCapture'
 import { KeyboardShortcuts } from './KeyboardShortcuts'
 import { Search } from './Search'
+import { FilterState, SortState } from '@/components/FilterSort'
 
 interface BoardProps {
   boardId?: string
   searchOpen?: boolean
   onSearchClose?: () => void
+  filters?: FilterState
+  sort?: SortState
 }
 
-export function Board({ boardId = 'default', searchOpen, onSearchClose }: BoardProps) {
+export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort }: BoardProps) {
   const {
     tasks,
     addTask,
@@ -61,6 +64,73 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose }: BoardP
   const setShowSearch = onSearchClose
     ? (show: boolean) => { if (!show) onSearchClose(); else setInternalShowSearch(true); }
     : setInternalShowSearch
+
+  // Apply filters and sorting to tasks
+  const getFilteredTasksByColumn = useCallback((column: ColumnId) => {
+    let columnTasks = getTasksByColumn(column)
+
+    // Apply filters
+    if (filters) {
+      // Label filter
+      if (filters.labels.length > 0) {
+        columnTasks = columnTasks.filter(task =>
+          filters.labels.some(label => (task.labels || []).includes(label))
+        )
+      }
+
+      // Priority filter
+      if (filters.priorities.length > 0) {
+        columnTasks = columnTasks.filter(task =>
+          filters.priorities.includes(task.priority)
+        )
+      }
+
+      // Due date filter
+      if (filters.dueDate !== 'all') {
+        columnTasks = columnTasks.filter(task => {
+          if (filters.dueDate === 'overdue') {
+            return task.dueDate && isOverdue(task.dueDate)
+          } else if (filters.dueDate === 'due-soon') {
+            return task.dueDate && isDueSoon(task.dueDate) && !isOverdue(task.dueDate)
+          } else if (filters.dueDate === 'no-date') {
+            return !task.dueDate
+          }
+          return true
+        })
+      }
+    }
+
+    // Apply sorting
+    if (sort) {
+      columnTasks = [...columnTasks].sort((a, b) => {
+        let comparison = 0
+        switch (sort.by) {
+          case 'created':
+            comparison = a.createdAt - b.createdAt
+            break
+          case 'due':
+            // Tasks without due dates go to the end
+            if (!a.dueDate && !b.dueDate) comparison = 0
+            else if (!a.dueDate) comparison = 1
+            else if (!b.dueDate) comparison = -1
+            else comparison = a.dueDate - b.dueDate
+            break
+          case 'priority':
+            const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 }
+            comparison = priorityOrder[a.priority] - priorityOrder[b.priority]
+            break
+          case 'alpha':
+            comparison = a.title.localeCompare(b.title)
+            break
+          default:
+            comparison = a.order - b.order
+        }
+        return sort.direction === 'asc' ? comparison : -comparison
+      })
+    }
+
+    return columnTasks
+  }, [getTasksByColumn, filters, sort])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -237,7 +307,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose }: BoardP
               key={column.id}
               id={column.id}
               title={column.title}
-              tasks={getTasksByColumn(column.id)}
+              tasks={getFilteredTasksByColumn(column.id)}
               onAddTask={addTask}
               onDeleteTask={deleteTask}
               onUpdateTask={updateTask}

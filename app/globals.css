@@ -27,12 +27,56 @@
   --success: #81b29a;
   --complete: #3d405b;
 
+  /* Chart colors */
+  --chart-1: #e07a5f;
+  --chart-2: #81b29a;
+  --chart-3: #3d405b;
+  --chart-4: #f2cc8f;
+  --chart-5: #a8dadc;
+
   /* Typography */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
 
   /* Spacing rhythm */
   --space-unit: 4px;
+
+  /* Theme transition */
+  --theme-transition: background-color 0.4s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  /* Warm cream/paper backgrounds */
+  --bg-primary: #faf8f5;
+  --bg-secondary: #f2efe9;
+  --bg-tertiary: #e8e4dc;
+  --bg-elevated: #ffffff;
+
+  /* Warmer borders */
+  --border: #d9d4c9;
+  --border-subtle: #e5e1d8;
+
+  /* Dark text hierarchy */
+  --text-primary: #1a1918;
+  --text-secondary: #5c5850;
+  --text-tertiary: #9c9689;
+
+  /* Slightly deeper accent for contrast */
+  --accent: #d4694e;
+  --accent-muted: #c45d42;
+  --accent-glow: rgba(212, 105, 78, 0.12);
+
+  /* Adjusted status */
+  --success: #5a9a7d;
+  --complete: #6b7094;
+
+  /* Chart colors - adjusted for light bg */
+  --chart-1: #d4694e;
+  --chart-2: #5a9a7d;
+  --chart-3: #6b7094;
+  --chart-4: #d9a85c;
+  --chart-5: #5c9aa3;
 }
 
 @theme inline {
@@ -52,6 +96,7 @@
 
 html {
   background: var(--bg-primary);
+  transition: var(--theme-transition);
 }
 
 body {
@@ -61,9 +106,10 @@ body {
   min-height: 100vh;
   letter-spacing: -0.01em;
   font-feature-settings: 'ss01' on, 'ss02' on;
+  transition: var(--theme-transition);
 }
 
-/* Film grain overlay */
+/* Film grain overlay - only in dark mode */
 body::before {
   content: '';
   position: fixed;
@@ -72,6 +118,11 @@ body::before {
   opacity: 0.03;
   pointer-events: none;
   z-index: 9999;
+  transition: opacity 0.4s ease;
+}
+
+[data-theme="light"] body::before {
+  opacity: 0.015;
 }
 
 /* Scrollbar styling */
@@ -126,6 +177,11 @@ button:not(:disabled),
   font-family: var(--font-body);
 }
 
+/* Theme-aware elements */
+.theme-transition {
+  transition: var(--theme-transition);
+}
+
 /* Entrance animations */
 @keyframes fadeUp {
   from {
@@ -154,6 +210,27 @@ button:not(:disabled),
   }
 }
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes countUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 .animate-fade-up {
   animation: fadeUp 0.5s ease forwards;
 }
@@ -164,4 +241,33 @@ button:not(:disabled),
 
 .animate-slide-in {
   animation: slideIn 0.4s ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease forwards;
+}
+
+.animate-count-up {
+  animation: countUp 0.5s ease forwards;
+}
+
+/* Stats chart animations */
+@keyframes barGrow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.animate-bar-grow {
+  animation: barGrow 0.6s ease-out forwards;
+  transform-origin: left;
+}
+
+/* Ring chart animation */
+@keyframes ringDraw {
+  from { stroke-dashoffset: var(--circumference); }
+  to { stroke-dashoffset: var(--offset); }
+}
+
+.animate-ring {
+  animation: ringDraw 1s ease-out forwards;
 }

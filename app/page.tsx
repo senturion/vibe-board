@@ -1,10 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Board } from '@/components/kanban/Board'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { Header } from '@/components/Header'
+import { StatsDashboard } from '@/components/StatsDashboard'
+import { DataManager } from '@/components/DataManager'
 import { useBoards } from '@/hooks/useBoards'
+import { useKanban } from '@/hooks/useKanban'
+import { useTheme } from '@/hooks/useTheme'
+import { FilterState, SortState } from '@/components/FilterSort'
 
 export default function Home() {
   const {
@@ -17,10 +22,39 @@ export default function Home() {
     switchBoard,
   } = useBoards()
 
+  const { tasks } = useKanban(activeBoardId)
+  const { isDark, toggleTheme, mounted: themeMounted } = useTheme()
+
   const [searchOpen, setSearchOpen] = useState(false)
+  const [showStats, setShowStats] = useState(false)
+  const [showDataManager, setShowDataManager] = useState(false)
+
+  // Filter & Sort state
+  const [filters, setFilters] = useState<FilterState>({
+    labels: [],
+    priorities: [],
+    dueDate: 'all',
+  })
+  const [sort, setSort] = useState<SortState>({
+    by: 'created',
+    direction: 'desc',
+  })
+
+  // Calculate active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (filters.labels.length > 0) count += filters.labels.length
+    if (filters.priorities.length > 0) count += filters.priorities.length
+    if (filters.dueDate !== 'all') count += 1
+    return count
+  }, [filters])
+
+  const handleImport = () => {
+    // Data is already imported to localStorage, just reload
+  }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--bg-primary)]">
+    <div className="flex h-screen overflow-hidden bg-[var(--bg-primary)] theme-transition">
       {/* Main Kanban Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header with Board Selector */}
@@ -32,10 +66,20 @@ export default function Home() {
           onDeleteBoard={deleteBoard}
           onUpdateBoard={updateBoard}
           onOpenSearch={() => setSearchOpen(true)}
+          onOpenStats={() => setShowStats(true)}
+          onOpenDataManager={() => setShowDataManager(true)}
+          filters={filters}
+          sort={sort}
+          onFilterChange={setFilters}
+          onSortChange={setSort}
+          activeFilterCount={activeFilterCount}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          themeMounted={themeMounted}
         />
 
         {/* Editorial Subheader */}
-        <div className="relative px-8 py-4 border-b border-[var(--border-subtle)]">
+        <div className="relative px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
           <div className="flex items-end justify-between gap-8">
             <div className="animate-fade-up">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-1">
@@ -67,12 +111,28 @@ export default function Home() {
             boardId={activeBoardId}
             searchOpen={searchOpen}
             onSearchClose={() => setSearchOpen(false)}
+            filters={filters}
+            sort={sort}
           />
         </div>
       </main>
 
       {/* Sidebar */}
       <Sidebar />
+
+      {/* Stats Dashboard */}
+      <StatsDashboard
+        isOpen={showStats}
+        onClose={() => setShowStats(false)}
+        tasks={tasks}
+      />
+
+      {/* Data Manager */}
+      <DataManager
+        isOpen={showDataManager}
+        onClose={() => setShowDataManager(false)}
+        onImport={handleImport}
+      />
     </div>
   )
 }
