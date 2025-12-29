@@ -9,7 +9,10 @@ import { DataManager } from '@/components/DataManager'
 import { useBoards } from '@/hooks/useBoards'
 import { useKanban } from '@/hooks/useKanban'
 import { useTheme } from '@/hooks/useTheme'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
+import { useColumnColors } from '@/hooks/useColumnColors'
 import { FilterState, SortState } from '@/components/FilterSort'
+import { SettingsPanel } from '@/components/SettingsPanel'
 
 export default function Home() {
   const {
@@ -24,10 +27,13 @@ export default function Home() {
 
   const { tasks } = useKanban(activeBoardId)
   const { isDark, toggleTheme, mounted: themeMounted } = useTheme()
+  const { colors: columnColors, setColumnColor, resetColors } = useColumnColors()
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showDataManager, setShowDataManager] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [compact, setCompact] = useLocalStorage('vibe-compact-mode', false)
 
   // Filter & Sort state
   const [filters, setFilters] = useState<FilterState>({
@@ -68,14 +74,12 @@ export default function Home() {
           onOpenSearch={() => setSearchOpen(true)}
           onOpenStats={() => setShowStats(true)}
           onOpenDataManager={() => setShowDataManager(true)}
+          onOpenSettings={() => setShowSettings(true)}
           filters={filters}
           sort={sort}
           onFilterChange={setFilters}
           onSortChange={setSort}
           activeFilterCount={activeFilterCount}
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
-          themeMounted={themeMounted}
         />
 
         {/* Editorial Subheader */}
@@ -113,6 +117,7 @@ export default function Home() {
             onSearchClose={() => setSearchOpen(false)}
             filters={filters}
             sort={sort}
+            compact={compact}
           />
         </div>
       </main>
@@ -132,6 +137,19 @@ export default function Home() {
         isOpen={showDataManager}
         onClose={() => setShowDataManager(false)}
         onImport={handleImport}
+      />
+
+      {/* Settings Panel */}
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        compact={compact}
+        onToggleCompact={() => setCompact(!compact)}
+        columnColors={columnColors}
+        onColumnColorChange={setColumnColor}
+        onResetColors={resetColors}
       />
     </div>
   )

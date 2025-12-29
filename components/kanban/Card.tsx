@@ -13,6 +13,8 @@ interface CardProps {
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void
   onOpenDetail: (task: KanbanTask) => void
   index?: number
+  compact?: boolean
+  accentColor?: string
 }
 
 const PRIORITY_COLORS: Record<Priority, string> = {
@@ -22,7 +24,7 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0 }: CardProps) {
+export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compact = false, accentColor }: CardProps) {
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
 
   const {
@@ -57,13 +59,64 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0 }: Card
     }
   }
 
+  // Compact mode: just title with subtle indicators
+  if (compact) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        onClick={handleClick}
+        className={cn(
+          'group relative bg-[var(--bg-secondary)] cursor-pointer',
+          'hover:bg-[var(--bg-tertiary)]',
+          'transition-all duration-150',
+          isDragging && 'opacity-40 cursor-grabbing'
+        )}
+        {...attributes}
+        {...listeners}
+      >
+        {/* Column color indicator */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-0.5"
+          style={{ backgroundColor: accentColor || priorityColor }}
+        />
+
+        <div className="px-3 py-2 pl-2 flex items-center justify-between gap-2">
+          <p className="text-[12px] text-[var(--text-primary)] leading-snug truncate flex-1">
+            {task.title}
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Compact indicators */}
+            {hasSubtasks && (
+              <span className="text-[9px] text-[var(--text-tertiary)]">
+                {completedSubtasks}/{subtasks.length}
+              </span>
+            )}
+            {overdue && <div className="w-1.5 h-1.5 rounded-full bg-red-400" />}
+            {dueSoon && !overdue && <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(task.id)
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 -m-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
+            >
+              <Trash2 size={11} />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Full mode: original card layout
   return (
     <div
       ref={setNodeRef}
       style={style}
       onClick={handleClick}
       className={cn(
-        'group relative bg-[var(--bg-secondary)] border-l-2 cursor-pointer',
+        'group relative bg-[var(--bg-secondary)] cursor-pointer',
         'hover:bg-[var(--bg-tertiary)]',
         'transition-all duration-150',
         isDragging && 'opacity-40 cursor-grabbing'
@@ -71,10 +124,10 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0 }: Card
       {...attributes}
       {...listeners}
     >
-      {/* Priority color indicator */}
+      {/* Column color indicator */}
       <div
         className="absolute left-0 top-0 bottom-0 w-0.5"
-        style={{ backgroundColor: priorityColor }}
+        style={{ backgroundColor: accentColor || priorityColor }}
       />
 
       <div className="p-4 pl-3">

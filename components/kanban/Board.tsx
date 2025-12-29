@@ -18,6 +18,7 @@ import { Archive } from 'lucide-react'
 import { COLUMNS, ColumnId, KanbanTask, isOverdue, isDueSoon } from '@/lib/types'
 import { useKanban } from '@/hooks/useKanban'
 import { useUndoRedo } from '@/contexts/UndoRedoContext'
+import { useColumnColors } from '@/hooks/useColumnColors'
 import { Column } from './Column'
 import { CardDetailModal } from './CardDetailModal'
 import { ArchivePanel } from './ArchivePanel'
@@ -32,9 +33,11 @@ interface BoardProps {
   onSearchClose?: () => void
   filters?: FilterState
   sort?: SortState
+  compact?: boolean
 }
 
-export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort }: BoardProps) {
+export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false }: BoardProps) {
+  const { getColumnColor, setColumnColor } = useColumnColors()
   const {
     tasks,
     addTask: rawAddTask,
@@ -430,6 +433,9 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
               onUpdateTask={updateTask}
               onOpenDetail={handleOpenDetail}
               index={index}
+              accentColor={getColumnColor(column.id)}
+              onColorChange={(color) => setColumnColor(column.id, color)}
+              compact={compact}
             />
           ))}
         </div>

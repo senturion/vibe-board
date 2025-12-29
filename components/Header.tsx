@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database } from 'lucide-react'
+import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings } from 'lucide-react'
 import { Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { ThemeToggle } from './ThemeToggle'
 import { FilterSort, FilterState, SortState } from './FilterSort'
 
 interface HeaderProps {
@@ -17,14 +16,12 @@ interface HeaderProps {
   onOpenSearch: () => void
   onOpenStats: () => void
   onOpenDataManager: () => void
+  onOpenSettings: () => void
   filters: FilterState
   sort: SortState
   onFilterChange: (filters: FilterState) => void
   onSortChange: (sort: SortState) => void
   activeFilterCount: number
-  isDark: boolean
-  onToggleTheme: () => void
-  themeMounted: boolean
 }
 
 export function Header({
@@ -37,14 +34,12 @@ export function Header({
   onOpenSearch,
   onOpenStats,
   onOpenDataManager,
+  onOpenSettings,
   filters,
   sort,
   onFilterChange,
   onSortChange,
   activeFilterCount,
-  isDark,
-  onToggleTheme,
-  themeMounted,
 }: HeaderProps) {
   const [showBoardMenu, setShowBoardMenu] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -292,12 +287,14 @@ export function Header({
           <Database size={14} />
         </button>
 
-        {/* Theme Toggle */}
-        <ThemeToggle
-          isDark={isDark}
-          onToggle={onToggleTheme}
-          mounted={themeMounted}
-        />
+        {/* Settings */}
+        <button
+          onClick={onOpenSettings}
+          className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+          title="Settings"
+        >
+          <Settings size={14} />
+        </button>
       </div>
     </header>
   )

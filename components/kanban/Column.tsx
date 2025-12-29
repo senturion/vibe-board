@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { KanbanTask, ColumnId } from '@/lib/types'
 import { Card } from './Card'
 import { AddCard } from './AddCard'
 import { cn } from '@/lib/utils'
+import { COLOR_PALETTE } from '@/hooks/useColumnColors'
 
 interface ColumnProps {
   id: ColumnId
@@ -16,17 +18,26 @@ interface ColumnProps {
   onUpdateTask: (id: string, updates: Partial<KanbanTask>) => void
   onOpenDetail: (task: KanbanTask) => void
   index: number
+  accentColor: string
+  onColorChange: (color: string) => void
+  compact?: boolean
 }
 
-const COLUMN_ACCENTS: Record<ColumnId, string> = {
-  'backlog': 'var(--text-tertiary)',
-  'todo': 'var(--accent)',
-  'in-progress': 'var(--success)',
-  'complete': 'var(--complete)',
-}
-
-export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask, onOpenDetail, index }: ColumnProps) {
+export function Column({
+  id,
+  title,
+  tasks,
+  onAddTask,
+  onDeleteTask,
+  onUpdateTask,
+  onOpenDetail,
+  index,
+  accentColor,
+  onColorChange,
+  compact = false,
+}: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id })
+  const [showColorPicker, setShowColorPicker] = useState(false)
 
   return (
     <div
@@ -42,17 +53,50 @@ export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask
           <span
             className="text-xs font-medium px-2 py-0.5"
             style={{
-              color: COLUMN_ACCENTS[id],
-              backgroundColor: `color-mix(in srgb, ${COLUMN_ACCENTS[id]} 10%, transparent)`,
+              color: accentColor,
+              backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
             }}
           >
             {tasks.length}
           </span>
         </div>
-        <div
-          className="h-0.5 w-12"
-          style={{ backgroundColor: COLUMN_ACCENTS[id] }}
-        />
+        {/* Color bar - clickable */}
+        <div className="relative">
+          <button
+            onClick={() => setShowColorPicker(!showColorPicker)}
+            className="h-0.5 w-12 block hover:h-1 transition-all duration-150 cursor-pointer"
+            style={{ backgroundColor: accentColor }}
+            title="Change column color"
+          />
+
+          {/* Color picker dropdown */}
+          {showColorPicker && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowColorPicker(false)}
+              />
+              <div className="absolute left-0 top-full mt-2 p-2 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20">
+                <div className="grid grid-cols-6 gap-1">
+                  {COLOR_PALETTE.map(color => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                        onColorChange(color)
+                        setShowColorPicker(false)
+                      }}
+                      className={cn(
+                        'w-6 h-6 rounded-sm transition-transform hover:scale-110',
+                        accentColor === color && 'ring-2 ring-white ring-offset-1 ring-offset-[var(--bg-elevated)]'
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Cards Container - Large drop zone */}
@@ -61,7 +105,8 @@ export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask
         className={cn(
           'flex-1 flex flex-col gap-3 p-4 rounded-lg transition-all duration-200 min-h-[300px]',
           'border-2 border-dashed border-transparent',
-          isOver && 'bg-[var(--bg-tertiary)] border-[var(--border)]'
+          isOver && 'bg-[var(--bg-tertiary)] border-[var(--border)]',
+          compact && 'gap-1'
         )}
       >
         {/* Ghost card at top when column is empty */}
@@ -78,6 +123,8 @@ export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask
               onUpdate={onUpdateTask}
               onOpenDetail={onOpenDetail}
               index={taskIndex}
+              compact={compact}
+              accentColor={accentColor}
             />
           ))}
         </SortableContext>
