@@ -64,6 +64,11 @@ export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask
           isOver && 'bg-[var(--bg-tertiary)] border-[var(--border)]'
         )}
       >
+        {/* Ghost card at top when column is empty */}
+        {tasks.length === 0 && (
+          <AddCard columnId={id} onAdd={onAddTask} />
+        )}
+
         <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task, taskIndex) => (
             <Card
@@ -77,15 +82,10 @@ export function Column({ id, title, tasks, onAddTask, onDeleteTask, onUpdateTask
           ))}
         </SortableContext>
 
-        {tasks.length === 0 && !isOver && (
-          <div className="flex-1 flex items-center justify-center py-12">
-            <p className="text-[11px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">
-              No tasks yet
-            </p>
-          </div>
+        {/* Ghost card at bottom when column has tasks */}
+        {tasks.length > 0 && (
+          <AddCard columnId={id} onAdd={onAddTask} />
         )}
-
-        <AddCard columnId={id} onAdd={onAddTask} />
       </div>
     </div>
   )
