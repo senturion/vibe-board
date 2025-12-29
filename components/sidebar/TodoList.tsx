@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Plus } from 'lucide-react'
-import { useSupabaseTodos } from '@/hooks/useSupabaseTodos'
+import { useTodos } from '@/hooks/useTodos'
 import { TodoItem } from './TodoItem'
 
 export function TodoList() {
-  const { todos, addTodo, toggleTodo, deleteTodo, updateTodo } = useSupabaseTodos()
+  const { todos, addTodo, toggleTodo, deleteTodo, updateTodo } = useTodos()
   const [isAdding, setIsAdding] = useState(false)
   const [newText, setNewText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)

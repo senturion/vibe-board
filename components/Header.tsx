@@ -158,7 +158,7 @@ export function Header({
                           }}
                           className={cn(
                             'w-full px-3 py-2 text-left text-[12px] flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer',
-                            board.id === activeBoard?.id ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
+                            board.id === activeBoard.id ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
                           )}
                         >
                           <span className="truncate">{board.name}</span>
