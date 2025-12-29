@@ -287,9 +287,9 @@ export function CardDetailModal({
                 onClick={() => setShowDueDatePicker(!showDueDatePicker)}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors',
-                  task.dueDate && isOverdue(task.dueDate) && 'text-red-400 border-red-400/30',
-                  task.dueDate && isDueSoon(task.dueDate) && !isOverdue(task.dueDate) && 'text-amber-400 border-amber-400/30',
-                  !task.dueDate && 'text-[var(--text-secondary)]'
+                  task.dueDate && isOverdue(task.dueDate) ? 'text-red-400 border-red-400/30' : undefined,
+                  task.dueDate && isDueSoon(task.dueDate) && !isOverdue(task.dueDate) ? 'text-amber-400 border-amber-400/30' : undefined,
+                  !task.dueDate ? 'text-[var(--text-secondary)]' : undefined
                 )}
               >
                 <Clock size={12} />
