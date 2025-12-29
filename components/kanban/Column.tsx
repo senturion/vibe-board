@@ -19,6 +19,7 @@ interface ColumnProps {
 }
 
 const COLUMN_ACCENTS: Record<ColumnId, string> = {
+  'backlog': 'var(--text-tertiary)',
   'todo': 'var(--accent)',
   'in-progress': 'var(--success)',
   'complete': 'var(--complete)',

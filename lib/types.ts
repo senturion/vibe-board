@@ -1,4 +1,4 @@
-export type ColumnId = 'todo' | 'in-progress' | 'complete'
+export type ColumnId = 'backlog' | 'todo' | 'in-progress' | 'complete'
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type LabelId = 'bug' | 'feature' | 'design' | 'docs' | 'refactor' | 'research'
 
@@ -49,7 +49,7 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'n', description: 'New task' },
   { key: '⌘ k', description: 'Quick capture' },
   { key: '/', description: 'Search' },
-  { key: '1 / 2 / 3', description: 'Move to column' },
+  { key: '1 / 2 / 3 / 4', description: 'Move to column' },
   { key: 'Escape', description: 'Close modal' },
   { key: '?', description: 'Show shortcuts' },
 ]
@@ -67,6 +67,7 @@ export interface Note {
 }
 
 export const COLUMNS: { id: ColumnId; title: string }[] = [
+  { id: 'backlog', title: 'Backlog' },
   { id: 'todo', title: 'Todo' },
   { id: 'in-progress', title: 'In Progress' },
   { id: 'complete', title: 'Complete' },

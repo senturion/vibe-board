@@ -79,10 +79,12 @@ export function CardDetailModal({
       // Column shortcuts when not in an input
       if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         if (e.key === '1') {
-          onMoveTask(task.id, 'todo')
+          onMoveTask(task.id, 'backlog')
         } else if (e.key === '2') {
-          onMoveTask(task.id, 'in-progress')
+          onMoveTask(task.id, 'todo')
         } else if (e.key === '3') {
+          onMoveTask(task.id, 'in-progress')
+        } else if (e.key === '4') {
           onMoveTask(task.id, 'complete')
         }
       }
