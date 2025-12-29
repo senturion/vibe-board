@@ -99,7 +99,7 @@ export function Header({
             onClick={() => setShowBoardMenu(!showBoardMenu)}
             className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
           >
-            <span className="max-w-[150px] truncate">{activeBoard.name}</span>
+            <span className="max-w-[150px] truncate">{activeBoard?.name || 'Loading...'}</span>
             <ChevronDown size={14} className={cn(
               'transition-transform',
               showBoardMenu && 'rotate-180'
@@ -158,7 +158,7 @@ export function Header({
                           }}
                           className={cn(
                             'w-full px-3 py-2 text-left text-[12px] flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer',
-                            board.id === activeBoard.id ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
+                            board.id === activeBoard?.id ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
                           )}
                         >
                           <span className="truncate">{board.name}</span>
