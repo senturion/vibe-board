@@ -25,7 +25,7 @@ export function useSupabaseKanban(boardId: string | null) {
   const [tasks, setTasks] = useState<KanbanTask[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Fetch tasks when board changes
   useEffect(() => {

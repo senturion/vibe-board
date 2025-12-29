@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Note } from '@/lib/types'
@@ -17,7 +17,7 @@ export function useSupabaseNotes() {
   const [loading, setLoading] = useState(true)
   const [noteId, setNoteId] = useState<string | null>(null)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {

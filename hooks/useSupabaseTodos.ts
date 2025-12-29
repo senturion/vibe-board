@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { TodoItem } from '@/lib/types'
@@ -17,7 +17,7 @@ export function useSupabaseTodos() {
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (!user) {
@@ -47,7 +47,10 @@ export function useSupabaseTodos() {
   }, [user, supabase])
 
   const addTodo = useCallback(async (text: string) => {
-    if (!user) return
+    if (!user) {
+      console.error('No user logged in')
+      return
+    }
 
     const { data, error } = await supabase
       .from('todos')
@@ -55,7 +58,12 @@ export function useSupabaseTodos() {
       .select()
       .single()
 
-    if (!error && data) {
+    if (error) {
+      console.error('Error adding todo:', error)
+      return
+    }
+
+    if (data) {
       const newTodo: TodoItem = {
         id: data.id,
         text: data.text,
