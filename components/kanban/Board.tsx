@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/core'
 import { Archive } from 'lucide-react'
 import { COLUMNS, ColumnId, KanbanTask, isOverdue, isDueSoon } from '@/lib/types'
-import { useKanban } from '@/hooks/useKanban'
+import { useSupabaseKanban } from '@/hooks/useSupabaseKanban'
 import { useUndoRedo } from '@/contexts/UndoRedoContext'
 import { useColumnColors } from '@/hooks/useColumnColors'
 import { Column } from './Column'
@@ -54,59 +54,61 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     getTasksByColumn,
     getArchivedTasks,
     getTaskById,
-  } = useKanban(boardId)
+  } = useSupabaseKanban(boardId)
 
   const { pushAction } = useUndoRedo()
 
-  // Wrapped actions with undo/redo support
-  const addTask = useCallback((title: string, column: ColumnId = 'todo', priority: KanbanTask['priority'] = 'medium') => {
-    const taskId = rawAddTask(title, column, priority)
+  // Wrapped actions with undo/redo support (simplified for async operations)
+  const addTask = useCallback(async (title: string, column: ColumnId = 'todo', priority: KanbanTask['priority'] = 'medium') => {
+    const taskId = await rawAddTask(title, column, priority)
     pushAction({
       type: 'add',
       description: `Added "${title.slice(0, 30)}${title.length > 30 ? '...' : ''}"`,
-      undo: () => rawDeleteTask(taskId),
-      redo: () => rawAddTask(title, column, priority),
+      undo: () => { rawDeleteTask(taskId) },
+      redo: () => { rawAddTask(title, column, priority) },
     })
     return taskId
   }, [rawAddTask, rawDeleteTask, pushAction])
 
-  const deleteTask = useCallback((id: string) => {
+  const deleteTask = useCallback(async (id: string) => {
     const task = getTaskById(id)
     if (!task) return
-    rawDeleteTask(id)
+    await rawDeleteTask(id)
     pushAction({
       type: 'delete',
       description: `Deleted "${task.title.slice(0, 30)}${task.title.length > 30 ? '...' : ''}"`,
-      undo: () => {
+      undo: async () => {
         // Re-add the task with all its properties
-        const newId = rawAddTask(task.title, task.column, task.priority)
-        if (task.description) rawUpdateTask(newId, { description: task.description })
-        if (task.labels?.length) rawUpdateTask(newId, { labels: task.labels })
-        if (task.dueDate) rawUpdateTask(newId, { dueDate: task.dueDate })
-        if (task.subtasks?.length) rawUpdateTask(newId, { subtasks: task.subtasks })
-        rawUpdateTask(newId, { order: task.order, createdAt: task.createdAt })
+        const newId = await rawAddTask(task.title, task.column, task.priority)
+        if (newId) {
+          if (task.description) await rawUpdateTask(newId, { description: task.description })
+          if (task.labels?.length) await rawUpdateTask(newId, { labels: task.labels })
+          if (task.dueDate) await rawUpdateTask(newId, { dueDate: task.dueDate })
+          if (task.subtasks?.length) await rawUpdateTask(newId, { subtasks: task.subtasks })
+          await rawUpdateTask(newId, { order: task.order, createdAt: task.createdAt })
+        }
       },
-      redo: () => rawDeleteTask(id),
+      redo: () => { rawDeleteTask(id) },
     })
   }, [rawDeleteTask, rawAddTask, rawUpdateTask, getTaskById, pushAction])
 
-  const updateTask = useCallback((id: string, updates: Partial<KanbanTask>) => {
+  const updateTask = useCallback(async (id: string, updates: Partial<KanbanTask>) => {
     const task = getTaskById(id)
     if (!task) return
     const previousState = { ...task }
-    rawUpdateTask(id, updates)
+    await rawUpdateTask(id, updates)
     pushAction({
       type: 'update',
       description: `Updated "${task.title.slice(0, 25)}${task.title.length > 25 ? '...' : ''}"`,
-      undo: () => rawUpdateTask(id, previousState),
-      redo: () => rawUpdateTask(id, updates),
+      undo: () => { rawUpdateTask(id, previousState) },
+      redo: () => { rawUpdateTask(id, updates) },
     })
   }, [rawUpdateTask, getTaskById, pushAction])
 
-  const archiveTask = useCallback((id: string) => {
+  const archiveTask = useCallback(async (id: string) => {
     const task = getTaskById(id)
     if (!task) return
-    rawArchiveTask(id)
+    await rawArchiveTask(id)
     pushAction({
       type: 'archive',
       description: `Archived "${task.title.slice(0, 25)}${task.title.length > 25 ? '...' : ''}"`,
@@ -115,24 +117,24 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     })
   }, [rawArchiveTask, rawRestoreTask, getTaskById, pushAction])
 
-  const restoreTask = useCallback((id: string) => {
+  const restoreTask = useCallback(async (id: string) => {
     const task = tasks.find(t => t.id === id)
     if (!task) return
-    rawRestoreTask(id)
+    await rawRestoreTask(id)
     pushAction({
       type: 'restore',
       description: `Restored "${task.title.slice(0, 25)}${task.title.length > 25 ? '...' : ''}"`,
-      undo: () => rawArchiveTask(id),
-      redo: () => rawRestoreTask(id),
+      undo: () => { rawArchiveTask(id) },
+      redo: () => { rawRestoreTask(id) },
     })
   }, [rawRestoreTask, rawArchiveTask, tasks, pushAction])
 
-  const moveTask = useCallback((taskId: string, toColumn: ColumnId, newOrder?: number) => {
+  const moveTask = useCallback(async (taskId: string, toColumn: ColumnId, newOrder?: number) => {
     const task = getTaskById(taskId)
     if (!task) return
     const previousColumn = task.column
     const previousOrder = task.order
-    rawMoveTask(taskId, toColumn, newOrder)
+    await rawMoveTask(taskId, toColumn, newOrder)
     // Only track column changes (not reordering within column)
     if (previousColumn !== toColumn) {
       const fromCol = COLUMNS.find(c => c.id === previousColumn)?.title
@@ -140,8 +142,8 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
       pushAction({
         type: 'move',
         description: `Moved to ${toCol}`,
-        undo: () => rawMoveTask(taskId, previousColumn, previousOrder),
-        redo: () => rawMoveTask(taskId, toColumn, newOrder),
+        undo: () => { rawMoveTask(taskId, previousColumn, previousOrder) },
+        redo: () => { rawMoveTask(taskId, toColumn, newOrder) },
       })
     }
   }, [rawMoveTask, getTaskById, pushAction])

@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useNotes } from '@/hooks/useNotes'
+import { useSupabaseNotes } from '@/hooks/useSupabaseNotes'
 
 export function Notes() {
-  const { note, updateNote } = useNotes()
+  const { note, updateNote } = useSupabaseNotes()
   const [localContent, setLocalContent] = useState('')
 
   useEffect(() => {

@@ -6,15 +6,19 @@ import { Sidebar } from '@/components/sidebar/Sidebar'
 import { Header } from '@/components/Header'
 import { StatsDashboard } from '@/components/StatsDashboard'
 import { DataManager } from '@/components/DataManager'
-import { useBoards } from '@/hooks/useBoards'
-import { useKanban } from '@/hooks/useKanban'
+import { useSupabaseBoards } from '@/hooks/useSupabaseBoards'
+import { useSupabaseKanban } from '@/hooks/useSupabaseKanban'
 import { useTheme } from '@/hooks/useTheme'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useColumnColors } from '@/hooks/useColumnColors'
 import { FilterState, SortState } from '@/components/FilterSort'
 import { SettingsPanel } from '@/components/SettingsPanel'
+import { useAuth } from '@/contexts/AuthContext'
+import { LogOut } from 'lucide-react'
 
 export default function Home() {
+  const { user, signOut } = useAuth()
+
   const {
     boards,
     activeBoard,
@@ -23,9 +27,10 @@ export default function Home() {
     updateBoard,
     deleteBoard,
     switchBoard,
-  } = useBoards()
+    loading: boardsLoading,
+  } = useSupabaseBoards()
 
-  const { tasks } = useKanban(activeBoardId)
+  const { tasks, loading: tasksLoading } = useSupabaseKanban(activeBoardId)
   const { isDark, toggleTheme, mounted: themeMounted } = useTheme()
   const { colors: columnColors, setColumnColor, resetColors } = useColumnColors()
 
@@ -59,6 +64,18 @@ export default function Home() {
     // Data is already imported to localStorage, just reload
   }
 
+  // Show loading state
+  if (boardsLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--bg-primary)]">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[var(--text-tertiary)] border-t-[var(--text-primary)] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-[var(--text-tertiary)]">Loading your boards...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg-primary)] theme-transition">
       {/* Main Kanban Area */}
@@ -90,7 +107,7 @@ export default function Home() {
                 Current Board
               </p>
               <h2 className="font-display text-2xl text-[var(--text-primary)] tracking-tight leading-none italic">
-                {activeBoard.name}
+                {activeBoard?.name || 'My Board'}
               </h2>
             </div>
             <div className="animate-fade-up flex items-center gap-6 pb-1" style={{ animationDelay: '0.1s', opacity: 0 }}>
@@ -101,7 +118,18 @@ export default function Home() {
                 </p>
               </div>
               <div className="w-px h-8 bg-[var(--border)]" />
-              <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" title="Synced locally" />
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" title="Synced to cloud" />
+                <span className="text-[10px] text-[var(--text-tertiary)]">Cloud</span>
+              </div>
+              <div className="w-px h-8 bg-[var(--border)]" />
+              <button
+                onClick={signOut}
+                className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={14} />
+              </button>
             </div>
           </div>
 
@@ -112,7 +140,7 @@ export default function Home() {
         {/* Board Area */}
         <div className="flex-1 overflow-auto">
           <Board
-            boardId={activeBoardId}
+            boardId={activeBoardId || undefined}
             searchOpen={searchOpen}
             onSearchClose={() => setSearchOpen(false)}
             filters={filters}
