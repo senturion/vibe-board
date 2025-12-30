@@ -1,41 +1,129 @@
 'use client'
 
-import { useCallback } from 'react'
-import { useLocalStorage } from './useLocalStorage'
+import { useCallback, useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { TodoItem } from '@/lib/types'
-import { generateId } from '@/lib/utils'
+import { Database } from '@/lib/supabase/types'
+
+type TodoRow = Database['public']['Tables']['todos']['Row']
 
 export function useTodos() {
-  const [todos, setTodos] = useLocalStorage<TodoItem[]>('sidebar-todos', [])
+  const [todos, setTodos] = useState<TodoItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const supabase = createClient()
 
-  const addTodo = useCallback((text: string) => {
-    const newTodo: TodoItem = {
-      id: generateId(),
-      text,
-      completed: false,
-      createdAt: Date.now(),
+  // Fetch todos from Supabase
+  useEffect(() => {
+    if (!user) {
+      setTodos([])
+      setLoading(false)
+      return
     }
+
+    const fetchTodos = async () => {
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching todos:', error)
+        setLoading(false)
+        return
+      }
+
+      const mappedTodos: TodoItem[] = (data as TodoRow[]).map(t => ({
+        id: t.id,
+        text: t.text,
+        completed: t.completed,
+        createdAt: new Date(t.created_at).getTime(),
+      }))
+
+      setTodos(mappedTodos)
+      setLoading(false)
+    }
+
+    fetchTodos()
+  }, [user, supabase])
+
+  const addTodo = useCallback(async (text: string) => {
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from('todos')
+      .insert({ user_id: user.id, text, completed: false })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating todo:', error)
+      return
+    }
+
+    const newTodo: TodoItem = {
+      id: data.id,
+      text: data.text,
+      completed: data.completed,
+      createdAt: new Date(data.created_at).getTime(),
+    }
+
     setTodos(prev => [newTodo, ...prev])
-  }, [setTodos])
+  }, [user, supabase])
 
-  const toggleTodo = useCallback((id: string) => {
-    setTodos(prev => prev.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+  const toggleTodo = useCallback(async (id: string) => {
+    const todo = todos.find(t => t.id === id)
+    if (!todo) return
+
+    const { error } = await supabase
+      .from('todos')
+      .update({ completed: !todo.completed })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error toggling todo:', error)
+      return
+    }
+
+    setTodos(prev => prev.map(t =>
+      t.id === id ? { ...t, completed: !t.completed } : t
     ))
-  }, [setTodos])
+  }, [todos, supabase])
 
-  const deleteTodo = useCallback((id: string) => {
-    setTodos(prev => prev.filter(todo => todo.id !== id))
-  }, [setTodos])
+  const deleteTodo = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('todos')
+      .delete()
+      .eq('id', id)
 
-  const updateTodo = useCallback((id: string, text: string) => {
-    setTodos(prev => prev.map(todo =>
-      todo.id === id ? { ...todo, text } : todo
+    if (error) {
+      console.error('Error deleting todo:', error)
+      return
+    }
+
+    setTodos(prev => prev.filter(t => t.id !== id))
+  }, [supabase])
+
+  const updateTodo = useCallback(async (id: string, text: string) => {
+    const { error } = await supabase
+      .from('todos')
+      .update({ text })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error updating todo:', error)
+      return
+    }
+
+    setTodos(prev => prev.map(t =>
+      t.id === id ? { ...t, text } : t
     ))
-  }, [setTodos])
+  }, [supabase])
 
   return {
     todos,
+    loading,
     addTodo,
     toggleTodo,
     deleteTodo,

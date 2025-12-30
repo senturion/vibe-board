@@ -1,113 +1,299 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
-import { useLocalStorage } from './useLocalStorage'
+import { useCallback, useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { KanbanTask, ColumnId, Priority, LabelId, Subtask } from '@/lib/types'
-import { generateId } from '@/lib/utils'
+import { Database } from '@/lib/supabase/types'
 
-export function useKanban(boardId: string = 'default') {
-  const [allTasks, setTasks] = useLocalStorage<KanbanTask[]>('kanban-tasks', [])
+type TaskRow = Database['public']['Tables']['tasks']['Row']
 
-  // Filter tasks by current board
-  const tasks = useMemo(() => {
-    return allTasks.filter(task => (task.boardId || 'default') === boardId)
-  }, [allTasks, boardId])
+export function useKanban(boardId: string = '') {
+  const [tasks, setTasks] = useState<KanbanTask[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const supabase = createClient()
 
-  const addTask = useCallback((title: string, column: ColumnId = 'todo', priority: Priority = 'medium') => {
+  // Fetch tasks from Supabase
+  useEffect(() => {
+    if (!user || !boardId) {
+      setTasks([])
+      setLoading(false)
+      return
+    }
+
+    const fetchTasks = async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('board_id', boardId)
+        .order('order', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching tasks:', error)
+        setLoading(false)
+        return
+      }
+
+      const mappedTasks: KanbanTask[] = (data as TaskRow[]).map(t => ({
+        id: t.id,
+        title: t.title,
+        description: t.description || undefined,
+        column: t.status as ColumnId,
+        priority: t.priority as Priority,
+        labels: (t.labels || []) as LabelId[],
+        subtasks: (t.subtasks as unknown as Subtask[]) || [],
+        dueDate: t.due_date ? new Date(t.due_date).getTime() : undefined,
+        order: t.order,
+        createdAt: new Date(t.created_at).getTime(),
+        archivedAt: t.archived_at ? new Date(t.archived_at).getTime() : undefined,
+        boardId: t.board_id,
+      }))
+
+      setTasks(mappedTasks)
+      setLoading(false)
+    }
+
+    fetchTasks()
+  }, [user, boardId, supabase])
+
+  const addTask = useCallback(async (title: string, column: ColumnId = 'todo', priority: Priority = 'medium') => {
+    if (!user || !boardId) return ''
+
+    const order = Date.now()
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        user_id: user.id,
+        board_id: boardId,
+        title,
+        status: column,
+        priority,
+        labels: [],
+        subtasks: [],
+        order,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating task:', error.message, error.code, error.details)
+      return ''
+    }
+
     const newTask: KanbanTask = {
-      id: generateId(),
-      title,
-      column,
-      priority,
+      id: data.id,
+      title: data.title,
+      column: data.status as ColumnId,
+      priority: data.priority as Priority,
       labels: [],
       subtasks: [],
-      order: Date.now(),
-      createdAt: Date.now(),
-      boardId,
+      order: data.order,
+      createdAt: new Date(data.created_at).getTime(),
+      boardId: data.board_id,
     }
+
     setTasks(prev => [...prev, newTask])
     return newTask.id
-  }, [setTasks, boardId])
+  }, [user, boardId, supabase])
 
-  const updateTask = useCallback((id: string, updates: Partial<KanbanTask>) => {
+  const updateTask = useCallback(async (id: string, updates: Partial<KanbanTask>) => {
+    const dbUpdates: Record<string, unknown> = {}
+    if (updates.title !== undefined) dbUpdates.title = updates.title
+    if (updates.description !== undefined) dbUpdates.description = updates.description
+    if (updates.column !== undefined) dbUpdates.status = updates.column
+    if (updates.priority !== undefined) dbUpdates.priority = updates.priority
+    if (updates.labels !== undefined) dbUpdates.labels = updates.labels
+    if (updates.subtasks !== undefined) dbUpdates.subtasks = updates.subtasks
+    if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate ? new Date(updates.dueDate).toISOString() : null
+    if (updates.order !== undefined) dbUpdates.order = updates.order
+    if (updates.archivedAt !== undefined) dbUpdates.archived_at = updates.archivedAt ? new Date(updates.archivedAt).toISOString() : null
+
+    const { error } = await supabase
+      .from('tasks')
+      .update(dbUpdates)
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error updating task:', error)
+      return
+    }
+
     setTasks(prev => prev.map(task =>
       task.id === id ? { ...task, ...updates } : task
     ))
-  }, [setTasks])
+  }, [supabase])
 
-  const deleteTask = useCallback((id: string) => {
+  const deleteTask = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting task:', error)
+      return
+    }
+
     setTasks(prev => prev.filter(task => task.id !== id))
-  }, [setTasks])
+  }, [supabase])
 
-  const archiveTask = useCallback((id: string) => {
+  const archiveTask = useCallback(async (id: string) => {
+    const archivedAt = new Date().toISOString()
+    const { error } = await supabase
+      .from('tasks')
+      .update({ archived_at: archivedAt })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error archiving task:', error)
+      return
+    }
+
     setTasks(prev => prev.map(task =>
       task.id === id ? { ...task, archivedAt: Date.now() } : task
     ))
-  }, [setTasks])
+  }, [supabase])
 
-  const restoreTask = useCallback((id: string) => {
+  const restoreTask = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ archived_at: null })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error restoring task:', error)
+      return
+    }
+
     setTasks(prev => prev.map(task =>
       task.id === id ? { ...task, archivedAt: undefined } : task
     ))
-  }, [setTasks])
+  }, [supabase])
 
-  const moveTask = useCallback((taskId: string, toColumn: ColumnId, newOrder?: number) => {
+  const moveTask = useCallback(async (taskId: string, toColumn: ColumnId, newOrder?: number) => {
+    const order = newOrder ?? Date.now()
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status: toColumn, order })
+      .eq('id', taskId)
+
+    if (error) {
+      console.error('Error moving task:', error)
+      return
+    }
+
     setTasks(prev => prev.map(task =>
       task.id === taskId
-        ? { ...task, column: toColumn, order: newOrder ?? Date.now() }
+        ? { ...task, column: toColumn, order }
         : task
     ))
-  }, [setTasks])
+  }, [supabase])
 
   // Subtask operations
-  const addSubtask = useCallback((taskId: string, text: string) => {
+  const addSubtask = useCallback(async (taskId: string, text: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
     const subtask: Subtask = {
-      id: generateId(),
+      id: crypto.randomUUID(),
       text,
       completed: false,
     }
-    setTasks(prev => prev.map(task =>
-      task.id === taskId
-        ? { ...task, subtasks: [...(task.subtasks || []), subtask] }
-        : task
-    ))
-  }, [setTasks])
+    const newSubtasks = [...(task.subtasks || []), subtask]
 
-  const toggleSubtask = useCallback((taskId: string, subtaskId: string) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId
-        ? {
-            ...task,
-            subtasks: (task.subtasks || []).map(st =>
-              st.id === subtaskId ? { ...st, completed: !st.completed } : st
-            ),
-          }
-        : task
-    ))
-  }, [setTasks])
+    const { error } = await supabase
+      .from('tasks')
+      .update({ subtasks: newSubtasks })
+      .eq('id', taskId)
 
-  const deleteSubtask = useCallback((taskId: string, subtaskId: string) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId
-        ? { ...task, subtasks: (task.subtasks || []).filter(st => st.id !== subtaskId) }
-        : task
+    if (error) {
+      console.error('Error adding subtask:', error)
+      return
+    }
+
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, subtasks: newSubtasks }
+        : t
     ))
-  }, [setTasks])
+  }, [tasks, supabase])
+
+  const toggleSubtask = useCallback(async (taskId: string, subtaskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    const newSubtasks = (task.subtasks || []).map(st =>
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    )
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ subtasks: newSubtasks })
+      .eq('id', taskId)
+
+    if (error) {
+      console.error('Error toggling subtask:', error)
+      return
+    }
+
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, subtasks: newSubtasks }
+        : t
+    ))
+  }, [tasks, supabase])
+
+  const deleteSubtask = useCallback(async (taskId: string, subtaskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    const newSubtasks = (task.subtasks || []).filter(st => st.id !== subtaskId)
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ subtasks: newSubtasks })
+      .eq('id', taskId)
+
+    if (error) {
+      console.error('Error deleting subtask:', error)
+      return
+    }
+
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, subtasks: newSubtasks }
+        : t
+    ))
+  }, [tasks, supabase])
 
   // Label operations
-  const toggleLabel = useCallback((taskId: string, labelId: LabelId) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id !== taskId) return task
-      const labels = task.labels || []
-      const hasLabel = labels.includes(labelId)
-      return {
-        ...task,
-        labels: hasLabel
-          ? labels.filter(l => l !== labelId)
-          : [...labels, labelId],
-      }
-    }))
-  }, [setTasks])
+  const toggleLabel = useCallback(async (taskId: string, labelId: LabelId) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    const labels = task.labels || []
+    const hasLabel = labels.includes(labelId)
+    const newLabels = hasLabel
+      ? labels.filter(l => l !== labelId)
+      : [...labels, labelId]
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ labels: newLabels })
+      .eq('id', taskId)
+
+    if (error) {
+      console.error('Error toggling label:', error)
+      return
+    }
+
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, labels: newLabels }
+        : t
+    ))
+  }, [tasks, supabase])
 
   // Search tasks
   const searchTasks = useCallback((query: string) => {
@@ -140,6 +326,7 @@ export function useKanban(boardId: string = 'default') {
 
   return {
     tasks,
+    loading,
     addTask,
     updateTask,
     deleteTask,

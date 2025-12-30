@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings } from 'lucide-react'
+import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings, LogOut } from 'lucide-react'
 import { Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { FilterSort, FilterState, SortState } from './FilterSort'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface HeaderProps {
   boards: Board[]
@@ -48,6 +49,7 @@ export function Header({
   const [editName, setEditName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
+  const { user, signOut } = useAuth()
 
   useEffect(() => {
     if (isCreating && inputRef.current) {
@@ -295,6 +297,17 @@ export function Header({
         >
           <Settings size={14} />
         </button>
+
+        {/* Sign Out */}
+        {user && (
+          <button
+            onClick={signOut}
+            className="p-2 text-[var(--text-tertiary)] hover:text-red-400 border border-[var(--border)] hover:border-red-400/50 transition-colors"
+            title={`Sign out (${user.email})`}
+          >
+            <LogOut size={14} />
+          </button>
+        )}
       </div>
     </header>
   )
