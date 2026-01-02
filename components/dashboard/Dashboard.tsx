@@ -33,7 +33,30 @@ import {
 } from './widgets'
 import { LoadingState } from '@/components/ui/EmptyState'
 import { cn } from '@/lib/utils'
-import * as LucideIcons from 'lucide-react'
+import {
+  ListChecks,
+  Target,
+  Flag,
+  BookOpen,
+  Timer,
+  BarChart3,
+  Calendar,
+  Cloud,
+  CheckSquare,
+} from 'lucide-react'
+
+// Icon mapping for widget types
+const WIDGET_ICONS: Record<string, React.ComponentType<{ size: number }>> = {
+  ListChecks,
+  Target,
+  Flag,
+  BookOpen,
+  Timer,
+  BarChart3,
+  Calendar,
+  Cloud,
+  CheckSquare,
+}
 
 // Widget content map
 const WIDGET_COMPONENTS: Record<WidgetType, React.ComponentType> = {
@@ -201,7 +224,7 @@ export function Dashboard() {
               </p>
             ) : (
               availableWidgetTypes.map(wt => {
-                const Icon = (LucideIcons as Record<string, React.ComponentType<{ size: number }>>)[wt.icon] || LayoutGrid
+                const Icon = WIDGET_ICONS[wt.icon] || LayoutGrid
                 return (
                   <button
                     key={wt.id}

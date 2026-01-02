@@ -206,7 +206,7 @@ export function useRoutines() {
   const addRoutineItem = useCallback(async (routineId: string, title: string, targetTime?: number) => {
     if (!user) return ''
 
-    const order = routineItems.filter(i => i.routineId === routineId).length
+    const order = items.filter(i => i.routineId === routineId).length
     const { data, error } = await supabase
       .from('routine_items')
       .insert({

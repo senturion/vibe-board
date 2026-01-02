@@ -4,20 +4,20 @@ import { useState } from 'react'
 import { BookOpen, ChevronRight, Sparkles } from 'lucide-react'
 import { useJournal } from '@/hooks/useJournal'
 import { useNavigation } from '@/contexts/NavigationContext'
-import { formatDateKey } from '@/lib/types'
 
 export function JournalWidget() {
-  const { todaysEntry, saveEntry, getRandomPrompt, loading } = useJournal()
+  const { getTodaysEntry, saveEntry, getRandomPrompt, loading } = useJournal()
+  const todaysEntry = getTodaysEntry()
   const { setActiveView } = useNavigation()
   const [showPrompt, setShowPrompt] = useState(false)
   const [prompt, setPrompt] = useState<string | null>(null)
 
-  const todayKey = formatDateKey(new Date())
+  const today = new Date()
 
   const handleGetPrompt = () => {
     const randomPrompt = getRandomPrompt()
     if (randomPrompt) {
-      setPrompt(randomPrompt.promptText)
+      setPrompt(randomPrompt)
       setShowPrompt(true)
     }
   }
@@ -68,7 +68,7 @@ export function JournalWidget() {
 
         <textarea
           value={todaysEntry?.content || ''}
-          onChange={(e) => saveEntry(todayKey, e.target.value)}
+          onChange={(e) => saveEntry(today, e.target.value)}
           placeholder="Write something..."
           className="flex-1 w-full bg-transparent text-[11px] text-[var(--text-secondary)] placeholder-[var(--text-tertiary)] resize-none outline-none"
         />

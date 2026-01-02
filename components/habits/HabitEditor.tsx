@@ -296,8 +296,8 @@ export function HabitEditor({
                   )}
                   style={{
                     backgroundColor: c,
-                    ringColor: c,
-                  }}
+                    '--tw-ring-color': c,
+                  } as React.CSSProperties}
                 />
               ))}
             </div>

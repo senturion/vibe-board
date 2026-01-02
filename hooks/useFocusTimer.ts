@@ -25,7 +25,7 @@ export function useFocusTimer() {
   const [linkedTaskId, setLinkedTaskId] = useState<string | undefined>()
   const [linkedGoalId, setLinkedGoalId] = useState<string | undefined>()
 
-  const timerRef = useRef<NodeJS.Timeout>()
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(0)
   const { user } = useAuth()
   const supabase = createClient()

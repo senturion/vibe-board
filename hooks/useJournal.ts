@@ -17,7 +17,7 @@ export function useJournal() {
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const supabase = createClient()
-  const saveTimeoutRef = useRef<NodeJS.Timeout>()
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch entries and prompts
   useEffect(() => {
