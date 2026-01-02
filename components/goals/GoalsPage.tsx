@@ -1,0 +1,223 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { Plus, Flag, Filter } from 'lucide-react'
+import { useGoals } from '@/hooks/useGoals'
+import { Goal, GoalStatus, GOAL_STATUSES } from '@/lib/types'
+import { cn } from '@/lib/utils'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { ProgressRing } from '@/components/ui/Progress'
+import { EmptyState, LoadingState } from '@/components/ui/EmptyState'
+import { GoalCard } from './GoalCard'
+import { GoalEditor } from './GoalEditor'
+
+type FilterStatus = 'all' | GoalStatus
+
+export function GoalsPage() {
+  const {
+    goals,
+    categories,
+    loading,
+    addGoal,
+    updateGoal,
+    deleteGoal,
+    archiveGoal,
+    completeGoal,
+    addMilestone,
+    toggleMilestone,
+    getMilestones,
+    getActiveGoals,
+  } = useGoals()
+
+  const [showEditor, setShowEditor] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<Goal | undefined>()
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+
+  const activeGoals = useMemo(() => getActiveGoals(), [getActiveGoals])
+
+  const filteredGoals = useMemo(() => {
+    if (filterStatus === 'all') return goals
+    return goals.filter(g => g.status === filterStatus)
+  }, [goals, filterStatus])
+
+  const stats = useMemo(() => {
+    const total = goals.length
+    const active = goals.filter(g => g.status === 'active').length
+    const completed = goals.filter(g => g.status === 'completed').length
+    const avgProgress = activeGoals.length > 0
+      ? Math.round(activeGoals.reduce((sum, g) => sum + g.progress, 0) / activeGoals.length)
+      : 0
+
+    return { total, active, completed, avgProgress }
+  }, [goals, activeGoals])
+
+  const handleSaveGoal = async (
+    goalData: Omit<Goal, 'id' | 'createdAt' | 'order'>,
+    milestonesTitles: string[]
+  ) => {
+    if (editingGoal) {
+      await updateGoal(editingGoal.id, goalData)
+      // Note: Milestone updates would need more complex handling for edits
+    } else {
+      const goalId = await addGoal(goalData)
+      if (goalId) {
+        for (const title of milestonesTitles) {
+          await addMilestone(goalId, title)
+        }
+      }
+    }
+    setEditingGoal(undefined)
+    setShowEditor(false)
+  }
+
+  const handleEdit = (goal: Goal) => {
+    setEditingGoal(goal)
+    setShowEditor(true)
+  }
+
+  if (loading) {
+    return <LoadingState message="Loading goals..." />
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Flag size={20} className="text-[var(--accent)]" />
+            <h1 className="text-lg font-medium text-[var(--text-primary)]">Goals</h1>
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={cn(
+                'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                filterStatus === 'all'
+                  ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              )}
+            >
+              All
+            </button>
+            {GOAL_STATUSES.map((status) => (
+              <button
+                key={status.id}
+                onClick={() => setFilterStatus(status.id)}
+                className={cn(
+                  'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                  filterStatus === status.id
+                    ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                )}
+              >
+                {status.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            setEditingGoal(undefined)
+            setShowEditor(true)
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--bg-primary)] text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
+        >
+          <Plus size={14} />
+          New Goal
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-4 gap-4">
+            <Card variant="bordered" padding="md">
+              <div className="text-center">
+                <p className="text-3xl font-medium text-[var(--text-primary)]">{stats.total}</p>
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                  Total Goals
+                </p>
+              </div>
+            </Card>
+
+            <Card variant="bordered" padding="md">
+              <div className="text-center">
+                <p className="text-3xl font-medium text-[var(--accent)]">{stats.active}</p>
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                  Active
+                </p>
+              </div>
+            </Card>
+
+            <Card variant="bordered" padding="md">
+              <div className="text-center">
+                <p className="text-3xl font-medium text-[var(--success)]">{stats.completed}</p>
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                  Completed
+                </p>
+              </div>
+            </Card>
+
+            <Card variant="bordered" padding="md">
+              <div className="flex items-center justify-center gap-3">
+                <ProgressRing value={stats.avgProgress} size={50} strokeWidth={4} color="var(--goal-progress)" />
+                <div>
+                  <p className="text-lg font-medium text-[var(--text-primary)]">{stats.avgProgress}%</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                    Avg Progress
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Goals List */}
+          {filteredGoals.length === 0 ? (
+            <EmptyState
+              icon="goals"
+              title={filterStatus === 'all' ? 'No goals yet' : `No ${filterStatus} goals`}
+              description="Set meaningful goals and break them down into achievable milestones"
+              action={filterStatus === 'all' ? {
+                label: 'Create Goal',
+                onClick: () => setShowEditor(true),
+              } : undefined}
+            />
+          ) : (
+            <div className="grid gap-4">
+              {filteredGoals.map((goal) => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  milestones={getMilestones(goal.id)}
+                  onEdit={() => handleEdit(goal)}
+                  onDelete={() => deleteGoal(goal.id)}
+                  onArchive={() => archiveGoal(goal.id)}
+                  onComplete={() => completeGoal(goal.id)}
+                  onToggleMilestone={toggleMilestone}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Goal Editor Modal */}
+      <GoalEditor
+        isOpen={showEditor}
+        onClose={() => {
+          setShowEditor(false)
+          setEditingGoal(undefined)
+        }}
+        onSave={handleSaveGoal}
+        goal={editingGoal}
+        existingMilestones={editingGoal ? getMilestones(editingGoal.id) : []}
+        categories={categories}
+      />
+    </div>
+  )
+}

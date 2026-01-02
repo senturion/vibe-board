@@ -1,0 +1,7 @@
+export { FocusWidget } from './FocusWidget'
+export { HabitsWidget } from './HabitsWidget'
+export { RoutinesWidget } from './RoutinesWidget'
+export { GoalsWidget } from './GoalsWidget'
+export { StatsWidget } from './StatsWidget'
+export { JournalWidget } from './JournalWidget'
+export { TasksWidget } from './TasksWidget'

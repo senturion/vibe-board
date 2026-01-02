@@ -34,6 +34,39 @@
   --chart-4: #f2cc8f;
   --chart-5: #a8dadc;
 
+  /* Life Dashboard - Habit colors */
+  --habit-complete: var(--success);
+  --habit-partial: #f2cc8f;
+  --habit-missed: #e07a5f;
+
+  /* Life Dashboard - Focus timer */
+  --focus-work: var(--accent);
+  --focus-break: var(--success);
+  --focus-long-break: #81b29a;
+
+  /* Life Dashboard - Goals */
+  --goal-progress: var(--chart-2);
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  /* Life Dashboard - Routines */
+  --routine-active: var(--accent);
+  --routine-complete: var(--success);
+
+  /* Life Dashboard - Journal */
+  --journal-mood-1: #ef4444;
+  --journal-mood-2: #f97316;
+  --journal-mood-3: #eab308;
+  --journal-mood-4: #84cc16;
+  --journal-mood-5: #22c55e;
+
+  /* Heatmap levels */
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(129, 178, 154, 0.25);
+  --heatmap-2: rgba(129, 178, 154, 0.5);
+  --heatmap-3: rgba(129, 178, 154, 0.75);
+  --heatmap-4: var(--success);
+
   /* Typography */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
@@ -77,6 +110,39 @@
   --chart-3: #6b7094;
   --chart-4: #d9a85c;
   --chart-5: #5c9aa3;
+
+  /* Life Dashboard - Habit colors (light) */
+  --habit-complete: var(--success);
+  --habit-partial: #d9a85c;
+  --habit-missed: #d4694e;
+
+  /* Life Dashboard - Focus timer (light) */
+  --focus-work: var(--accent);
+  --focus-break: var(--success);
+  --focus-long-break: #5a9a7d;
+
+  /* Life Dashboard - Goals (light) */
+  --goal-progress: var(--chart-2);
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  /* Life Dashboard - Routines (light) */
+  --routine-active: var(--accent);
+  --routine-complete: var(--success);
+
+  /* Life Dashboard - Journal (light) */
+  --journal-mood-1: #dc2626;
+  --journal-mood-2: #ea580c;
+  --journal-mood-3: #ca8a04;
+  --journal-mood-4: #65a30d;
+  --journal-mood-5: #16a34a;
+
+  /* Heatmap levels (light) */
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(90, 154, 125, 0.2);
+  --heatmap-2: rgba(90, 154, 125, 0.4);
+  --heatmap-3: rgba(90, 154, 125, 0.6);
+  --heatmap-4: var(--success);
 }
 
 @theme inline {
@@ -299,4 +365,109 @@ button:not(:disabled),
 
 .animate-shrink {
   animation: shrink linear forwards;
+}
+
+/* View transition animations */
+@keyframes viewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes viewExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.animate-view-enter {
+  animation: viewEnter 0.2s ease-out forwards;
+}
+
+.animate-view-exit {
+  animation: viewExit 0.15s ease-in forwards;
+}
+
+/* Heatmap cell animation */
+@keyframes heatmapPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-heatmap-cell {
+  animation: heatmapPop 0.2s ease-out forwards;
+}
+
+/* Timer pulse animation */
+@keyframes timerPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+
+.animate-timer-pulse {
+  animation: timerPulse 2s ease-in-out infinite;
+}
+
+/* Streak flame animation */
+@keyframes flameDance {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  25% { transform: scale(1.05) rotate(2deg); }
+  50% { transform: scale(1.1) rotate(-1deg); }
+  75% { transform: scale(1.05) rotate(1deg); }
+}
+
+.animate-flame {
+  animation: flameDance 0.8s ease-in-out infinite;
+}
+
+/* Progress bar fill animation */
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: var(--progress); }
+}
+
+.animate-progress-fill {
+  animation: progressFill 0.8s ease-out forwards;
+}
+
+/* Checkbox check animation */
+@keyframes checkmark {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.animate-checkmark {
+  animation: checkmark 0.3s ease-out forwards;
+}
+
+/* Widget grid layout */
+.widget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* Calendar grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+/* Heatmap grid */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(53, 1fr);
+  gap: 2px;
 }

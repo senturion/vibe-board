@@ -13,8 +13,17 @@ import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useColumnColors } from '@/hooks/useColumnColors'
 import { FilterState, SortState } from '@/components/FilterSort'
 import { SettingsPanel } from '@/components/SettingsPanel'
+import { useNavigation } from '@/contexts/NavigationContext'
+import { MainNav } from '@/components/navigation/MainNav'
+import { HabitsPage } from '@/components/habits/HabitsPage'
+import { GoalsPage } from '@/components/goals/GoalsPage'
+import { RoutinesPage } from '@/components/routines/RoutinesPage'
+import { JournalPage } from '@/components/journal/JournalPage'
+import { FocusPage } from '@/components/focus'
+import { Dashboard } from '@/components/dashboard'
 
 export default function Home() {
+  const { activeView } = useNavigation()
   const {
     boards,
     activeBoard,
@@ -59,67 +68,113 @@ export default function Home() {
     // Data is already imported to localStorage, just reload
   }
 
+  // Render content based on active view
+  const renderContent = () => {
+    switch (activeView) {
+      case 'habits':
+        return <HabitsPage />
+      case 'goals':
+        return <GoalsPage />
+      case 'journal':
+        return <JournalPage />
+      case 'routines':
+        return <RoutinesPage />
+      case 'focus':
+        return <FocusPage />
+      case 'dashboard':
+        return <Dashboard />
+      case 'board':
+      default:
+        return (
+          <>
+            {/* Board Header with controls */}
+            <Header
+              boards={boards}
+              activeBoard={activeBoard}
+              onSwitchBoard={switchBoard}
+              onAddBoard={addBoard}
+              onDeleteBoard={deleteBoard}
+              onUpdateBoard={updateBoard}
+              onOpenSearch={() => setSearchOpen(true)}
+              onOpenStats={() => setShowStats(true)}
+              onOpenDataManager={() => setShowDataManager(true)}
+              onOpenSettings={() => setShowSettings(true)}
+              filters={filters}
+              sort={sort}
+              onFilterChange={setFilters}
+              onSortChange={setSort}
+              activeFilterCount={activeFilterCount}
+            />
+            {/* Editorial Subheader */}
+            <div className="relative px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
+              <div className="flex items-end justify-between gap-8">
+                <div className="animate-fade-up">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-1">
+                    Current Board
+                  </p>
+                  <h2 className="font-display text-2xl text-[var(--text-primary)] tracking-tight leading-none italic">
+                    {activeBoard.name}
+                  </h2>
+                </div>
+                <div className="animate-fade-up flex items-center gap-6 pb-1" style={{ animationDelay: '0.1s', opacity: 0 }}>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">Today</p>
+                    <p className="text-sm text-[var(--text-secondary)] font-light">
+                      {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="w-px h-8 bg-[var(--border)]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" title="Synced locally" />
+                </div>
+              </div>
+
+              {/* Decorative line */}
+              <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-[var(--accent)] via-[var(--border)] to-transparent" />
+            </div>
+
+            {/* Board Area */}
+            <div className="flex-1 overflow-auto">
+              <Board
+                boardId={activeBoardId}
+                searchOpen={searchOpen}
+                onSearchClose={() => setSearchOpen(false)}
+                filters={filters}
+                sort={sort}
+                compact={compact}
+              />
+            </div>
+          </>
+        )
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg-primary)] theme-transition">
-      {/* Main Kanban Area */}
+      {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header with Board Selector */}
-        <Header
-          boards={boards}
-          activeBoard={activeBoard}
-          onSwitchBoard={switchBoard}
-          onAddBoard={addBoard}
-          onDeleteBoard={deleteBoard}
-          onUpdateBoard={updateBoard}
-          onOpenSearch={() => setSearchOpen(true)}
-          onOpenStats={() => setShowStats(true)}
-          onOpenDataManager={() => setShowDataManager(true)}
-          onOpenSettings={() => setShowSettings(true)}
-          filters={filters}
-          sort={sort}
-          onFilterChange={setFilters}
-          onSortChange={setSort}
-          activeFilterCount={activeFilterCount}
-        />
-
-        {/* Editorial Subheader */}
-        <div className="relative px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
-          <div className="flex items-end justify-between gap-8">
-            <div className="animate-fade-up">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-1">
-                Current Board
-              </p>
-              <h2 className="font-display text-2xl text-[var(--text-primary)] tracking-tight leading-none italic">
-                {activeBoard.name}
-              </h2>
-            </div>
-            <div className="animate-fade-up flex items-center gap-6 pb-1" style={{ animationDelay: '0.1s', opacity: 0 }}>
-              <div className="text-right">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">Today</p>
-                <p className="text-sm text-[var(--text-secondary)] font-light">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                </p>
-              </div>
-              <div className="w-px h-8 bg-[var(--border)]" />
-              <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" title="Synced locally" />
-            </div>
+        {/* Header with Navigation */}
+        <header className="flex items-center justify-between px-6 py-3 border-b border-[var(--border-subtle)] theme-transition">
+          {/* Left: Logo & Navigation */}
+          <div className="flex items-center gap-6">
+            <h1 className="font-display text-xl tracking-tight text-[var(--text-primary)]">
+              <span className="italic">Vibe</span>
+              <span className="text-[var(--accent)]">Board</span>
+            </h1>
+            <MainNav />
           </div>
 
-          {/* Decorative line */}
-          <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-[var(--accent)] via-[var(--border)] to-transparent" />
-        </div>
+          {/* Right: Settings button (always visible) */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+            title="Settings"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </header>
 
-        {/* Board Area */}
-        <div className="flex-1 overflow-auto">
-          <Board
-            boardId={activeBoardId}
-            searchOpen={searchOpen}
-            onSearchClose={() => setSearchOpen(false)}
-            filters={filters}
-            sort={sort}
-            compact={compact}
-          />
-        </div>
+        {/* View Content */}
+        {renderContent()}
       </main>
 
       {/* Sidebar */}

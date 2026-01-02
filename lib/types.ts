@@ -87,3 +87,387 @@ export function isDueSoon(dueDate: number): boolean {
   const twoDaysFromNow = now.getTime() + 2 * 24 * 60 * 60 * 1000
   return dueDate >= now.getTime() && dueDate <= twoDaysFromNow
 }
+
+// =====================================================
+// LIFE DASHBOARD TYPES
+// =====================================================
+
+// Navigation
+export type ViewId = 'dashboard' | 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus'
+
+export const VIEWS: { id: ViewId; title: string; icon: string }[] = [
+  { id: 'dashboard', title: 'Dashboard', icon: 'LayoutDashboard' },
+  { id: 'board', title: 'Board', icon: 'Columns3' },
+  { id: 'habits', title: 'Habits', icon: 'Target' },
+  { id: 'goals', title: 'Goals', icon: 'Flag' },
+  { id: 'journal', title: 'Journal', icon: 'BookOpen' },
+  { id: 'routines', title: 'Routines', icon: 'ListChecks' },
+  { id: 'focus', title: 'Focus', icon: 'Timer' },
+]
+
+// =====================================================
+// ROUTINES
+// =====================================================
+
+export type DayOfWeek = 1 | 2 | 3 | 4 | 5 | 6 | 7 // 1=Mon, 7=Sun
+
+export const DAYS_OF_WEEK: { id: DayOfWeek; label: string; short: string }[] = [
+  { id: 1, label: 'Monday', short: 'Mon' },
+  { id: 2, label: 'Tuesday', short: 'Tue' },
+  { id: 3, label: 'Wednesday', short: 'Wed' },
+  { id: 4, label: 'Thursday', short: 'Thu' },
+  { id: 5, label: 'Friday', short: 'Fri' },
+  { id: 6, label: 'Saturday', short: 'Sat' },
+  { id: 7, label: 'Sunday', short: 'Sun' },
+]
+
+export const DAY_PRESETS = {
+  everyday: [1, 2, 3, 4, 5, 6, 7] as DayOfWeek[],
+  weekdays: [1, 2, 3, 4, 5] as DayOfWeek[],
+  weekends: [6, 7] as DayOfWeek[],
+}
+
+export interface Routine {
+  id: string
+  name: string
+  description?: string
+  daysOfWeek: DayOfWeek[]
+  isActive: boolean
+  order: number
+  createdAt: number
+  items?: RoutineItem[]
+}
+
+export interface RoutineItem {
+  id: string
+  routineId: string
+  title: string
+  targetTime?: number // in minutes
+  order: number
+  createdAt: number
+}
+
+export interface RoutineCompletion {
+  id: string
+  routineId: string
+  completionDate: string // YYYY-MM-DD
+  completedAt: number
+}
+
+export interface RoutineItemCompletion {
+  id: string
+  routineItemId: string
+  completionDate: string // YYYY-MM-DD
+  completedAt: number
+  duration?: number // in minutes
+}
+
+// =====================================================
+// HABITS
+// =====================================================
+
+export type FrequencyType = 'daily' | 'weekly' | 'specific_days'
+
+export interface HabitCategory {
+  id: string
+  name: string
+  color: string
+  icon?: string
+  order: number
+  createdAt: number
+}
+
+export interface Habit {
+  id: string
+  categoryId?: string
+  name: string
+  description?: string
+  frequencyType: FrequencyType
+  frequencyValue: number // for 'weekly': X times per week
+  specificDays?: DayOfWeek[] // for 'specific_days'
+  targetCount: number // how many times per day/occasion
+  isActive: boolean
+  color: string
+  icon?: string
+  order: number
+  createdAt: number
+  archivedAt?: number
+  category?: HabitCategory
+}
+
+export interface HabitCompletion {
+  id: string
+  habitId: string
+  completionDate: string // YYYY-MM-DD
+  count: number // supports multiple completions per day
+  note?: string
+  completedAt: number
+}
+
+export interface HabitStreak {
+  id: string
+  habitId: string
+  currentStreak: number
+  bestStreak: number
+  lastCompletionDate?: string // YYYY-MM-DD
+  updatedAt: number
+}
+
+// Habit Analytics
+export interface HeatmapEntry {
+  date: string // YYYY-MM-DD
+  count: number
+  level: 0 | 1 | 2 | 3 | 4 // 0=none, 1-4=intensity levels
+}
+
+export interface HabitStats {
+  totalCompletions: number
+  averagePerWeek: number
+  currentStreak: number
+  bestStreak: number
+  completionRate: number // percentage
+}
+
+export const HABIT_COLORS: string[] = [
+  '#e07a5f', // terracotta
+  '#81b29a', // sage
+  '#f2cc8f', // sand
+  '#3d405b', // charcoal
+  '#f4a261', // orange
+  '#2a9d8f', // teal
+  '#e76f51', // coral
+  '#264653', // dark teal
+]
+
+// =====================================================
+// GOALS
+// =====================================================
+
+export type GoalStatus = 'active' | 'completed' | 'paused' | 'abandoned'
+export type GoalPriority = 'low' | 'medium' | 'high'
+
+export interface GoalCategory {
+  id: string
+  name: string
+  color: string
+  icon?: string
+  order: number
+  createdAt: number
+}
+
+export interface Goal {
+  id: string
+  categoryId?: string
+  title: string
+  description?: string
+  targetDate?: string // YYYY-MM-DD
+  startDate: string // YYYY-MM-DD
+  status: GoalStatus
+  progress: number // 0-100
+  priority: GoalPriority
+  order: number
+  createdAt: number
+  completedAt?: number
+  archivedAt?: number
+  category?: GoalCategory
+  milestones?: Milestone[]
+}
+
+export interface Milestone {
+  id: string
+  goalId: string
+  title: string
+  description?: string
+  targetDate?: string // YYYY-MM-DD
+  isCompleted: boolean
+  completedAt?: number
+  order: number
+  createdAt: number
+}
+
+export interface GoalTaskLink {
+  id: string
+  goalId: string
+  taskId: string
+  createdAt: number
+}
+
+export const GOAL_STATUSES: { id: GoalStatus; label: string; color: string }[] = [
+  { id: 'active', label: 'Active', color: 'var(--accent)' },
+  { id: 'completed', label: 'Completed', color: 'var(--success)' },
+  { id: 'paused', label: 'Paused', color: 'var(--text-tertiary)' },
+  { id: 'abandoned', label: 'Abandoned', color: '#ef4444' },
+]
+
+// =====================================================
+// JOURNAL
+// =====================================================
+
+export interface JournalPrompt {
+  id: string
+  promptText: string
+  isActive: boolean
+  order: number
+  createdAt: number
+}
+
+export interface JournalEntry {
+  id: string
+  entryDate: string // YYYY-MM-DD
+  content: string
+  mood?: number // 1-5 scale
+  moodEmoji?: string
+  tags: string[]
+  isFavorite: boolean
+  wordCount: number
+  createdAt: number
+  updatedAt: number
+}
+
+export const MOOD_EMOJIS: { value: number; emoji: string; label: string }[] = [
+  { value: 1, emoji: '😢', label: 'Terrible' },
+  { value: 2, emoji: '😕', label: 'Bad' },
+  { value: 3, emoji: '😐', label: 'Okay' },
+  { value: 4, emoji: '🙂', label: 'Good' },
+  { value: 5, emoji: '😄', label: 'Great' },
+]
+
+export const DEFAULT_JOURNAL_PROMPTS: string[] = [
+  'What are you grateful for today?',
+  'What was the highlight of your day?',
+  'What challenged you today?',
+  'What did you learn today?',
+  'How are you feeling right now?',
+  'What are your intentions for tomorrow?',
+]
+
+// =====================================================
+// FOCUS TIMER
+// =====================================================
+
+export type SessionType = 'work' | 'short_break' | 'long_break'
+
+export interface FocusSettings {
+  workDuration: number // minutes
+  shortBreakDuration: number
+  longBreakDuration: number
+  sessionsUntilLongBreak: number
+  autoStartBreaks: boolean
+  autoStartWork: boolean
+  soundEnabled: boolean
+  soundVolume: number // 0-100
+}
+
+export const DEFAULT_FOCUS_SETTINGS: FocusSettings = {
+  workDuration: 25,
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  sessionsUntilLongBreak: 4,
+  autoStartBreaks: false,
+  autoStartWork: false,
+  soundEnabled: true,
+  soundVolume: 70,
+}
+
+export interface FocusSession {
+  id: string
+  sessionType: SessionType
+  plannedDuration: number // minutes
+  actualDuration?: number // minutes
+  isCompleted: boolean
+  taskId?: string
+  goalId?: string
+  note?: string
+  startedAt: number
+  endedAt?: number
+}
+
+export const SESSION_TYPES: { id: SessionType; label: string; color: string }[] = [
+  { id: 'work', label: 'Work', color: 'var(--accent)' },
+  { id: 'short_break', label: 'Short Break', color: 'var(--success)' },
+  { id: 'long_break', label: 'Long Break', color: '#81b29a' },
+]
+
+// =====================================================
+// DASHBOARD WIDGETS
+// =====================================================
+
+export type WidgetType = 'routines' | 'habits' | 'goals' | 'journal' | 'focus' | 'stats' | 'calendar' | 'weather' | 'tasks'
+
+export interface DashboardWidget {
+  id: string
+  widgetType: WidgetType
+  title?: string // custom title override
+  positionX: number
+  positionY: number
+  width: number // grid columns
+  height: number // grid rows
+  config: Record<string, unknown> // widget-specific settings
+  isVisible: boolean
+  createdAt: number
+}
+
+export const WIDGET_TYPES: { id: WidgetType; title: string; icon: string; defaultSize: { width: number; height: number } }[] = [
+  { id: 'routines', title: 'Today\'s Routines', icon: 'ListChecks', defaultSize: { width: 1, height: 2 } },
+  { id: 'habits', title: 'Habit Tracker', icon: 'Target', defaultSize: { width: 2, height: 2 } },
+  { id: 'goals', title: 'Goals Progress', icon: 'Flag', defaultSize: { width: 1, height: 2 } },
+  { id: 'journal', title: 'Quick Journal', icon: 'BookOpen', defaultSize: { width: 1, height: 1 } },
+  { id: 'focus', title: 'Focus Timer', icon: 'Timer', defaultSize: { width: 1, height: 1 } },
+  { id: 'stats', title: 'Quick Stats', icon: 'BarChart3', defaultSize: { width: 2, height: 1 } },
+  { id: 'calendar', title: 'Calendar', icon: 'Calendar', defaultSize: { width: 1, height: 2 } },
+  { id: 'weather', title: 'Weather', icon: 'Cloud', defaultSize: { width: 1, height: 1 } },
+  { id: 'tasks', title: 'Today\'s Tasks', icon: 'CheckSquare', defaultSize: { width: 1, height: 2 } },
+]
+
+// =====================================================
+// HELPER FUNCTIONS
+// =====================================================
+
+// Get current day of week (1=Mon, 7=Sun)
+export function getCurrentDayOfWeek(): DayOfWeek {
+  const day = new Date().getDay()
+  return (day === 0 ? 7 : day) as DayOfWeek
+}
+
+// Check if a routine should be active today
+export function isRoutineActiveToday(routine: Routine): boolean {
+  return routine.isActive && routine.daysOfWeek.includes(getCurrentDayOfWeek())
+}
+
+// Check if a habit should be tracked today
+export function isHabitActiveToday(habit: Habit): boolean {
+  if (!habit.isActive) return false
+  const today = getCurrentDayOfWeek()
+
+  switch (habit.frequencyType) {
+    case 'daily':
+      return true
+    case 'specific_days':
+      return habit.specificDays?.includes(today) ?? false
+    case 'weekly':
+      return true // weekly habits can be completed any day
+    default:
+      return false
+  }
+}
+
+// Format date as YYYY-MM-DD
+export function formatDateKey(date: Date = new Date()): string {
+  return date.toISOString().split('T')[0]
+}
+
+// Parse YYYY-MM-DD to Date
+export function parseDateKey(dateKey: string): Date {
+  return new Date(dateKey + 'T00:00:00')
+}
+
+// Calculate days between two dates
+export function daysBetween(date1: Date, date2: Date): number {
+  const oneDay = 24 * 60 * 60 * 1000
+  return Math.round(Math.abs((date1.getTime() - date2.getTime()) / oneDay))
+}
+
+// Calculate word count
+export function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(word => word.length > 0).length
+}
