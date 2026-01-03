@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, ListChecks, Sun, Moon, Briefcase, Home, Building2 } from 'lucide-react'
+import { Plus, ListChecks, Sun, Moon, Briefcase, Home, Building2, Dumbbell, Coffee, BookOpen, Brain, Sparkles, Check } from 'lucide-react'
 import { useRoutines } from '@/hooks/useRoutines'
 import { useWorkLocation } from '@/contexts/WorkLocationContext'
 import { Routine, DayOfWeek, WorkLocation } from '@/lib/types'
@@ -13,6 +13,165 @@ import { RoutineCard } from './RoutineCard'
 import { RoutineEditor } from './RoutineEditor'
 
 type ViewMode = 'today' | 'all'
+
+// Routine templates configuration
+const ROUTINE_TEMPLATES = [
+  {
+    id: 'morning',
+    name: 'Morning Routine',
+    description: 'Start your day right',
+    icon: Sun,
+    color: 'text-amber-400',
+    daysOfWeek: [1, 2, 3, 4, 5, 6, 7] as DayOfWeek[],
+    items: ['Wake up & stretch', 'Drink water', 'Meditate for 10 min', 'Review daily goals'],
+  },
+  {
+    id: 'evening',
+    name: 'Evening Routine',
+    description: 'Wind down & reflect',
+    icon: Moon,
+    color: 'text-indigo-400',
+    daysOfWeek: [1, 2, 3, 4, 5, 6, 7] as DayOfWeek[],
+    items: ['Review the day', 'Plan tomorrow', 'Gratitude journaling', 'Read for 20 min'],
+  },
+  {
+    id: 'work',
+    name: 'Work Start',
+    description: 'Weekday productivity',
+    icon: Briefcase,
+    color: 'text-blue-400',
+    daysOfWeek: [1, 2, 3, 4, 5] as DayOfWeek[],
+    items: ['Check calendar', 'Review priorities', 'Clear inbox to zero', 'Deep work block'],
+  },
+  {
+    id: 'workout',
+    name: 'Workout Routine',
+    description: 'Stay active & healthy',
+    icon: Dumbbell,
+    color: 'text-green-400',
+    daysOfWeek: [1, 2, 3, 4, 5] as DayOfWeek[],
+    items: ['Warm up (5 min)', 'Main workout', 'Cool down stretches', 'Log workout'],
+  },
+  {
+    id: 'wfh-start',
+    name: 'WFH Morning',
+    description: 'Remote work kickoff',
+    icon: Home,
+    color: 'text-violet-400',
+    daysOfWeek: [1, 2, 3, 4, 5] as DayOfWeek[],
+    location: 'wfh' as WorkLocation,
+    items: ['Get dressed properly', 'Set up workspace', 'Check Slack/Teams', 'Block focus time'],
+  },
+  {
+    id: 'office-start',
+    name: 'Office Arrival',
+    description: 'In-office kickoff',
+    icon: Building2,
+    color: 'text-orange-400',
+    daysOfWeek: [1, 2, 3, 4, 5] as DayOfWeek[],
+    location: 'office' as WorkLocation,
+    items: ['Settle in & coffee', 'Quick desk tidy', 'Check in with team', 'Review meeting schedule'],
+  },
+  {
+    id: 'focus',
+    name: 'Deep Focus Block',
+    description: 'Distraction-free work',
+    icon: Brain,
+    color: 'text-pink-400',
+    daysOfWeek: [1, 2, 3, 4, 5] as DayOfWeek[],
+    items: ['Silence notifications', 'Set timer for 90 min', 'Work on ONE task', 'Take a proper break'],
+  },
+  {
+    id: 'learning',
+    name: 'Learning Session',
+    description: 'Daily skill building',
+    icon: BookOpen,
+    color: 'text-cyan-400',
+    daysOfWeek: [1, 2, 3, 4, 5, 6, 7] as DayOfWeek[],
+    items: ['Pick one topic', 'Read/watch for 30 min', 'Take notes', 'Practice or apply'],
+  },
+  {
+    id: 'weekly-review',
+    name: 'Weekly Review',
+    description: 'Sunday planning',
+    icon: Sparkles,
+    color: 'text-yellow-400',
+    daysOfWeek: [7] as DayOfWeek[], // Sunday only
+    items: ['Review past week wins', 'Check goal progress', 'Plan next week', 'Clear task backlog'],
+  },
+]
+
+interface RoutineTemplatesProps {
+  routines: Routine[]
+  onAddRoutine: (name: string, daysOfWeek: DayOfWeek[], description?: string, location?: WorkLocation) => Promise<string>
+  onAddItem: (routineId: string, title: string) => Promise<string>
+}
+
+function RoutineTemplates({ routines, onAddRoutine, onAddItem }: RoutineTemplatesProps) {
+  const [addedTemplates, setAddedTemplates] = useState<Set<string>>(new Set())
+
+  // Check which templates already exist (by name match)
+  const existingNames = useMemo(() =>
+    new Set(routines.map(r => r.name.toLowerCase())),
+    [routines]
+  )
+
+  const availableTemplates = ROUTINE_TEMPLATES.filter(
+    t => !existingNames.has(t.name.toLowerCase()) && !addedTemplates.has(t.id)
+  )
+
+  if (availableTemplates.length === 0) {
+    return null
+  }
+
+  const handleAddTemplate = async (template: typeof ROUTINE_TEMPLATES[0]) => {
+    const id = await onAddRoutine(
+      template.name,
+      template.daysOfWeek,
+      template.description,
+      template.location
+    )
+    if (id) {
+      for (const item of template.items) {
+        await onAddItem(id, item)
+      }
+      setAddedTemplates(prev => new Set([...prev, template.id]))
+    }
+  }
+
+  return (
+    <div className="mt-8 pt-6 border-t border-[var(--border-subtle)]">
+      <h3 className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-4">
+        Quick-Add Templates
+      </h3>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {availableTemplates.map((template) => {
+          const Icon = template.icon
+          return (
+            <button
+              key={template.id}
+              onClick={() => handleAddTemplate(template)}
+              className="flex items-center gap-3 p-3 bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] transition-colors text-left group"
+            >
+              <div className={cn('p-2 bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-elevated)]', template.color)}>
+                <Icon size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-medium text-[var(--text-primary)] truncate">
+                  {template.name}
+                </p>
+                <p className="text-[10px] text-[var(--text-tertiary)] truncate">
+                  {template.description}
+                </p>
+              </div>
+              <Plus size={14} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent)] flex-shrink-0" />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export function RoutinesPage() {
   const {
@@ -234,72 +393,12 @@ export function RoutinesPage() {
             </div>
           )}
 
-          {/* Suggested routines (only show when no routines) */}
-          {routines.length === 0 && (
-            <div className="mt-8">
-              <h3 className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-4">
-                Suggested Routines
-              </h3>
-              <div className="grid gap-3 md:grid-cols-3">
-                <button
-                  onClick={async () => {
-                    const id = await addRoutine('Morning Routine', [1, 2, 3, 4, 5, 6, 7])
-                    if (id) {
-                      await addRoutineItem(id, 'Wake up & stretch')
-                      await addRoutineItem(id, 'Drink water')
-                      await addRoutineItem(id, 'Meditate')
-                      await addRoutineItem(id, 'Review goals')
-                    }
-                  }}
-                  className="flex items-center gap-3 p-4 bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors text-left"
-                >
-                  <Sun size={20} className="text-[var(--accent)]" />
-                  <div>
-                    <p className="text-[13px] font-medium text-[var(--text-primary)]">Morning Routine</p>
-                    <p className="text-[11px] text-[var(--text-tertiary)]">Start your day right</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={async () => {
-                    const id = await addRoutine('Work Routine', [1, 2, 3, 4, 5])
-                    if (id) {
-                      await addRoutineItem(id, 'Check calendar')
-                      await addRoutineItem(id, 'Review priorities')
-                      await addRoutineItem(id, 'Deep work session')
-                      await addRoutineItem(id, 'Process inbox')
-                    }
-                  }}
-                  className="flex items-center gap-3 p-4 bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors text-left"
-                >
-                  <Briefcase size={20} className="text-[var(--chart-2)]" />
-                  <div>
-                    <p className="text-[13px] font-medium text-[var(--text-primary)]">Work Routine</p>
-                    <p className="text-[11px] text-[var(--text-tertiary)]">Weekday productivity</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={async () => {
-                    const id = await addRoutine('Evening Routine', [1, 2, 3, 4, 5, 6, 7])
-                    if (id) {
-                      await addRoutineItem(id, 'Review the day')
-                      await addRoutineItem(id, 'Plan tomorrow')
-                      await addRoutineItem(id, 'Wind down')
-                      await addRoutineItem(id, 'Read')
-                    }
-                  }}
-                  className="flex items-center gap-3 p-4 bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors text-left"
-                >
-                  <Moon size={20} className="text-[var(--chart-3)]" />
-                  <div>
-                    <p className="text-[13px] font-medium text-[var(--text-primary)]">Evening Routine</p>
-                    <p className="text-[11px] text-[var(--text-tertiary)]">End your day well</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Routine Templates - always visible */}
+          <RoutineTemplates
+            routines={routines}
+            onAddRoutine={addRoutine}
+            onAddItem={addRoutineItem}
+          />
         </div>
       </div>
 
