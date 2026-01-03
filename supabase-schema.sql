@@ -520,6 +520,29 @@ create policy "Users can update own dashboard_widgets" on public.dashboard_widge
 create policy "Users can delete own dashboard_widgets" on public.dashboard_widgets for delete using (auth.uid() = user_id);
 
 -- =====================================================
+-- WORK LOCATIONS
+-- =====================================================
+
+-- Work location per day (WFH vs Office)
+create table public.work_locations (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  date date not null,
+  location text not null check (location in ('wfh', 'office')),
+  created_at timestamptz default now() not null,
+  unique(user_id, date)
+);
+
+-- Enable RLS for work_locations
+alter table public.work_locations enable row level security;
+
+-- RLS Policies for work_locations
+create policy "Users can view own work_locations" on public.work_locations for select using (auth.uid() = user_id);
+create policy "Users can create own work_locations" on public.work_locations for insert with check (auth.uid() = user_id);
+create policy "Users can update own work_locations" on public.work_locations for update using (auth.uid() = user_id);
+create policy "Users can delete own work_locations" on public.work_locations for delete using (auth.uid() = user_id);
+
+-- =====================================================
 -- EXTEND USER SETTINGS
 -- =====================================================
 
@@ -527,3 +550,15 @@ create policy "Users can delete own dashboard_widgets" on public.dashboard_widge
 alter table public.user_settings
   add column if not exists default_view text default 'dashboard',
   add column if not exists sidebar_widgets text[] default '{"routines","focus"}';
+
+-- =====================================================
+-- ADD LOCATION TO ROUTINES
+-- =====================================================
+
+-- Add location column to routines (NULL = both locations)
+alter table public.routines
+  add column if not exists location text check (location in ('wfh', 'office'));
+
+-- Add app_settings column for comprehensive settings storage
+alter table public.user_settings
+  add column if not exists app_settings jsonb default '{}';

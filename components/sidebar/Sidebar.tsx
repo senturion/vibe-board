@@ -1,68 +1,119 @@
 'use client'
 
 import { useState } from 'react'
-import { PanelRightClose, PanelRight } from 'lucide-react'
+import { PanelRightClose, PanelRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { TodoList } from './TodoList'
 import { Notes } from './Notes'
+import { QuoteWidget, WeatherWidget, HabitsMiniWidget, FocusMiniWidget, GoalsMiniWidget, WorkLocationWidget } from './widgets'
 import { cn } from '@/lib/utils'
+
+interface SectionProps {
+  title: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}
+
+function CollapsibleSection({ title, defaultOpen = true, children }: SectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
+  return (
+    <div className="border-b border-[var(--border-subtle)]">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors"
+      >
+        <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)] font-medium">
+          {title}
+        </span>
+        {isOpen ? (
+          <ChevronUp size={12} className="text-[var(--text-tertiary)]" />
+        ) : (
+          <ChevronDown size={12} className="text-[var(--text-tertiary)]" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-3">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(true)
 
   return (
     <>
-      {/* Toggle button when sidebar is closed */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed right-6 top-8 p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors z-10"
-          title="Open sidebar"
-        >
-          <PanelRight size={20} />
-        </button>
-      )}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed right-8 top-3 p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors z-20"
+        title={isOpen ? 'Close sidebar' : 'Open sidebar'}
+      >
+        {isOpen ? <PanelRightClose size={20} /> : <PanelRight size={20} />}
+      </button>
 
       {/* Sidebar */}
       <aside
         className={cn(
           'h-screen bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)] flex flex-col transition-all duration-300 ease-out',
-          isOpen ? 'w-[340px] animate-slide-in' : 'w-0 overflow-hidden'
+          isOpen ? 'w-[320px] animate-slide-in' : 'w-0 overflow-hidden'
         )}
       >
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-1">
-              Workspace
-            </p>
-            <span className="font-display text-lg text-[var(--text-primary)] italic">Tools</span>
-          </div>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-            title="Close sidebar"
-          >
-            <PanelRightClose size={18} />
-          </button>
-        </div>
-
-        {/* Sections Container */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Todo List Section */}
-          <div className="p-6 border-b border-[var(--border-subtle)] h-[50%] overflow-hidden">
-            <TodoList />
-          </div>
-
-          {/* Notes Section */}
-          <div className="p-6 flex-1 overflow-hidden">
-            <Notes />
+            <span className="font-display text-xl tracking-tight text-[var(--text-primary)]">Widgets</span>
           </div>
         </div>
 
-        {/* Sidebar Footer */}
-        <div className="px-6 py-4 border-t border-[var(--border-subtle)]">
-          <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">
-            Data saved locally
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Weather & Quote - Always visible at top */}
+          <div className="p-4 space-y-3 border-b border-[var(--border-subtle)]">
+            <WeatherWidget />
+            <QuoteWidget />
+          </div>
+
+          {/* Work Location */}
+          <CollapsibleSection title="Work Location" defaultOpen={true}>
+            <WorkLocationWidget />
+          </CollapsibleSection>
+
+          {/* Focus Timer */}
+          <CollapsibleSection title="Focus Timer" defaultOpen={true}>
+            <FocusMiniWidget />
+          </CollapsibleSection>
+
+          {/* Habits */}
+          <CollapsibleSection title="Today's Habits" defaultOpen={true}>
+            <HabitsMiniWidget />
+          </CollapsibleSection>
+
+          {/* Goals */}
+          <CollapsibleSection title="Goals" defaultOpen={true}>
+            <GoalsMiniWidget />
+          </CollapsibleSection>
+
+          {/* Quick Tasks */}
+          <CollapsibleSection title="Quick Tasks" defaultOpen={true}>
+            <div className="max-h-[200px] overflow-y-auto">
+              <TodoList compact />
+            </div>
+          </CollapsibleSection>
+
+          {/* Notes */}
+          <CollapsibleSection title="Quick Notes" defaultOpen={false}>
+            <div className="max-h-[250px] overflow-y-auto">
+              <Notes compact />
+            </div>
+          </CollapsibleSection>
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-2 border-t border-[var(--border-subtle)]">
+          <p className="text-[9px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">
+            Synced with Supabase
           </p>
         </div>
       </aside>

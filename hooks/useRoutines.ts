@@ -8,6 +8,7 @@ import {
   RoutineItem,
   RoutineItemCompletion,
   DayOfWeek,
+  WorkLocation,
   formatDateKey,
   getCurrentDayOfWeek,
   isRoutineActiveToday,
@@ -72,6 +73,7 @@ export function useRoutines() {
         name: r.name,
         description: r.description || undefined,
         daysOfWeek: r.days_of_week as DayOfWeek[],
+        location: r.location as WorkLocation | undefined,
         isActive: r.is_active,
         order: r.order,
         createdAt: new Date(r.created_at).getTime(),
@@ -125,7 +127,7 @@ export function useRoutines() {
   }
 
   // Add a new routine
-  const addRoutine = useCallback(async (name: string, daysOfWeek: DayOfWeek[]) => {
+  const addRoutine = useCallback(async (name: string, daysOfWeek: DayOfWeek[], description?: string, location?: WorkLocation) => {
     if (!user) return ''
 
     const order = routines.length
@@ -134,7 +136,9 @@ export function useRoutines() {
       .insert({
         user_id: user.id,
         name,
+        description: description || null,
         days_of_week: daysOfWeek,
+        location: location || null,
         order,
       })
       .select()
@@ -150,6 +154,7 @@ export function useRoutines() {
       name: data.name,
       description: data.description || undefined,
       daysOfWeek: data.days_of_week as DayOfWeek[],
+      location: data.location as WorkLocation | undefined,
       isActive: data.is_active,
       order: data.order,
       createdAt: new Date(data.created_at).getTime(),
@@ -157,7 +162,7 @@ export function useRoutines() {
 
     setRoutines(prev => [...prev, newRoutine])
     return newRoutine.id
-  }, [user, supabase])
+  }, [user, supabase, routines.length])
 
   // Update a routine
   const updateRoutine = useCallback(async (id: string, updates: Partial<Routine>) => {
@@ -168,6 +173,7 @@ export function useRoutines() {
     if (updates.description !== undefined) dbUpdates.description = updates.description
     if (updates.daysOfWeek !== undefined) dbUpdates.days_of_week = updates.daysOfWeek
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
+    if ('location' in updates) dbUpdates.location = updates.location || null
 
     const { error } = await supabase
       .from('routines')
@@ -353,9 +359,21 @@ export function useRoutines() {
     return items.filter(i => i.routineId === routineId).sort((a, b) => a.order - b.order)
   }, [items])
 
-  // Get today's routines
-  const getTodaysRoutines = useCallback(() => {
-    return routines.filter(isRoutineActiveToday)
+  // Get today's routines (optionally filtered by work location)
+  const getTodaysRoutines = useCallback((workLocation?: WorkLocation | null) => {
+    return routines.filter(routine => {
+      // First check if routine is active today (day of week)
+      if (!isRoutineActiveToday(routine)) return false
+
+      // If no work location filter provided, show all routines
+      if (!workLocation) return true
+
+      // If routine has no location set (both), always show it
+      if (!routine.location) return true
+
+      // Otherwise, filter by matching location
+      return routine.location === workLocation
+    })
   }, [routines])
 
   // Get routine progress for today

@@ -11,9 +11,10 @@ interface TodoItemProps {
   onDelete: (id: string) => void
   onUpdate: (id: string, text: string) => void
   index?: number
+  compact?: boolean
 }
 
-export function TodoItem({ todo, onToggle, onDelete, onUpdate, index = 0 }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onDelete, onUpdate, index = 0, compact = false }: TodoItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(todo.text)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -46,21 +47,22 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, index = 0 }: Todo
   return (
     <div
       className={cn(
-        'group flex items-start gap-3 py-2 px-2 -mx-2 rounded transition-colors',
-        'hover:bg-[var(--bg-tertiary)]'
+        'group flex items-start gap-2 transition-colors',
+        compact ? 'py-1' : 'py-2 px-2 -mx-2 rounded hover:bg-[var(--bg-tertiary)]'
       )}
     >
       {/* Custom Checkbox */}
       <button
         onClick={() => onToggle(todo.id)}
         className={cn(
-          'mt-0.5 w-4 h-4 border flex items-center justify-center shrink-0 transition-all duration-200',
+          'border flex items-center justify-center shrink-0 transition-all duration-200',
+          compact ? 'w-3.5 h-3.5 mt-0.5' : 'mt-0.5 w-4 h-4',
           todo.completed
             ? 'bg-[var(--accent)] border-[var(--accent)]'
             : 'border-[var(--text-tertiary)] hover:border-[var(--text-secondary)]'
         )}
       >
-        {todo.completed && <Check size={10} className="text-[var(--bg-primary)]" strokeWidth={3} />}
+        {todo.completed && <Check size={compact ? 8 : 10} className="text-[var(--bg-primary)]" strokeWidth={3} />}
       </button>
 
       {/* Text */}
@@ -72,13 +74,17 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, index = 0 }: Todo
           onChange={(e) => setEditText(e.target.value)}
           onBlur={handleSubmit}
           onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent text-[13px] text-[var(--text-primary)] outline-none min-w-0"
+          className={cn(
+            'flex-1 bg-transparent text-[var(--text-primary)] outline-none min-w-0',
+            compact ? 'text-[11px]' : 'text-[13px]'
+          )}
         />
       ) : (
         <span
-          onDoubleClick={() => setIsEditing(true)}
+          onDoubleClick={() => !compact && setIsEditing(true)}
           className={cn(
-            'flex-1 text-[13px] cursor-default select-none leading-relaxed',
+            'flex-1 cursor-default select-none',
+            compact ? 'text-[11px] leading-normal truncate' : 'text-[13px] leading-relaxed',
             todo.completed
               ? 'text-[var(--text-tertiary)] line-through decoration-[var(--text-tertiary)]'
               : 'text-[var(--text-primary)]'
@@ -89,12 +95,14 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, index = 0 }: Todo
       )}
 
       {/* Delete Button */}
-      <button
-        onClick={() => onDelete(todo.id)}
-        className="opacity-0 group-hover:opacity-100 p-1 -m-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
-      >
-        <X size={12} />
-      </button>
+      {!compact && (
+        <button
+          onClick={() => onDelete(todo.id)}
+          className="opacity-0 group-hover:opacity-100 p-1 -m-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
+        >
+          <X size={12} />
+        </button>
+      )}
     </div>
   )
 }

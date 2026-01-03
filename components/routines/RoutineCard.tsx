@@ -5,6 +5,7 @@ import { Check, MoreHorizontal, Edit2, Trash2, Plus, Clock } from 'lucide-react'
 import { Routine, RoutineItem, DAYS_OF_WEEK } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { ProgressBar } from '@/components/ui/Progress'
+import { RoutineLocationBadge } from './RoutineLocationBadge'
 
 interface RoutineCardProps {
   routine: Routine
@@ -75,7 +76,10 @@ export function RoutineCard({
       {/* Header */}
       <div className="flex items-start justify-between p-4 border-b border-[var(--border-subtle)]">
         <div>
-          <h3 className="text-sm font-medium text-[var(--text-primary)]">{routine.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">{routine.name}</h3>
+            <RoutineLocationBadge location={routine.location} />
+          </div>
           <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{getDaysLabel()}</p>
         </div>
 

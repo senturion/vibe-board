@@ -1,0 +1,6 @@
+export { QuoteWidget } from './QuoteWidget'
+export { WeatherWidget } from './WeatherWidget'
+export { HabitsMiniWidget } from './HabitsMiniWidget'
+export { FocusMiniWidget } from './FocusMiniWidget'
+export { GoalsMiniWidget } from './GoalsMiniWidget'
+export { WorkLocationWidget } from './WorkLocationWidget'

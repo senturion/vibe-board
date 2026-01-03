@@ -20,7 +20,7 @@ import { GoalsPage } from '@/components/goals/GoalsPage'
 import { RoutinesPage } from '@/components/routines/RoutinesPage'
 import { JournalPage } from '@/components/journal/JournalPage'
 import { FocusPage } from '@/components/focus'
-import { Dashboard } from '@/components/dashboard'
+import { CalendarView } from '@/components/calendar'
 
 export default function Home() {
   const { activeView } = useNavigation()
@@ -71,6 +71,8 @@ export default function Home() {
   // Render content based on active view
   const renderContent = () => {
     switch (activeView) {
+      case 'calendar':
+        return <CalendarView />
       case 'habits':
         return <HabitsPage />
       case 'goals':
@@ -82,7 +84,6 @@ export default function Home() {
       case 'focus':
         return <FocusPage />
       case 'dashboard':
-        return <Dashboard />
       case 'board':
       default:
         return (
@@ -153,7 +154,7 @@ export default function Home() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header with Navigation */}
-        <header className="flex items-center justify-between px-6 py-3 border-b border-[var(--border-subtle)] theme-transition">
+        <header className="flex items-center justify-between px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
           {/* Left: Logo & Navigation */}
           <div className="flex items-center gap-6">
             <h1 className="font-display text-xl tracking-tight text-[var(--text-primary)]">
@@ -163,14 +164,7 @@ export default function Home() {
             <MainNav />
           </div>
 
-          {/* Right: Settings button (always visible) */}
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
-            title="Settings"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+          <div />
         </header>
 
         {/* View Content */}

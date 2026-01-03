@@ -5,7 +5,11 @@ import { Plus } from 'lucide-react'
 import { useTodos } from '@/hooks/useTodos'
 import { TodoItem } from './TodoItem'
 
-export function TodoList() {
+interface TodoListProps {
+  compact?: boolean
+}
+
+export function TodoList({ compact = false }: TodoListProps) {
   const { todos, addTodo, toggleTodo, deleteTodo, updateTodo } = useTodos()
   const [isAdding, setIsAdding] = useState(false)
   const [newText, setNewText] = useState('')
@@ -36,6 +40,55 @@ export function TodoList() {
 
   const pendingCount = todos.filter(t => !t.completed).length
   const completedCount = todos.filter(t => t.completed).length
+
+  if (compact) {
+    return (
+      <div className="space-y-1">
+        {todos.slice(0, 5).map((todo, index) => (
+          <TodoItem
+            key={todo.id}
+            todo={todo}
+            onToggle={toggleTodo}
+            onDelete={deleteTodo}
+            onUpdate={updateTodo}
+            index={index}
+            compact
+          />
+        ))}
+
+        {todos.length === 0 && !isAdding && (
+          <p className="text-[10px] text-[var(--text-tertiary)]">No tasks yet</p>
+        )}
+
+        {isAdding ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={newText}
+            onChange={(e) => setNewText(e.target.value)}
+            onBlur={handleSubmit}
+            onKeyDown={handleKeyDown}
+            placeholder="Add task..."
+            className="w-full bg-[var(--bg-secondary)] px-2 py-1 text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none border border-[var(--border)]"
+          />
+        ) : (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+          >
+            <Plus size={10} />
+            Add task
+          </button>
+        )}
+
+        {todos.length > 5 && (
+          <p className="text-[9px] text-[var(--text-tertiary)]">
+            +{todos.length - 5} more
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">

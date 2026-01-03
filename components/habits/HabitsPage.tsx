@@ -41,10 +41,11 @@ export function HabitsPage() {
 
   const todayHabits = useMemo(() => getActiveHabitsForToday(), [getActiveHabitsForToday])
 
+  const selectedHabitStreak = selectedHabitForStats ? getStreak(selectedHabitForStats.id) : undefined
   const selectedHabitAnalytics = useHabitAnalytics({
     habit: selectedHabitForStats,
     completions,
-    streak: selectedHabitForStats ? getStreak(selectedHabitForStats.id) : undefined,
+    streak: selectedHabitStreak ? { current: selectedHabitStreak.currentStreak, best: selectedHabitStreak.bestStreak } : undefined,
   })
 
   const handleSaveHabit = async (habitData: Omit<Habit, 'id' | 'createdAt' | 'order'>) => {
@@ -149,7 +150,7 @@ export function HabitsPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-medium text-[var(--text-primary)]">
-                      {Math.max(...habits.map(h => getStreak(h.id).current), 0)}
+                      {Math.max(...habits.map(h => getStreak(h.id)?.bestStreak || 0), 0)}
                     </p>
                     <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                       Best Streak
@@ -197,19 +198,23 @@ export function HabitsPage() {
                   />
                 ) : (
                   <div className="space-y-2 p-4 pt-0">
-                    {todayHabits.map((habit) => (
-                      <HabitCard
-                        key={habit.id}
-                        habit={habit}
-                        completionStatus={getCompletionStatus(habit.id)}
-                        streak={getStreak(habit.id)}
-                        onToggle={() => toggleHabit(habit.id)}
-                        onEdit={() => handleEdit(habit)}
-                        onDelete={() => deleteHabit(habit.id)}
-                        onArchive={() => archiveHabit(habit.id)}
-                        onViewStats={() => handleViewStats(habit)}
-                      />
-                    ))}
+                    {todayHabits.map((habit) => {
+                      const status = getCompletionStatus(habit.id)
+                      const streak = getStreak(habit.id)
+                      return (
+                        <HabitCard
+                          key={habit.id}
+                          habit={habit}
+                          completionStatus={{ completed: status.isComplete, count: status.count, target: status.target }}
+                          streak={{ current: streak?.currentStreak || 0, best: streak?.bestStreak || 0 }}
+                          onToggle={() => toggleHabit(habit.id)}
+                          onEdit={() => handleEdit(habit)}
+                          onDelete={() => deleteHabit(habit.id)}
+                          onArchive={() => archiveHabit(habit.id)}
+                          onViewStats={() => handleViewStats(habit)}
+                        />
+                      )
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -231,19 +236,23 @@ export function HabitsPage() {
               />
             ) : (
               <div className="space-y-3">
-                {habits.map((habit) => (
-                  <HabitCard
-                    key={habit.id}
-                    habit={habit}
-                    completionStatus={getCompletionStatus(habit.id)}
-                    streak={getStreak(habit.id)}
-                    onToggle={() => toggleHabit(habit.id)}
-                    onEdit={() => handleEdit(habit)}
-                    onDelete={() => deleteHabit(habit.id)}
-                    onArchive={() => archiveHabit(habit.id)}
-                    onViewStats={() => handleViewStats(habit)}
-                  />
-                ))}
+                {habits.map((habit) => {
+                  const status = getCompletionStatus(habit.id)
+                  const streak = getStreak(habit.id)
+                  return (
+                    <HabitCard
+                      key={habit.id}
+                      habit={habit}
+                      completionStatus={{ completed: status.isComplete, count: status.count, target: status.target }}
+                      streak={{ current: streak?.currentStreak || 0, best: streak?.bestStreak || 0 }}
+                      onToggle={() => toggleHabit(habit.id)}
+                      onEdit={() => handleEdit(habit)}
+                      onDelete={() => deleteHabit(habit.id)}
+                      onArchive={() => archiveHabit(habit.id)}
+                      onViewStats={() => handleViewStats(habit)}
+                    />
+                  )
+                })}
               </div>
             )}
           </div>

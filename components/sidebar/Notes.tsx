@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useNotes } from '@/hooks/useNotes'
 
-export function Notes() {
+interface NotesProps {
+  compact?: boolean
+}
+
+export function Notes({ compact = false }: NotesProps) {
   const { note, updateNote } = useNotes()
   const [localContent, setLocalContent] = useState('')
 
@@ -18,6 +22,24 @@ export function Notes() {
   }
 
   const wordCount = localContent.trim() ? localContent.trim().split(/\s+/).length : 0
+
+  if (compact) {
+    return (
+      <div>
+        <textarea
+          value={localContent}
+          onChange={handleChange}
+          placeholder="Quick notes..."
+          className="w-full h-[120px] bg-[var(--bg-secondary)] border border-[var(--border)] p-2 text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none leading-relaxed"
+        />
+        {wordCount > 0 && (
+          <p className="text-[9px] text-[var(--text-tertiary)] mt-1">
+            {wordCount} {wordCount === 1 ? 'word' : 'words'}
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">

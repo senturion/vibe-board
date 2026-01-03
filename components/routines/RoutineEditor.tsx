@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
-import { Routine, DayOfWeek, DAYS_OF_WEEK, DAY_PRESETS } from '@/lib/types'
+import { X, Home, Building2 } from 'lucide-react'
+import { Routine, DayOfWeek, DAYS_OF_WEEK, DAY_PRESETS, WorkLocation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface RoutineEditorProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (name: string, daysOfWeek: DayOfWeek[], description?: string) => void
+  onSave: (name: string, daysOfWeek: DayOfWeek[], description?: string, location?: WorkLocation) => void
   routine?: Routine
 }
 
@@ -21,6 +21,7 @@ export function RoutineEditor({
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [daysOfWeek, setDaysOfWeek] = useState<DayOfWeek[]>(DAY_PRESETS.everyday)
+  const [location, setLocation] = useState<WorkLocation | 'both'>('both')
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -29,10 +30,12 @@ export function RoutineEditor({
         setName(routine.name)
         setDescription(routine.description || '')
         setDaysOfWeek(routine.daysOfWeek)
+        setLocation(routine.location || 'both')
       } else {
         setName('')
         setDescription('')
         setDaysOfWeek(DAY_PRESETS.everyday)
+        setLocation('both')
       }
       setTimeout(() => nameInputRef.current?.focus(), 100)
     }
@@ -42,7 +45,12 @@ export function RoutineEditor({
     e.preventDefault()
     if (!name.trim() || daysOfWeek.length === 0) return
 
-    onSave(name.trim(), daysOfWeek, description.trim() || undefined)
+    onSave(
+      name.trim(),
+      daysOfWeek,
+      description.trim() || undefined,
+      location === 'both' ? undefined : location
+    )
     onClose()
   }
 
@@ -149,6 +157,60 @@ export function RoutineEditor({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Work Location */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+              Work Location
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setLocation('both')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2 text-[11px] border transition-colors',
+                  location === 'both'
+                    ? 'bg-[var(--accent-glow)] border-[var(--accent-muted)] text-[var(--accent)]'
+                    : 'border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)]'
+                )}
+              >
+                Both
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocation('wfh')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2 text-[11px] border transition-colors',
+                  location === 'wfh'
+                    ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
+                    : 'border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)]'
+                )}
+              >
+                <Home size={12} />
+                WFH
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocation('office')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2 text-[11px] border transition-colors',
+                  location === 'office'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                    : 'border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)]'
+                )}
+              >
+                <Building2 size={12} />
+                Office
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-[var(--text-tertiary)]">
+              {location === 'both'
+                ? 'This routine shows regardless of work location'
+                : location === 'wfh'
+                ? 'Only shows on Work from Home days'
+                : 'Only shows on Office days'}
+            </p>
           </div>
 
           {/* Actions */}

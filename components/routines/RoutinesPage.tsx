@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, ListChecks, Sun, Moon, Briefcase } from 'lucide-react'
+import { Plus, ListChecks, Sun, Moon, Briefcase, Home, Building2 } from 'lucide-react'
 import { useRoutines } from '@/hooks/useRoutines'
-import { Routine, DayOfWeek, getCurrentDayOfWeek } from '@/lib/types'
+import { useWorkLocation } from '@/contexts/WorkLocationContext'
+import { Routine, DayOfWeek, WorkLocation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import { ProgressRing } from '@/components/ui/Progress'
@@ -28,11 +29,17 @@ export function RoutinesPage() {
     toggleItem,
   } = useRoutines()
 
+  const { getTodaysLocation } = useWorkLocation()
+
   const [viewMode, setViewMode] = useState<ViewMode>('today')
   const [showEditor, setShowEditor] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState<Routine | undefined>()
 
-  const todaysRoutines = useMemo(() => getTodaysRoutines(), [getTodaysRoutines])
+  const todaysLocation = getTodaysLocation()
+  const todaysRoutines = useMemo(
+    () => getTodaysRoutines(todaysLocation),
+    [getTodaysRoutines, todaysLocation]
+  )
 
   const todayStats = useMemo(() => {
     let totalItems = 0
@@ -52,11 +59,11 @@ export function RoutinesPage() {
     }
   }, [todaysRoutines, getRoutineProgress])
 
-  const handleSaveRoutine = async (name: string, daysOfWeek: DayOfWeek[], description?: string) => {
+  const handleSaveRoutine = async (name: string, daysOfWeek: DayOfWeek[], description?: string, location?: WorkLocation) => {
     if (editingRoutine) {
-      await updateRoutine(editingRoutine.id, { name, daysOfWeek, description })
+      await updateRoutine(editingRoutine.id, { name, daysOfWeek, description, location })
     } else {
-      await addRoutine(name, daysOfWeek)
+      await addRoutine(name, daysOfWeek, description, location)
     }
     setEditingRoutine(undefined)
     setShowEditor(false)
@@ -127,48 +134,72 @@ export function RoutinesPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Today's Stats (only show in today view) */}
           {viewMode === 'today' && (
-            <div className="grid grid-cols-3 gap-4">
-              <Card variant="bordered" padding="md">
-                <div className="flex items-center gap-4">
-                  <ProgressRing
-                    value={todayStats.percentage}
-                    size={60}
-                    strokeWidth={5}
-                    color="var(--success)"
-                  />
-                  <div>
-                    <p className="text-2xl font-medium text-[var(--text-primary)]">
-                      {todayStats.percentage}%
+            <>
+              {/* Work location indicator */}
+              {todaysLocation && (
+                <div className={cn(
+                  'flex items-center gap-2 px-3 py-2 border',
+                  todaysLocation === 'wfh'
+                    ? 'bg-indigo-500/5 border-indigo-500/20'
+                    : 'bg-amber-500/5 border-amber-500/20'
+                )}>
+                  {todaysLocation === 'wfh' ? (
+                    <Home size={14} className="text-indigo-400" />
+                  ) : (
+                    <Building2 size={14} className="text-amber-400" />
+                  )}
+                  <span className={cn(
+                    'text-[11px]',
+                    todaysLocation === 'wfh' ? 'text-indigo-400' : 'text-amber-400'
+                  )}>
+                    Showing routines for: {todaysLocation === 'wfh' ? 'Work from Home' : 'Office'}
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-4">
+                <Card variant="bordered" padding="md">
+                  <div className="flex items-center gap-4">
+                    <ProgressRing
+                      value={todayStats.percentage}
+                      size={60}
+                      strokeWidth={5}
+                      color="var(--success)"
+                    />
+                    <div>
+                      <p className="text-2xl font-medium text-[var(--text-primary)]">
+                        {todayStats.percentage}%
+                      </p>
+                      <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                        Complete
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card variant="bordered" padding="md">
+                  <div className="text-center">
+                    <p className="text-3xl font-medium text-[var(--text-primary)]">
+                      {todayStats.completedItems}/{todayStats.totalItems}
                     </p>
-                    <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-                      Complete
+                    <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                      Items Done
                     </p>
                   </div>
-                </div>
-              </Card>
+                </Card>
 
-              <Card variant="bordered" padding="md">
-                <div className="text-center">
-                  <p className="text-3xl font-medium text-[var(--text-primary)]">
-                    {todayStats.completedItems}/{todayStats.totalItems}
-                  </p>
-                  <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
-                    Items Done
-                  </p>
-                </div>
-              </Card>
-
-              <Card variant="bordered" padding="md">
-                <div className="text-center">
-                  <p className="text-3xl font-medium text-[var(--accent)]">
-                    {todayStats.routines}
-                  </p>
-                  <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
-                    Active Routines
-                  </p>
-                </div>
-              </Card>
-            </div>
+                <Card variant="bordered" padding="md">
+                  <div className="text-center">
+                    <p className="text-3xl font-medium text-[var(--accent)]">
+                      {todayStats.routines}
+                    </p>
+                    <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                      Active Routines
+                    </p>
+                  </div>
+                </Card>
+              </div>
+            </>
           )}
 
           {/* Routines List */}

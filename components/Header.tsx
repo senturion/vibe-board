@@ -6,6 +6,7 @@ import { Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { FilterSort, FilterState, SortState } from './FilterSort'
 import { useAuth } from '@/contexts/AuthContext'
+import { Modal, ModalActions } from '@/components/ui'
 
 interface HeaderProps {
   boards: Board[]
@@ -47,6 +48,7 @@ export function Header({
   const [newBoardName, setNewBoardName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
   const { user, signOut } = useAuth()
@@ -86,7 +88,8 @@ export function Header({
   }
 
   return (
-    <header className="flex items-center justify-between px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
+    <>
+      <header className="flex items-center justify-between px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
       {/* Left: Logo & Board Selector */}
       <div className="flex items-center gap-6">
         {/* Logo */}
@@ -301,7 +304,7 @@ export function Header({
         {/* Sign Out */}
         {user && (
           <button
-            onClick={signOut}
+            onClick={() => setShowLogoutConfirm(true)}
             className="p-2 text-[var(--text-tertiary)] hover:text-red-400 border border-[var(--border)] hover:border-red-400/50 transition-colors"
             title={`Sign out (${user.email})`}
           >
@@ -309,6 +312,35 @@ export function Header({
           </button>
         )}
       </div>
-    </header>
+      </header>
+      <Modal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        title="Sign out"
+        description="Are you sure you want to sign out?"
+        size="sm"
+      >
+        <p className="text-[12px] text-[var(--text-secondary)]">
+          You can sign back in any time.
+        </p>
+        <ModalActions>
+          <button
+            onClick={() => setShowLogoutConfirm(false)}
+            className="px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              setShowLogoutConfirm(false)
+              signOut()
+            }}
+            className="px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] bg-red-500/10 text-red-400 border border-red-400/30 hover:border-red-400/60 transition-colors"
+          >
+            Sign out
+          </button>
+        </ModalActions>
+      </Modal>
+    </>
   )
 }

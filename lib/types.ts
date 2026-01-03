@@ -93,17 +93,47 @@ export function isDueSoon(dueDate: number): boolean {
 // =====================================================
 
 // Navigation
-export type ViewId = 'dashboard' | 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus'
+export type ViewId = 'dashboard' | 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus' | 'calendar'
 
 export const VIEWS: { id: ViewId; title: string; icon: string }[] = [
-  { id: 'dashboard', title: 'Dashboard', icon: 'LayoutDashboard' },
-  { id: 'board', title: 'Board', icon: 'Columns3' },
+  { id: 'dashboard', title: 'Home', icon: 'LayoutDashboard' },
+  { id: 'calendar', title: 'Calendar', icon: 'CalendarDays' },
   { id: 'habits', title: 'Habits', icon: 'Target' },
   { id: 'goals', title: 'Goals', icon: 'Flag' },
-  { id: 'journal', title: 'Journal', icon: 'BookOpen' },
   { id: 'routines', title: 'Routines', icon: 'ListChecks' },
+  { id: 'journal', title: 'Journal', icon: 'BookOpen' },
   { id: 'focus', title: 'Focus', icon: 'Timer' },
 ]
+
+// =====================================================
+// WORK LOCATION
+// =====================================================
+
+export type WorkLocation = 'wfh' | 'office'
+
+export interface WorkLocationEntry {
+  id: string
+  date: string // YYYY-MM-DD
+  location: WorkLocation
+  createdAt: number
+}
+
+export const WORK_LOCATIONS: { id: WorkLocation; label: string; emoji: string }[] = [
+  { id: 'wfh', label: 'Work from Home', emoji: '🏠' },
+  { id: 'office', label: 'Office', emoji: '🏢' },
+]
+
+// =====================================================
+// CALENDAR
+// =====================================================
+
+export interface CalendarDay {
+  date: string // YYYY-MM-DD
+  habits: { total: number; completed: number }
+  hasJournal: boolean
+  journalMood?: number
+  routines: { total: number; completed: number }
+}
 
 // =====================================================
 // ROUTINES
@@ -132,6 +162,7 @@ export interface Routine {
   name: string
   description?: string
   daysOfWeek: DayOfWeek[]
+  location?: WorkLocation // undefined = both locations
   isActive: boolean
   order: number
   createdAt: number
