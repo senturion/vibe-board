@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, BarChart3, Calendar, Target, Flame } from 'lucide-react'
+import { Plus, BarChart3, Calendar, Target, Flame, CalendarDays } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 import { useHabitAnalytics, useAllHabitsAnalytics } from '@/hooks/useHabitAnalytics'
-import { Habit, isHabitActiveToday } from '@/lib/types'
+import { useTemporalView } from '@/hooks/useTemporalView'
+import { Habit, isHabitActiveToday, formatDateKey, HabitCompletion } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { ProgressRing } from '@/components/ui/Progress'
@@ -13,8 +14,9 @@ import { StreakBadge, StatBadge } from '@/components/ui/Badge'
 import { HabitCard } from './HabitCard'
 import { HabitEditor } from './HabitEditor'
 import { HabitHeatmap } from './HabitHeatmap'
+import { TemporalNav, DayView, WeekView, MonthView } from '@/components/temporal'
 
-type ViewMode = 'today' | 'all' | 'analytics'
+type ViewMode = 'today' | 'all' | 'analytics' | 'calendar'
 
 export function HabitsPage() {
   const {
@@ -38,8 +40,12 @@ export function HabitsPage() {
   const [selectedHabitForStats, setSelectedHabitForStats] = useState<Habit | undefined>()
 
   const { todayStats, weeklyStats } = useAllHabitsAnalytics(habits, completions)
+  const temporal = useTemporalView('habits')
 
   const todayHabits = useMemo(() => getActiveHabitsForToday(), [getActiveHabitsForToday])
+
+  // Helper to get completion date from a completion record
+  const getCompletionDate = (completion: HabitCompletion) => completion.completionDate
 
   const selectedHabitStreak = selectedHabitForStats ? getStreak(selectedHabitForStats.id) : undefined
   const selectedHabitAnalytics = useHabitAnalytics({
@@ -84,7 +90,7 @@ export function HabitsPage() {
 
           {/* View mode tabs */}
           <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
-            {(['today', 'all', 'analytics'] as ViewMode[]).map((mode) => (
+            {(['today', 'all', 'calendar', 'analytics'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => {
@@ -92,7 +98,7 @@ export function HabitsPage() {
                   if (mode !== 'analytics') setSelectedHabitForStats(undefined)
                 }}
                 className={cn(
-                  'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                  'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors flex items-center gap-1.5',
                   viewMode === mode
                     ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -100,6 +106,12 @@ export function HabitsPage() {
               >
                 {mode === 'today' && 'Today'}
                 {mode === 'all' && 'All Habits'}
+                {mode === 'calendar' && (
+                  <>
+                    <CalendarDays size={12} />
+                    Calendar
+                  </>
+                )}
                 {mode === 'analytics' && 'Analytics'}
               </button>
             ))}
@@ -254,6 +266,124 @@ export function HabitsPage() {
                   )
                 })}
               </div>
+            )}
+          </div>
+        )}
+
+        {viewMode === 'calendar' && (
+          <div className="h-full flex flex-col -m-6">
+            {/* Temporal Navigation */}
+            <TemporalNav
+              mode={temporal.mode}
+              onModeChange={temporal.setMode}
+              dateLabel={temporal.dateLabel}
+              onPrev={temporal.goToPrev}
+              onNext={temporal.goToNext}
+              onToday={temporal.goToToday}
+              isToday={temporal.isToday}
+              showListMode={false}
+            />
+
+            {/* Temporal View Content */}
+            {temporal.mode === 'day' && (
+              <DayView
+                date={temporal.currentDate}
+                items={completions}
+                getItemDate={getCompletionDate}
+                emptyMessage="No habits completed on this day"
+                renderItem={(completion) => {
+                  const habit = habits.find(h => h.id === completion.habitId)
+                  if (!habit) return null
+                  return (
+                    <div
+                      className="flex items-center gap-2 p-2 bg-[var(--bg-secondary)] rounded"
+                      style={{ borderLeft: `3px solid ${habit.color}` }}
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
+                        style={{ backgroundColor: habit.color + '20', color: habit.color }}
+                      >
+                        ✓
+                      </div>
+                      <span className="text-sm text-[var(--text-primary)]">{habit.name}</span>
+                      {completion.count > 1 && (
+                        <span className="text-xs text-[var(--text-tertiary)]">×{completion.count}</span>
+                      )}
+                    </div>
+                  )
+                }}
+              />
+            )}
+
+            {temporal.mode === 'week' && (
+              <WeekView
+                startDate={temporal.dateRange.start}
+                items={completions}
+                getItemDate={getCompletionDate}
+                onDayClick={(date) => {
+                  temporal.setCurrentDate(date)
+                  temporal.setMode('day')
+                }}
+                renderItem={(completion) => {
+                  const habit = habits.find(h => h.id === completion.habitId)
+                  if (!habit) return null
+                  return (
+                    <div
+                      className="px-1.5 py-0.5 rounded text-[10px] truncate"
+                      style={{ backgroundColor: habit.color + '20', color: habit.color }}
+                    >
+                      {habit.name}
+                    </div>
+                  )
+                }}
+              />
+            )}
+
+            {temporal.mode === 'month' && (
+              <MonthView
+                year={temporal.currentDate.getFullYear()}
+                month={temporal.currentDate.getMonth()}
+                items={completions}
+                getItemDate={getCompletionDate}
+                selectedDate={temporal.currentDate}
+                onDayClick={(date) => {
+                  temporal.setCurrentDate(date)
+                  temporal.setMode('day')
+                }}
+                renderDayContent={(date, dayCompletions) => {
+                  // Group completions by habit
+                  const habitCounts = new Map<string, number>()
+                  dayCompletions.forEach(c => {
+                    habitCounts.set(c.habitId, (habitCounts.get(c.habitId) || 0) + c.count)
+                  })
+
+                  const uniqueHabits = Array.from(habitCounts.keys())
+                  const totalCompleted = uniqueHabits.length
+
+                  if (totalCompleted === 0) return null
+
+                  return (
+                    <div className="space-y-0.5">
+                      {uniqueHabits.slice(0, 2).map(habitId => {
+                        const habit = habits.find(h => h.id === habitId)
+                        if (!habit) return null
+                        return (
+                          <div
+                            key={habitId}
+                            className="h-1.5 rounded-full"
+                            style={{ backgroundColor: habit.color }}
+                          />
+                        )
+                      })}
+                      {totalCompleted > 2 && (
+                        <div className="text-[9px] text-[var(--text-tertiary)]">
+                          +{totalCompleted - 2}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }}
+              />
             )}
           </div>
         )}

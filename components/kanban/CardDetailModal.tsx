@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock } from 'lucide-react'
-import { KanbanTask, Priority, LabelId, PRIORITIES, COLUMNS, LABELS, isOverdue, isDueSoon } from '@/lib/types'
+import { KanbanTask, Priority, PRIORITIES, COLUMNS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { useTagsContext } from '@/contexts/TagsContext'
+import { TagPicker, TagManager, TagBadge } from '@/components/tags'
 
 interface CardDetailModalProps {
   task: KanbanTask
@@ -15,7 +17,6 @@ interface CardDetailModalProps {
   onAddSubtask: (taskId: string, text: string) => void
   onToggleSubtask: (taskId: string, subtaskId: string) => void
   onDeleteSubtask: (taskId: string, subtaskId: string) => void
-  onToggleLabel: (taskId: string, labelId: LabelId) => void
   onMoveTask: (taskId: string, column: KanbanTask['column']) => void
 }
 
@@ -36,7 +37,6 @@ export function CardDetailModal({
   onAddSubtask,
   onToggleSubtask,
   onDeleteSubtask,
-  onToggleLabel,
   onMoveTask,
 }: CardDetailModalProps) {
   const [title, setTitle] = useState(task.title)
@@ -46,9 +46,28 @@ export function CardDetailModal({
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [showLabelsMenu, setShowLabelsMenu] = useState(false)
   const [showDueDatePicker, setShowDueDatePicker] = useState(false)
+  const [showTagManager, setShowTagManager] = useState(false)
+  const [taskTagIds, setTaskTagIds] = useState<string[]>([])
+
+  const { tags, getTaskTagIds, setTaskTags, getTagsForTask } = useTagsContext()
 
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const subtaskInputRef = useRef<HTMLInputElement>(null)
+
+  // Load task tags
+  useEffect(() => {
+    if (isOpen && task.id) {
+      getTaskTagIds(task.id).then(setTaskTagIds)
+    }
+  }, [isOpen, task.id, getTaskTagIds])
+
+  // Handle tag changes
+  const handleTagsChange = async (newTagIds: string[]) => {
+    setTaskTagIds(newTagIds)
+    await setTaskTags(task.id, newTagIds)
+  }
+
+  const selectedTags = getTagsForTask(taskTagIds)
 
   useEffect(() => {
     setTitle(task.title)
@@ -237,45 +256,32 @@ export function CardDetailModal({
               )}
             </div>
 
-            {/* Labels */}
+            {/* Tags */}
             <div className="relative">
               <button
                 onClick={() => setShowLabelsMenu(!showLabelsMenu)}
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
               >
                 <Tag size={12} />
-                Labels
-                {(task.labels || []).length > 0 && (
+                Tags
+                {taskTagIds.length > 0 && (
                   <span className="text-[10px] px-1.5 bg-[var(--bg-tertiary)]">
-                    {task.labels.length}
+                    {taskTagIds.length}
                   </span>
                 )}
               </button>
               {showLabelsMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowLabelsMenu(false)} />
-                  <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[140px]">
-                    {LABELS.map((label) => {
-                      const isActive = (task.labels || []).includes(label.id)
-                      return (
-                        <button
-                          key={label.id}
-                          onClick={() => onToggleLabel(task.id, label.id)}
-                          className="w-full px-3 py-2 text-left text-[11px] flex items-center gap-2 hover:bg-[var(--bg-tertiary)] transition-colors"
-                        >
-                          <span
-                            className={cn(
-                              'w-3 h-3 border flex items-center justify-center shrink-0 transition-all',
-                              isActive ? 'border-[var(--accent)]' : 'border-[var(--text-tertiary)]'
-                            )}
-                            style={{ backgroundColor: isActive ? label.bg : 'transparent' }}
-                          >
-                            {isActive && <Check size={8} style={{ color: label.color }} />}
-                          </span>
-                          <span style={{ color: label.color }}>{label.label}</span>
-                        </button>
-                      )
-                    })}
+                  <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 w-64 p-3">
+                    <TagPicker
+                      selectedTagIds={taskTagIds}
+                      onTagsChange={handleTagsChange}
+                      onOpenManager={() => {
+                        setShowLabelsMenu(false)
+                        setShowTagManager(true)
+                      }}
+                    />
                   </div>
                 </>
               )}
@@ -341,19 +347,16 @@ export function CardDetailModal({
             </div>
           </div>
 
-          {/* Active Labels Display */}
-          {(task.labels || []).length > 0 && (
+          {/* Active Tags Display */}
+          {selectedTags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {LABELS.filter(l => (task.labels || []).includes(l.id)).map(label => (
-                <span
-                  key={label.id}
-                  className="px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] font-medium cursor-pointer hover:opacity-80 transition-opacity"
-                  style={{ color: label.color, backgroundColor: label.bg }}
-                  onClick={() => onToggleLabel(task.id, label.id)}
-                >
-                  {label.label}
-                  <X size={10} className="inline ml-1.5 -mr-0.5" />
-                </span>
+              {selectedTags.map(tag => (
+                <TagBadge
+                  key={tag.id}
+                  tag={tag}
+                  size="md"
+                  onRemove={() => handleTagsChange(taskTagIds.filter(id => id !== tag.id))}
+                />
               ))}
             </div>
           )}
@@ -492,6 +495,9 @@ export function CardDetailModal({
           </button>
         </div>
       </div>
+
+      {/* Tag Manager Modal */}
+      <TagManager isOpen={showTagManager} onClose={() => setShowTagManager(false)} />
     </>
   )
 }

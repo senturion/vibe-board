@@ -23,6 +23,7 @@ create table public.tasks (
   due_date timestamptz,
   "order" integer not null default 0,
   created_at timestamptz default now() not null,
+  completed_at timestamptz,
   archived_at timestamptz
 );
 
@@ -562,3 +563,88 @@ alter table public.routines
 -- Add app_settings column for comprehensive settings storage
 alter table public.user_settings
   add column if not exists app_settings jsonb default '{}';
+
+-- =====================================================
+-- CUSTOMIZABLE TAGS
+-- =====================================================
+
+-- Tag categories (Priority, Status, Type, etc.)
+create table public.tag_categories (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  name text not null,
+  "order" integer default 0 not null,
+  created_at timestamptz default now() not null
+);
+
+-- Tags (user-customizable labels)
+create table public.tags (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  category_id uuid references public.tag_categories(id) on delete set null,
+  name text not null,
+  color text default '#60a5fa' not null,
+  bg_color text default 'rgba(96, 165, 250, 0.15)' not null,
+  "order" integer default 0 not null,
+  created_at timestamptz default now() not null
+);
+
+-- Task-tag junction table (many-to-many)
+create table public.task_tags (
+  task_id uuid references public.tasks(id) on delete cascade not null,
+  tag_id uuid references public.tags(id) on delete cascade not null,
+  created_at timestamptz default now() not null,
+  primary key (task_id, tag_id)
+);
+
+-- Enable RLS for tag tables
+alter table public.tag_categories enable row level security;
+alter table public.tags enable row level security;
+alter table public.task_tags enable row level security;
+
+-- RLS Policies for tag_categories
+create policy "Users can view own tag_categories" on public.tag_categories for select using (auth.uid() = user_id);
+create policy "Users can create own tag_categories" on public.tag_categories for insert with check (auth.uid() = user_id);
+create policy "Users can update own tag_categories" on public.tag_categories for update using (auth.uid() = user_id);
+create policy "Users can delete own tag_categories" on public.tag_categories for delete using (auth.uid() = user_id);
+
+-- RLS Policies for tags
+create policy "Users can view own tags" on public.tags for select using (auth.uid() = user_id);
+create policy "Users can create own tags" on public.tags for insert with check (auth.uid() = user_id);
+create policy "Users can update own tags" on public.tags for update using (auth.uid() = user_id);
+create policy "Users can delete own tags" on public.tags for delete using (auth.uid() = user_id);
+
+-- RLS Policies for task_tags (access via task ownership)
+create policy "Users can manage task_tags" on public.task_tags for all using (
+  exists (select 1 from public.tasks where tasks.id = task_tags.task_id and tasks.user_id = auth.uid())
+);
+
+-- =====================================================
+-- USER UI STATE (Cloud-synced persistence)
+-- =====================================================
+
+-- User UI state for persisting app state across sessions
+create table public.user_ui_state (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  active_view text default 'dashboard' not null,
+  widget_states jsonb default '{}' not null, -- {widgetId: {collapsed: boolean, ...}}
+  section_view_modes jsonb default '{}' not null, -- {habits: 'list'|'day'|'week'|'month', ...}
+  section_selected_dates jsonb default '{}' not null, -- {habits: '2026-01-04', ...}
+  sidebar_collapsed boolean default false not null,
+  updated_at timestamptz default now() not null
+);
+
+-- Enable RLS for user_ui_state
+alter table public.user_ui_state enable row level security;
+
+-- RLS Policies for user_ui_state
+create policy "Users can view own ui_state" on public.user_ui_state for select using (auth.uid() = user_id);
+create policy "Users can create own ui_state" on public.user_ui_state for insert with check (auth.uid() = user_id);
+create policy "Users can update own ui_state" on public.user_ui_state for update using (auth.uid() = user_id);
+
+-- =====================================================
+-- ADD COLLAPSED STATE TO WIDGETS
+-- =====================================================
+
+alter table public.dashboard_widgets
+  add column if not exists is_collapsed boolean default false not null;

@@ -31,6 +31,9 @@ import {
   JournalWidget,
   TasksWidget,
 } from './widgets'
+import { DeadlinesWidget } from './widgets/DeadlinesWidget'
+import { StreaksWidget } from './widgets/StreaksWidget'
+import { ActivityFeedWidget } from './widgets/ActivityFeedWidget'
 import { LoadingState } from '@/components/ui/EmptyState'
 import { cn } from '@/lib/utils'
 import {
@@ -43,6 +46,9 @@ import {
   Calendar,
   Cloud,
   CheckSquare,
+  Clock,
+  Flame,
+  Activity,
 } from 'lucide-react'
 
 // Icon mapping for widget types
@@ -56,6 +62,9 @@ const WIDGET_ICONS: Record<string, React.ComponentType<{ size: number }>> = {
   Calendar,
   Cloud,
   CheckSquare,
+  Clock,
+  Flame,
+  Activity,
 }
 
 // Widget content map
@@ -69,6 +78,9 @@ const WIDGET_COMPONENTS: Record<WidgetType, React.ComponentType> = {
   tasks: TasksWidget,
   calendar: () => <div className="text-[11px] text-[var(--text-tertiary)] text-center">Calendar coming soon</div>,
   weather: () => <div className="text-[11px] text-[var(--text-tertiary)] text-center">Weather coming soon</div>,
+  deadlines: DeadlinesWidget,
+  streaks: StreaksWidget,
+  activity: ActivityFeedWidget,
 }
 
 function SortableWidget({

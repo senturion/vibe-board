@@ -1,6 +1,6 @@
 'use client'
 
-import { LayoutDashboard, Columns3, Target, Flag, BookOpen, ListChecks, Timer } from 'lucide-react'
+import { LayoutDashboard, Columns3, Target, Flag, BookOpen, ListChecks, Timer, Activity } from 'lucide-react'
 import { useNavigation } from '@/contexts/NavigationContext'
 import { ViewId, VIEWS } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
   BookOpen,
   ListChecks,
   Timer,
+  Activity,
 }
 
 interface MainNavProps {

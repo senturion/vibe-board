@@ -486,7 +486,6 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
           onAddSubtask={addSubtask}
           onToggleSubtask={toggleSubtask}
           onDeleteSubtask={deleteSubtask}
-          onToggleLabel={toggleLabel}
           onMoveTask={handleMoveTask}
         />
       )}

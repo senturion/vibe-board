@@ -20,7 +20,7 @@ import { GoalsPage } from '@/components/goals/GoalsPage'
 import { RoutinesPage } from '@/components/routines/RoutinesPage'
 import { JournalPage } from '@/components/journal/JournalPage'
 import { FocusPage } from '@/components/focus'
-import { CalendarView } from '@/components/calendar'
+import { ActivityLog } from '@/components/activity/ActivityLog'
 
 export default function Home() {
   const { activeView } = useNavigation()
@@ -71,8 +71,6 @@ export default function Home() {
   // Render content based on active view
   const renderContent = () => {
     switch (activeView) {
-      case 'calendar':
-        return <CalendarView />
       case 'habits':
         return <HabitsPage />
       case 'goals':
@@ -83,6 +81,8 @@ export default function Home() {
         return <RoutinesPage />
       case 'focus':
         return <FocusPage />
+      case 'activity':
+        return <ActivityLog />
       case 'dashboard':
       case 'board':
       default:

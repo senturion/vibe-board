@@ -19,6 +19,7 @@ export interface KanbanTask {
   dueDate?: number
   order: number
   createdAt: number
+  completedAt?: number  // When task was moved to complete
   archivedAt?: number
   boardId?: string  // For multi-board support
 }
@@ -53,6 +54,47 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'Escape', description: 'Close modal' },
   { key: '?', description: 'Show shortcuts' },
 ]
+
+// =====================================================
+// CUSTOMIZABLE TAGS
+// =====================================================
+
+export interface TagCategory {
+  id: string
+  name: string
+  order: number
+  createdAt: number
+}
+
+export interface Tag {
+  id: string
+  categoryId?: string
+  name: string
+  color: string
+  bgColor: string
+  order: number
+  createdAt: number
+  category?: TagCategory
+}
+
+// Default tag colors for picker
+export const TAG_COLORS: { color: string; bg: string }[] = [
+  { color: '#f87171', bg: 'rgba(248, 113, 113, 0.15)' }, // red
+  { color: '#fb923c', bg: 'rgba(251, 146, 60, 0.15)' },  // orange
+  { color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)' },  // amber
+  { color: '#a3e635', bg: 'rgba(163, 230, 53, 0.15)' },  // lime
+  { color: '#4ade80', bg: 'rgba(74, 222, 128, 0.15)' },  // green
+  { color: '#2dd4bf', bg: 'rgba(45, 212, 191, 0.15)' },  // teal
+  { color: '#22d3ee', bg: 'rgba(34, 211, 238, 0.15)' },  // cyan
+  { color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.15)' },  // blue
+  { color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.15)' }, // violet
+  { color: '#c084fc', bg: 'rgba(192, 132, 252, 0.15)' }, // purple
+  { color: '#f472b6', bg: 'rgba(244, 114, 182, 0.15)' }, // pink
+  { color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }, // slate
+]
+
+// Default tag categories
+export const DEFAULT_TAG_CATEGORIES: string[] = ['Type', 'Priority', 'Status']
 
 export interface TodoItem {
   id: string
@@ -93,17 +135,24 @@ export function isDueSoon(dueDate: number): boolean {
 // =====================================================
 
 // Navigation
-export type ViewId = 'dashboard' | 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus' | 'calendar'
+export type ViewId = 'dashboard' | 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus' | 'activity'
 
 export const VIEWS: { id: ViewId; title: string; icon: string }[] = [
   { id: 'dashboard', title: 'Home', icon: 'LayoutDashboard' },
-  { id: 'calendar', title: 'Calendar', icon: 'CalendarDays' },
   { id: 'habits', title: 'Habits', icon: 'Target' },
   { id: 'goals', title: 'Goals', icon: 'Flag' },
   { id: 'routines', title: 'Routines', icon: 'ListChecks' },
   { id: 'journal', title: 'Journal', icon: 'BookOpen' },
   { id: 'focus', title: 'Focus', icon: 'Timer' },
+  { id: 'activity', title: 'Activity', icon: 'Activity' },
 ]
+
+// Section view modes (list vs temporal views)
+export type SectionViewMode = 'list' | 'day' | 'week' | 'month'
+export type TemporalViewMode = 'day' | 'week' | 'month'
+
+// Sections that support temporal views
+export type TemporalSectionId = 'habits' | 'goals' | 'routines' | 'board'
 
 // =====================================================
 // WORK LOCATION
@@ -423,7 +472,7 @@ export const SESSION_TYPES: { id: SessionType; label: string; color: string }[] 
 // DASHBOARD WIDGETS
 // =====================================================
 
-export type WidgetType = 'routines' | 'habits' | 'goals' | 'journal' | 'focus' | 'stats' | 'calendar' | 'weather' | 'tasks'
+export type WidgetType = 'routines' | 'habits' | 'goals' | 'journal' | 'focus' | 'stats' | 'calendar' | 'weather' | 'tasks' | 'deadlines' | 'streaks' | 'activity'
 
 export interface DashboardWidget {
   id: string
@@ -438,17 +487,50 @@ export interface DashboardWidget {
   createdAt: number
 }
 
-export const WIDGET_TYPES: { id: WidgetType; title: string; icon: string; defaultSize: { width: number; height: number } }[] = [
-  { id: 'routines', title: 'Today\'s Routines', icon: 'ListChecks', defaultSize: { width: 1, height: 2 } },
-  { id: 'habits', title: 'Habit Tracker', icon: 'Target', defaultSize: { width: 2, height: 2 } },
-  { id: 'goals', title: 'Goals Progress', icon: 'Flag', defaultSize: { width: 1, height: 2 } },
-  { id: 'journal', title: 'Quick Journal', icon: 'BookOpen', defaultSize: { width: 1, height: 1 } },
-  { id: 'focus', title: 'Focus Timer', icon: 'Timer', defaultSize: { width: 1, height: 1 } },
-  { id: 'stats', title: 'Quick Stats', icon: 'BarChart3', defaultSize: { width: 2, height: 1 } },
-  { id: 'calendar', title: 'Calendar', icon: 'Calendar', defaultSize: { width: 1, height: 2 } },
-  { id: 'weather', title: 'Weather', icon: 'Cloud', defaultSize: { width: 1, height: 1 } },
-  { id: 'tasks', title: 'Today\'s Tasks', icon: 'CheckSquare', defaultSize: { width: 1, height: 2 } },
+export const WIDGET_TYPES: { id: WidgetType; title: string; icon: string; defaultSize: { width: number; height: number }; description: string }[] = [
+  { id: 'routines', title: 'Today\'s Routines', icon: 'ListChecks', defaultSize: { width: 1, height: 2 }, description: 'Track daily routines' },
+  { id: 'habits', title: 'Habit Tracker', icon: 'Target', defaultSize: { width: 2, height: 2 }, description: 'Check off daily habits' },
+  { id: 'goals', title: 'Goals Progress', icon: 'Flag', defaultSize: { width: 1, height: 2 }, description: 'View goal progress' },
+  { id: 'journal', title: 'Quick Journal', icon: 'BookOpen', defaultSize: { width: 1, height: 1 }, description: 'Quick journal entry' },
+  { id: 'focus', title: 'Focus Timer', icon: 'Timer', defaultSize: { width: 1, height: 1 }, description: 'Pomodoro timer' },
+  { id: 'stats', title: 'Quick Stats', icon: 'BarChart3', defaultSize: { width: 2, height: 1 }, description: 'Overview statistics' },
+  { id: 'calendar', title: 'Calendar', icon: 'Calendar', defaultSize: { width: 1, height: 2 }, description: 'Monthly calendar view' },
+  { id: 'weather', title: 'Weather', icon: 'Cloud', defaultSize: { width: 1, height: 1 }, description: 'Current weather' },
+  { id: 'tasks', title: 'Today\'s Tasks', icon: 'CheckSquare', defaultSize: { width: 1, height: 2 }, description: 'Tasks due today' },
+  { id: 'deadlines', title: 'Upcoming Deadlines', icon: 'Clock', defaultSize: { width: 1, height: 2 }, description: 'Tasks and goals due soon' },
+  { id: 'streaks', title: 'Habit Streaks', icon: 'Flame', defaultSize: { width: 1, height: 1 }, description: 'Current habit streaks' },
+  { id: 'activity', title: 'Activity Feed', icon: 'Activity', defaultSize: { width: 1, height: 2 }, description: 'Recent activity log' },
 ]
+
+// =====================================================
+// USER UI STATE (Cloud persistence)
+// =====================================================
+
+export interface UserUIState {
+  activeView: ViewId
+  widgetStates: Record<string, { collapsed: boolean }>
+  sectionViewModes: Record<TemporalSectionId, SectionViewMode>
+  sectionSelectedDates: Record<TemporalSectionId, string> // YYYY-MM-DD
+  sidebarCollapsed: boolean
+}
+
+export const DEFAULT_UI_STATE: UserUIState = {
+  activeView: 'dashboard',
+  widgetStates: {},
+  sectionViewModes: {
+    habits: 'list',
+    goals: 'list',
+    routines: 'list',
+    board: 'list',
+  },
+  sectionSelectedDates: {
+    habits: formatDateKey(),
+    goals: formatDateKey(),
+    routines: formatDateKey(),
+    board: formatDateKey(),
+  },
+  sidebarCollapsed: false,
+}
 
 // =====================================================
 // HELPER FUNCTIONS

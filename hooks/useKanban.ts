@@ -46,6 +46,7 @@ export function useKanban(boardId: string = '') {
         dueDate: t.due_date ? new Date(t.due_date).getTime() : undefined,
         order: t.order,
         createdAt: new Date(t.created_at).getTime(),
+        completedAt: (t as TaskRow & { completed_at?: string }).completed_at ? new Date((t as TaskRow & { completed_at?: string }).completed_at!).getTime() : undefined,
         archivedAt: t.archived_at ? new Date(t.archived_at).getTime() : undefined,
         boardId: t.board_id,
       }))
@@ -107,6 +108,7 @@ export function useKanban(boardId: string = '') {
     if (updates.subtasks !== undefined) dbUpdates.subtasks = updates.subtasks
     if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate ? new Date(updates.dueDate).toISOString() : null
     if (updates.order !== undefined) dbUpdates.order = updates.order
+    if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt ? new Date(updates.completedAt).toISOString() : null
     if (updates.archivedAt !== undefined) dbUpdates.archived_at = updates.archivedAt ? new Date(updates.archivedAt).toISOString() : null
 
     const { error } = await supabase
@@ -173,9 +175,20 @@ export function useKanban(boardId: string = '') {
 
   const moveTask = useCallback(async (taskId: string, toColumn: ColumnId, newOrder?: number) => {
     const order = newOrder ?? Date.now()
+    const task = tasks.find(t => t.id === taskId)
+
+    // Set completedAt when moving to complete, clear it when moving away
+    const completedAt = toColumn === 'complete'
+      ? (task?.completedAt || Date.now()) // Keep existing completedAt if already set
+      : null
+
     const { error } = await supabase
       .from('tasks')
-      .update({ status: toColumn, order })
+      .update({
+        status: toColumn,
+        order,
+        completed_at: completedAt ? new Date(completedAt).toISOString() : null
+      })
       .eq('id', taskId)
 
     if (error) {
@@ -183,12 +196,17 @@ export function useKanban(boardId: string = '') {
       return
     }
 
-    setTasks(prev => prev.map(task =>
-      task.id === taskId
-        ? { ...task, column: toColumn, order }
-        : task
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? {
+            ...t,
+            column: toColumn,
+            order,
+            completedAt: completedAt || undefined
+          }
+        : t
     ))
-  }, [supabase])
+  }, [supabase, tasks])
 
   // Subtask operations
   const addSubtask = useCallback(async (taskId: string, text: string) => {
