@@ -1,5 +1,4 @@
 /* Editorial Studio - Typography Forward Design */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -57,8 +56,10 @@
   --journal-mood-1: #ef4444;
   --journal-mood-2: #f97316;
   --journal-mood-3: #eab308;
-  --journal-mood-4: #84cc16;
-  --journal-mood-5: #22c55e;
+  --journal-mood-4: #94a3b8;
+  --journal-mood-5: #84cc16;
+  --journal-mood-6: #22c55e;
+  --journal-mood-7: #ec4899;
 
   /* Heatmap levels */
   --heatmap-0: var(--bg-tertiary);
@@ -134,8 +135,10 @@
   --journal-mood-1: #dc2626;
   --journal-mood-2: #ea580c;
   --journal-mood-3: #ca8a04;
-  --journal-mood-4: #65a30d;
-  --journal-mood-5: #16a34a;
+  --journal-mood-4: #64748b;
+  --journal-mood-5: #65a30d;
+  --journal-mood-6: #16a34a;
+  --journal-mood-7: #db2777;
 
   /* Heatmap levels (light) */
   --heatmap-0: var(--bg-tertiary);

@@ -2,14 +2,15 @@
 
 import { useState } from 'react'
 import { Filter, SortAsc, X, Check, ChevronDown } from 'lucide-react'
-import { LabelId, Priority, LABELS, PRIORITIES } from '@/lib/types'
+import { Priority, PRIORITIES } from '@/lib/types'
+import { useTagsContext } from '@/contexts/TagsContext'
 import { cn } from '@/lib/utils'
 
 export type SortOption = 'created' | 'due' | 'priority' | 'alpha'
 export type DueDateFilter = 'all' | 'overdue' | 'due-soon' | 'no-date'
 
 export interface FilterState {
-  labels: LabelId[]
+  tags: string[]
   priorities: Priority[]
   dueDate: DueDateFilter
 }
@@ -48,14 +49,15 @@ export function FilterSort({
   onSortChange,
   activeFilterCount,
 }: FilterSortProps) {
+  const { tags } = useTagsContext()
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'filter' | 'sort'>('filter')
 
-  const toggleLabel = (labelId: LabelId) => {
-    const newLabels = filters.labels.includes(labelId)
-      ? filters.labels.filter(l => l !== labelId)
-      : [...filters.labels, labelId]
-    onFilterChange({ ...filters, labels: newLabels })
+  const toggleTag = (tagId: string) => {
+    const newTags = filters.tags.includes(tagId)
+      ? filters.tags.filter(t => t !== tagId)
+      : [...filters.tags, tagId]
+    onFilterChange({ ...filters, tags: newTags })
   }
 
   const togglePriority = (priority: Priority) => {
@@ -70,7 +72,7 @@ export function FilterSort({
   }
 
   const clearFilters = () => {
-    onFilterChange({ labels: [], priorities: [], dueDate: 'all' })
+    onFilterChange({ tags: [], priorities: [], dueDate: 'all' })
   }
 
   const setSortOption = (by: SortOption) => {
@@ -139,32 +141,36 @@ export function FilterSort({
             <div className="p-4 max-h-[400px] overflow-y-auto">
               {activeTab === 'filter' ? (
                 <div className="space-y-5">
-                  {/* Labels */}
+                  {/* Tags */}
                   <div>
                     <label className="block text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)] mb-3">
-                      Labels
+                      Tags
                     </label>
-                    <div className="flex flex-wrap gap-2">
-                      {LABELS.map(label => {
-                        const isActive = filters.labels.includes(label.id)
-                        return (
-                          <button
-                            key={label.id}
-                            onClick={() => toggleLabel(label.id)}
-                            className={cn(
-                              'px-2.5 py-1.5 text-[10px] uppercase tracking-[0.05em] font-medium transition-all',
-                              isActive
-                                ? 'ring-1 ring-[var(--accent)]'
-                                : 'opacity-60 hover:opacity-100'
-                            )}
-                            style={{ color: label.color, backgroundColor: label.bg }}
-                          >
-                            {isActive && <Check size={10} className="inline mr-1" />}
-                            {label.label}
-                          </button>
-                        )
-                      })}
-                    </div>
+                    {tags.length === 0 ? (
+                      <p className="text-[11px] text-[var(--text-tertiary)]">No tags yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map(tag => {
+                          const isActive = filters.tags.includes(tag.id)
+                          return (
+                            <button
+                              key={tag.id}
+                              onClick={() => toggleTag(tag.id)}
+                              className={cn(
+                                'px-2.5 py-1.5 text-[10px] uppercase tracking-[0.05em] font-medium transition-all',
+                                isActive
+                                  ? 'ring-1 ring-[var(--accent)]'
+                                  : 'opacity-60 hover:opacity-100'
+                              )}
+                              style={{ color: tag.color, backgroundColor: tag.bgColor }}
+                            >
+                              {isActive && <Check size={10} className="inline mr-1" />}
+                              {tag.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Priority */}

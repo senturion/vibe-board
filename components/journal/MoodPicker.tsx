@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MOOD_EMOJIS } from '@/lib/types'
+import { MOOD_OPTIONS, MoodIcon, MoodPlaceholderIcon, getMoodOption } from './moods'
 import { cn } from '@/lib/utils'
 
 interface MoodPickerProps {
@@ -13,13 +13,14 @@ interface MoodPickerProps {
 export function MoodPicker({ value, onChange, size = 'md' }: MoodPickerProps) {
   const [showPicker, setShowPicker] = useState(false)
 
-  const currentMood = MOOD_EMOJIS.find(m => m.value === value)
+  const currentMood = getMoodOption(value)
 
   const sizeClasses = {
-    sm: { button: 'p-1.5 text-sm', picker: 'text-lg' },
-    md: { button: 'p-2 text-lg', picker: 'text-xl' },
-    lg: { button: 'p-3 text-2xl', picker: 'text-2xl' },
+    sm: { button: 'p-1.5 text-sm' },
+    md: { button: 'p-2 text-lg' },
+    lg: { button: 'p-3 text-2xl' },
   }
+  const iconSize = size === 'sm' ? 14 : size === 'lg' ? 22 : 18
 
   return (
     <div className="relative">
@@ -32,9 +33,13 @@ export function MoodPicker({ value, onChange, size = 'md' }: MoodPickerProps) {
             ? 'border-[var(--accent-muted)] bg-[var(--accent-glow)]'
             : 'border-[var(--border)] hover:border-[var(--text-tertiary)] text-[var(--text-tertiary)]'
         )}
-        title={currentMood ? currentMood.label : 'Set mood'}
+        title={currentMood ? `${currentMood.label} · ${currentMood.description}` : 'Set mood'}
       >
-        {currentMood ? currentMood.emoji : '😶'}
+        {currentMood ? (
+          <MoodIcon mood={currentMood.value} size={iconSize} />
+        ) : (
+          <MoodPlaceholderIcon size={iconSize} />
+        )}
       </button>
 
       {showPicker && (
@@ -43,12 +48,12 @@ export function MoodPicker({ value, onChange, size = 'md' }: MoodPickerProps) {
             className="fixed inset-0 z-10"
             onClick={() => setShowPicker(false)}
           />
-          <div className="absolute right-0 top-full mt-2 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl z-20 p-2">
+          <div className="absolute right-0 bottom-full mb-2 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl z-20 p-3 min-w-[420px]">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2 px-1">
               How are you feeling?
             </p>
-            <div className="flex gap-1">
-              {MOOD_EMOJIS.map((mood) => (
+            <div className="grid grid-cols-7 gap-2 w-full">
+              {MOOD_OPTIONS.map((mood) => (
                 <button
                   key={mood.value}
                   onClick={() => {
@@ -56,15 +61,22 @@ export function MoodPicker({ value, onChange, size = 'md' }: MoodPickerProps) {
                     setShowPicker(false)
                   }}
                   className={cn(
-                    'p-2 transition-all',
-                    sizeClasses[size].picker,
+                    'w-full min-w-[52px] p-2 transition-all border border-transparent',
                     value === mood.value
-                      ? 'bg-[var(--accent-glow)] scale-110'
+                      ? 'bg-[var(--accent-glow)] scale-105 border-[var(--accent-muted)]'
                       : 'hover:bg-[var(--bg-tertiary)] hover:scale-105'
                   )}
-                  title={mood.label}
+                  title={`${mood.label} · ${mood.description}`}
                 >
-                  {mood.emoji}
+                  <div className="flex flex-col items-center gap-1">
+                    <MoodIcon mood={mood.value} size={18} />
+                    <span className="text-[9px] uppercase tracking-[0.08em] text-[var(--text-tertiary)] whitespace-nowrap">
+                      {mood.label}
+                    </span>
+                    <span className="text-[9px] text-[var(--text-tertiary)]">
+                      {mood.value}
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -82,18 +94,18 @@ interface MoodDisplayProps {
 }
 
 export function MoodDisplay({ mood, size = 'md', showLabel = false }: MoodDisplayProps) {
-  const moodData = MOOD_EMOJIS.find(m => m.value === mood)
+  const moodData = getMoodOption(mood)
   if (!moodData) return null
 
   const sizeClasses = {
-    sm: 'text-sm',
-    md: 'text-lg',
-    lg: 'text-2xl',
+    sm: 12,
+    md: 16,
+    lg: 20,
   }
 
   return (
-    <span className={cn('inline-flex items-center gap-1', sizeClasses[size])}>
-      <span>{moodData.emoji}</span>
+    <span className="inline-flex items-center gap-1">
+      <MoodIcon mood={mood} size={sizeClasses[size]} />
       {showLabel && (
         <span className="text-[11px] text-[var(--text-tertiary)]">{moodData.label}</span>
       )}

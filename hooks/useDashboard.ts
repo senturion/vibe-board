@@ -23,59 +23,6 @@ export function useDashboard() {
   const { user } = useAuth()
   const supabase = createClient()
 
-  // Fetch widgets
-  useEffect(() => {
-    if (!user) {
-      // Use default widgets for unauthenticated users
-      const defaultWithIds = DEFAULT_WIDGETS.map((w, i) => ({
-        ...w,
-        id: `default-${i}`,
-        createdAt: Date.now(),
-      }))
-      setWidgets(defaultWithIds)
-      setLoading(false)
-      return
-    }
-
-    const fetchWidgets = async () => {
-      const { data, error } = await supabase
-        .from('dashboard_widgets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('position_y', { ascending: true })
-        .order('position_x', { ascending: true })
-
-      if (error) {
-        console.error('Error fetching widgets:', error)
-        setLoading(false)
-        return
-      }
-
-      if (data && data.length > 0) {
-        const mappedWidgets: DashboardWidget[] = data.map(w => ({
-          id: w.id,
-          widgetType: w.widget_type as WidgetType,
-          title: w.title || undefined,
-          positionX: w.position_x,
-          positionY: w.position_y,
-          width: w.width,
-          height: w.height,
-          config: (w.config as Record<string, unknown>) || {},
-          isVisible: w.is_visible,
-          createdAt: new Date(w.created_at).getTime(),
-        }))
-        setWidgets(mappedWidgets)
-      } else {
-        // Initialize with default widgets
-        await initializeDefaultWidgets()
-      }
-
-      setLoading(false)
-    }
-
-    fetchWidgets()
-  }, [user, supabase])
-
   // Initialize default widgets for new users
   const initializeDefaultWidgets = useCallback(async () => {
     if (!user) return
@@ -117,6 +64,71 @@ export function useDashboard() {
       setWidgets(mappedWidgets)
     }
   }, [user, supabase])
+
+  // Fetch widgets
+  useEffect(() => {
+    let isActive = true
+    const fetchWidgets = async () => {
+      if (!user) {
+        // Use default widgets for unauthenticated users
+        const defaultWithIds = DEFAULT_WIDGETS.map((w, i) => ({
+          ...w,
+          id: `default-${i}`,
+          createdAt: Date.now(),
+        }))
+        if (isActive) {
+          setWidgets(defaultWithIds)
+          setLoading(false)
+        }
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('dashboard_widgets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('position_y', { ascending: true })
+        .order('position_x', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching widgets:', error)
+        if (isActive) {
+          setLoading(false)
+        }
+        return
+      }
+
+      if (data && data.length > 0) {
+        const mappedWidgets: DashboardWidget[] = data.map(w => ({
+          id: w.id,
+          widgetType: w.widget_type as WidgetType,
+          title: w.title || undefined,
+          positionX: w.position_x,
+          positionY: w.position_y,
+          width: w.width,
+          height: w.height,
+          config: (w.config as Record<string, unknown>) || {},
+          isVisible: w.is_visible,
+          createdAt: new Date(w.created_at).getTime(),
+        }))
+        if (isActive) {
+          setWidgets(mappedWidgets)
+        }
+      } else {
+        // Initialize with default widgets
+        await initializeDefaultWidgets()
+      }
+
+      if (isActive) {
+        setLoading(false)
+      }
+    }
+
+    fetchWidgets()
+    return () => {
+      isActive = false
+    }
+  }, [user, supabase, initializeDefaultWidgets])
 
   // Add widget
   const addWidget = useCallback(async (widgetType: WidgetType) => {

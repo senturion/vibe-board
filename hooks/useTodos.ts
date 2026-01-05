@@ -16,13 +16,16 @@ export function useTodos() {
 
   // Fetch todos from Supabase
   useEffect(() => {
-    if (!user) {
-      setTodos([])
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchTodos = async () => {
+      if (!user) {
+        if (isActive) {
+          setTodos([])
+          setLoading(false)
+        }
+        return
+      }
+
       const { data, error } = await supabase
         .from('todos')
         .select('*')
@@ -30,7 +33,9 @@ export function useTodos() {
 
       if (error) {
         console.error('Error fetching todos:', error)
-        setLoading(false)
+        if (isActive) {
+          setLoading(false)
+        }
         return
       }
 
@@ -41,11 +46,16 @@ export function useTodos() {
         createdAt: new Date(t.created_at).getTime(),
       }))
 
-      setTodos(mappedTodos)
-      setLoading(false)
+      if (isActive) {
+        setTodos(mappedTodos)
+        setLoading(false)
+      }
     }
 
     fetchTodos()
+    return () => {
+      isActive = false
+    }
   }, [user, supabase])
 
   const addTodo = useCallback(async (text: string) => {

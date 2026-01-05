@@ -24,16 +24,18 @@ export function useGoals() {
 
   // Fetch goals, categories, milestones, and task links
   useEffect(() => {
-    if (!user) {
-      setGoals([])
-      setCategories([])
-      setMilestones([])
-      setTaskLinks([])
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchData = async () => {
+      if (!user) {
+        if (isActive) {
+          setGoals([])
+          setCategories([])
+          setMilestones([])
+          setTaskLinks([])
+          setLoading(false)
+        }
+        return
+      }
       // Fetch goals
       const { data: goalsData, error: goalsError } = await supabase
         .from('goals')
@@ -126,15 +128,20 @@ export function useGoals() {
         createdAt: new Date(l.created_at).getTime(),
       }))
 
-      setGoals(mappedGoals)
-      setCategories(mappedCategories)
-      setMilestones(mappedMilestones)
-      setTaskLinks(mappedTaskLinks)
-      setLoading(false)
+      if (isActive) {
+        setGoals(mappedGoals)
+        setCategories(mappedCategories)
+        setMilestones(mappedMilestones)
+        setTaskLinks(mappedTaskLinks)
+        setLoading(false)
+      }
     }
 
     fetchData()
-  }, [user, supabase])
+    return () => {
+      isActive = false
+    }
+  }, [user, supabase, milestones])
 
   // Add a new goal
   const addGoal = useCallback(async (goal: Omit<Goal, 'id' | 'createdAt' | 'order'>) => {
@@ -179,7 +186,7 @@ export function useGoals() {
 
     setGoals(prev => [...prev, newGoal])
     return newGoal.id
-  }, [user, supabase])
+  }, [user, supabase, goals.length])
 
   // Update a goal
   const updateGoal = useCallback(async (id: string, updates: Partial<Goal>) => {
@@ -211,7 +218,7 @@ export function useGoals() {
     }
 
     setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g))
-  }, [user, supabase])
+  }, [user, supabase, milestones])
 
   // Delete a goal
   const deleteGoal = useCallback(async (id: string) => {
@@ -231,7 +238,7 @@ export function useGoals() {
     setGoals(prev => prev.filter(g => g.id !== id))
     setMilestones(prev => prev.filter(m => m.goalId !== id))
     setTaskLinks(prev => prev.filter(l => l.goalId !== id))
-  }, [user, supabase])
+  }, [user, supabase, milestones])
 
   // Archive a goal
   const archiveGoal = useCallback(async (id: string) => {
@@ -249,7 +256,7 @@ export function useGoals() {
     }
 
     setGoals(prev => prev.filter(g => g.id !== id))
-  }, [user, supabase])
+  }, [user, supabase, milestones])
 
   // Complete a goal
   const completeGoal = useCallback(async (id: string) => {
@@ -294,7 +301,7 @@ export function useGoals() {
 
     setMilestones(prev => [...prev, newMilestone])
     return newMilestone.id
-  }, [user, supabase])
+  }, [user, supabase, milestones])
 
   // Update milestone
   const updateMilestone = useCallback(async (id: string, updates: Partial<Milestone>) => {
@@ -325,7 +332,7 @@ export function useGoals() {
     }
 
     setMilestones(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m))
-  }, [user, supabase])
+  }, [user, supabase, categories.length])
 
   // Delete milestone
   const deleteMilestone = useCallback(async (id: string) => {
@@ -343,7 +350,7 @@ export function useGoals() {
     }
 
     setMilestones(prev => prev.filter(m => m.id !== id))
-  }, [user, supabase])
+  }, [user, supabase, categories.length])
 
   // Toggle milestone completion
   const toggleMilestone = useCallback(async (id: string) => {
@@ -413,7 +420,7 @@ export function useGoals() {
     }
 
     setTaskLinks(prev => prev.filter(l => !(l.goalId === goalId && l.taskId === taskId)))
-  }, [user, supabase])
+  }, [user, supabase, categories.length])
 
   // Get linked tasks for a goal
   const getLinkedTaskIds = useCallback((goalId: string) => {
@@ -475,7 +482,7 @@ export function useGoals() {
 
     setCategories(prev => [...prev, newCategory])
     return newCategory.id
-  }, [user, supabase])
+  }, [user, supabase, categories.length])
 
   // Delete category
   const deleteCategory = useCallback(async (id: string) => {

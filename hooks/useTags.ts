@@ -3,81 +3,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { Tag, TagCategory, LABELS, TAG_COLORS } from '@/lib/types'
+import { Tag, TagCategory, LABELS } from '@/lib/types'
 
 export function useTags() {
   const [tags, setTags] = useState<Tag[]>([])
   const [categories, setCategories] = useState<TagCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
+  const [taskTagsVersion, setTaskTagsVersion] = useState(0)
 
   const { user } = useAuth()
   const supabase = createClient()
-
-  // Fetch tags and categories
-  useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
-
-    const fetchData = async () => {
-      // Fetch categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('tag_categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('order', { ascending: true })
-
-      if (categoriesError) {
-        console.error('Error fetching tag categories:', categoriesError)
-      }
-
-      // Fetch tags
-      const { data: tagsData, error: tagsError } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('order', { ascending: true })
-
-      if (tagsError) {
-        console.error('Error fetching tags:', tagsError)
-      }
-
-      if (categoriesData) {
-        const mappedCategories: TagCategory[] = categoriesData.map(c => ({
-          id: c.id,
-          name: c.name,
-          order: c.order,
-          createdAt: new Date(c.created_at).getTime(),
-        }))
-        setCategories(mappedCategories)
-      }
-
-      if (tagsData) {
-        const mappedTags: Tag[] = tagsData.map(t => ({
-          id: t.id,
-          categoryId: t.category_id || undefined,
-          name: t.name,
-          color: t.color,
-          bgColor: t.bg_color,
-          order: t.order,
-          createdAt: new Date(t.created_at).getTime(),
-        }))
-        setTags(mappedTags)
-      }
-
-      // Initialize with default tags if none exist
-      if ((!tagsData || tagsData.length === 0) && !initialized) {
-        await initializeDefaultTags()
-        setInitialized(true)
-      }
-
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [user, supabase, initialized])
 
   // Initialize default tags from LABELS
   const initializeDefaultTags = useCallback(async () => {
@@ -142,6 +78,79 @@ export function useTags() {
       setTags(mappedTags)
     }
   }, [user, supabase])
+
+  // Fetch tags and categories
+  useEffect(() => {
+    let isActive = true
+    const fetchData = async () => {
+      if (!user) {
+        if (isActive) {
+          setLoading(false)
+        }
+        return
+      }
+
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('tag_categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('order', { ascending: true })
+
+      if (categoriesError) {
+        console.error('Error fetching tag categories:', categoriesError)
+      }
+
+      // Fetch tags
+      const { data: tagsData, error: tagsError } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('order', { ascending: true })
+
+      if (tagsError) {
+        console.error('Error fetching tags:', tagsError)
+      }
+
+      if (categoriesData) {
+        const mappedCategories: TagCategory[] = categoriesData.map(c => ({
+          id: c.id,
+          name: c.name,
+          order: c.order,
+          createdAt: new Date(c.created_at).getTime(),
+        }))
+        setCategories(mappedCategories)
+      }
+
+      if (tagsData) {
+        const mappedTags: Tag[] = tagsData.map(t => ({
+          id: t.id,
+          categoryId: t.category_id || undefined,
+          name: t.name,
+          color: t.color,
+          bgColor: t.bg_color,
+          order: t.order,
+          createdAt: new Date(t.created_at).getTime(),
+        }))
+        setTags(mappedTags)
+      }
+
+      // Initialize with default tags if none exist
+      if ((!tagsData || tagsData.length === 0) && !initialized) {
+        await initializeDefaultTags()
+        setInitialized(true)
+      }
+
+      if (isActive) {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+    return () => {
+      isActive = false
+    }
+  }, [user, supabase, initialized, initializeDefaultTags])
 
   // Add category
   const addCategory = useCallback(async (name: string): Promise<TagCategory | null> => {
@@ -337,7 +346,9 @@ export function useTags() {
 
     if (error && error.code !== '23505') { // ignore duplicate key error
       console.error('Error adding tag to task:', error)
+      return
     }
+    setTaskTagsVersion(prev => prev + 1)
   }, [user, supabase])
 
   // Remove tag from task
@@ -352,7 +363,9 @@ export function useTags() {
 
     if (error) {
       console.error('Error removing tag from task:', error)
+      return
     }
+    setTaskTagsVersion(prev => prev + 1)
   }, [user, supabase])
 
   // Get task tag IDs
@@ -372,15 +385,44 @@ export function useTags() {
     return data?.map(d => d.tag_id) || []
   }, [user, supabase])
 
+  const getTaskTagIdsByTaskIds = useCallback(async (taskIds: string[]): Promise<Record<string, string[]>> => {
+    if (!user || taskIds.length === 0) return {}
+
+    const { data, error } = await supabase
+      .from('task_tags')
+      .select('task_id, tag_id')
+      .in('task_id', taskIds)
+
+    if (error) {
+      console.error('Error fetching task tags:', error)
+      return {}
+    }
+
+    const map: Record<string, string[]> = {}
+    for (const row of data || []) {
+      if (!map[row.task_id]) {
+        map[row.task_id] = []
+      }
+      map[row.task_id].push(row.tag_id)
+    }
+
+    return map
+  }, [user, supabase])
+
   // Set task tags (replace all)
   const setTaskTags = useCallback(async (taskId: string, tagIds: string[]) => {
     if (!user) return
 
     // Delete existing
-    await supabase
+    const { error: deleteError } = await supabase
       .from('task_tags')
       .delete()
       .eq('task_id', taskId)
+
+    if (deleteError) {
+      console.error('Error clearing task tags:', deleteError)
+      return
+    }
 
     // Insert new
     if (tagIds.length > 0) {
@@ -390,8 +432,11 @@ export function useTags() {
 
       if (error) {
         console.error('Error setting task tags:', error)
+        return
       }
     }
+
+    setTaskTagsVersion(prev => prev + 1)
   }, [user, supabase])
 
   return {
@@ -417,6 +462,8 @@ export function useTags() {
     addTagToTask,
     removeTagFromTask,
     getTaskTagIds,
+    getTaskTagIdsByTaskIds,
     setTaskTags,
+    taskTagsVersion,
   }
 }

@@ -16,22 +16,32 @@ export function useKanban(boardId: string = '') {
 
   // Fetch tasks from Supabase
   useEffect(() => {
-    if (!user || !boardId) {
-      setTasks([])
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchTasks = async () => {
-      const { data, error } = await supabase
+      if (!user) {
+        if (isActive) {
+          setTasks([])
+          setLoading(false)
+        }
+        return
+      }
+
+      let query = supabase
         .from('tasks')
         .select('*')
-        .eq('board_id', boardId)
         .order('order', { ascending: true })
+
+      if (boardId) {
+        query = query.eq('board_id', boardId)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error('Error fetching tasks:', error)
-        setLoading(false)
+        if (isActive) {
+          setLoading(false)
+        }
         return
       }
 
@@ -46,16 +56,22 @@ export function useKanban(boardId: string = '') {
         dueDate: t.due_date ? new Date(t.due_date).getTime() : undefined,
         order: t.order,
         createdAt: new Date(t.created_at).getTime(),
-        completedAt: (t as TaskRow & { completed_at?: string }).completed_at ? new Date((t as TaskRow & { completed_at?: string }).completed_at!).getTime() : undefined,
+        updatedAt: t.updated_at ? new Date(t.updated_at).getTime() : new Date(t.created_at).getTime(),
+        completedAt: t.completed_at ? new Date(t.completed_at).getTime() : undefined,
         archivedAt: t.archived_at ? new Date(t.archived_at).getTime() : undefined,
         boardId: t.board_id,
       }))
 
-      setTasks(mappedTasks)
-      setLoading(false)
+      if (isActive) {
+        setTasks(mappedTasks)
+        setLoading(false)
+      }
     }
 
     fetchTasks()
+    return () => {
+      isActive = false
+    }
   }, [user, boardId, supabase])
 
   const addTask = useCallback(async (title: string, column: ColumnId = 'todo', priority: Priority = 'medium') => {
@@ -91,6 +107,7 @@ export function useKanban(boardId: string = '') {
       subtasks: [],
       order: data.order,
       createdAt: new Date(data.created_at).getTime(),
+      updatedAt: data.updated_at ? new Date(data.updated_at).getTime() : new Date(data.created_at).getTime(),
       boardId: data.board_id,
     }
 
@@ -111,6 +128,9 @@ export function useKanban(boardId: string = '') {
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt ? new Date(updates.completedAt).toISOString() : null
     if (updates.archivedAt !== undefined) dbUpdates.archived_at = updates.archivedAt ? new Date(updates.archivedAt).toISOString() : null
 
+    const updatedAt = Date.now()
+    dbUpdates.updated_at = new Date(updatedAt).toISOString()
+
     const { error } = await supabase
       .from('tasks')
       .update(dbUpdates)
@@ -122,7 +142,7 @@ export function useKanban(boardId: string = '') {
     }
 
     setTasks(prev => prev.map(task =>
-      task.id === id ? { ...task, ...updates } : task
+      task.id === id ? { ...task, ...updates, updatedAt } : task
     ))
   }, [supabase])
 
@@ -141,10 +161,11 @@ export function useKanban(boardId: string = '') {
   }, [supabase])
 
   const archiveTask = useCallback(async (id: string) => {
-    const archivedAt = new Date().toISOString()
+    const now = Date.now()
+    const archivedAt = new Date(now).toISOString()
     const { error } = await supabase
       .from('tasks')
-      .update({ archived_at: archivedAt })
+      .update({ archived_at: archivedAt, updated_at: archivedAt })
       .eq('id', id)
 
     if (error) {
@@ -153,14 +174,15 @@ export function useKanban(boardId: string = '') {
     }
 
     setTasks(prev => prev.map(task =>
-      task.id === id ? { ...task, archivedAt: Date.now() } : task
+      task.id === id ? { ...task, archivedAt: now, updatedAt: now } : task
     ))
   }, [supabase])
 
   const restoreTask = useCallback(async (id: string) => {
+    const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ archived_at: null })
+      .update({ archived_at: null, updated_at: new Date(now).toISOString() })
       .eq('id', id)
 
     if (error) {
@@ -169,17 +191,18 @@ export function useKanban(boardId: string = '') {
     }
 
     setTasks(prev => prev.map(task =>
-      task.id === id ? { ...task, archivedAt: undefined } : task
+      task.id === id ? { ...task, archivedAt: undefined, updatedAt: now } : task
     ))
   }, [supabase])
 
   const moveTask = useCallback(async (taskId: string, toColumn: ColumnId, newOrder?: number) => {
-    const order = newOrder ?? Date.now()
+    const now = Date.now()
+    const order = newOrder ?? now
     const task = tasks.find(t => t.id === taskId)
 
     // Set completedAt when moving to complete, clear it when moving away
     const completedAt = toColumn === 'complete'
-      ? (task?.completedAt || Date.now()) // Keep existing completedAt if already set
+      ? (task?.completedAt || now) // Keep existing completedAt if already set
       : null
 
     const { error } = await supabase
@@ -187,7 +210,8 @@ export function useKanban(boardId: string = '') {
       .update({
         status: toColumn,
         order,
-        completed_at: completedAt ? new Date(completedAt).toISOString() : null
+        completed_at: completedAt ? new Date(completedAt).toISOString() : null,
+        updated_at: new Date(now).toISOString(),
       })
       .eq('id', taskId)
 
@@ -202,7 +226,8 @@ export function useKanban(boardId: string = '') {
             ...t,
             column: toColumn,
             order,
-            completedAt: completedAt || undefined
+            completedAt: completedAt || undefined,
+            updatedAt: now,
           }
         : t
     ))
@@ -220,9 +245,10 @@ export function useKanban(boardId: string = '') {
     }
     const newSubtasks = [...(task.subtasks || []), subtask]
 
+    const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ subtasks: newSubtasks })
+      .update({ subtasks: newSubtasks, updated_at: new Date(now).toISOString() })
       .eq('id', taskId)
 
     if (error) {
@@ -232,7 +258,7 @@ export function useKanban(boardId: string = '') {
 
     setTasks(prev => prev.map(t =>
       t.id === taskId
-        ? { ...t, subtasks: newSubtasks }
+        ? { ...t, subtasks: newSubtasks, updatedAt: now }
         : t
     ))
   }, [tasks, supabase])
@@ -245,9 +271,10 @@ export function useKanban(boardId: string = '') {
       st.id === subtaskId ? { ...st, completed: !st.completed } : st
     )
 
+    const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ subtasks: newSubtasks })
+      .update({ subtasks: newSubtasks, updated_at: new Date(now).toISOString() })
       .eq('id', taskId)
 
     if (error) {
@@ -257,7 +284,7 @@ export function useKanban(boardId: string = '') {
 
     setTasks(prev => prev.map(t =>
       t.id === taskId
-        ? { ...t, subtasks: newSubtasks }
+        ? { ...t, subtasks: newSubtasks, updatedAt: now }
         : t
     ))
   }, [tasks, supabase])
@@ -268,9 +295,10 @@ export function useKanban(boardId: string = '') {
 
     const newSubtasks = (task.subtasks || []).filter(st => st.id !== subtaskId)
 
+    const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ subtasks: newSubtasks })
+      .update({ subtasks: newSubtasks, updated_at: new Date(now).toISOString() })
       .eq('id', taskId)
 
     if (error) {
@@ -280,7 +308,7 @@ export function useKanban(boardId: string = '') {
 
     setTasks(prev => prev.map(t =>
       t.id === taskId
-        ? { ...t, subtasks: newSubtasks }
+        ? { ...t, subtasks: newSubtasks, updatedAt: now }
         : t
     ))
   }, [tasks, supabase])
@@ -296,9 +324,10 @@ export function useKanban(boardId: string = '') {
       ? labels.filter(l => l !== labelId)
       : [...labels, labelId]
 
+    const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ labels: newLabels })
+      .update({ labels: newLabels, updated_at: new Date(now).toISOString() })
       .eq('id', taskId)
 
     if (error) {
@@ -308,7 +337,7 @@ export function useKanban(boardId: string = '') {
 
     setTasks(prev => prev.map(t =>
       t.id === taskId
-        ? { ...t, labels: newLabels }
+        ? { ...t, labels: newLabels, updatedAt: now }
         : t
     ))
   }, [tasks, supabase])

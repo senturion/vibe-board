@@ -1,6 +1,21 @@
 import type { Metadata, Viewport } from "next";
+import { Instrument_Serif, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+
+const fontDisplay = Instrument_Serif({
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+});
+
+const fontBody = DM_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-body",
+});
 
 export const metadata: Metadata = {
   title: "Vibe Board",
@@ -24,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased">
+      <body className={`${fontDisplay.variable} ${fontBody.variable} antialiased`}>
         <Providers>
           {children}
         </Providers>

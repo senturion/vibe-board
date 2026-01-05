@@ -24,9 +24,10 @@ export function ActivityMiniWidget() {
 
   const activities = useMemo(() => {
     const items: ActivityItem[] = []
-    const today = formatDateKey(new Date())
-    const yesterday = formatDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000))
-    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000
+    const now = new Date()
+    const today = formatDateKey(now)
+    const yesterday = formatDateKey(new Date(now.getTime() - 24 * 60 * 60 * 1000))
+    const twoDaysAgo = now.getTime() - 2 * 24 * 60 * 60 * 1000
 
     // Recent habit completions
     completions
@@ -56,6 +57,27 @@ export function ActivityMiniWidget() {
           timestamp: task.completedAt!,
           icon: CheckSquare,
           color: '#60a5fa',
+        })
+      })
+
+    // Recent task updates
+    tasks
+      .filter(task => {
+        if (task.archivedAt) return false
+        const updatedAt = task.updatedAt ?? task.createdAt
+        if (updatedAt <= twoDaysAgo) return false
+        return !(task.completedAt && task.completedAt >= updatedAt)
+      })
+      .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))
+      .slice(0, 3)
+      .forEach(task => {
+        const updatedAt = task.updatedAt ?? task.createdAt
+        items.push({
+          id: `task-updated-${task.id}`,
+          title: `Updated: ${task.title}`,
+          timestamp: updatedAt,
+          icon: Activity,
+          color: '#93c5fd',
         })
       })
 
@@ -105,7 +127,7 @@ export function ActivityMiniWidget() {
   }, [completions, habits, entries, milestones, goals, tasks])
 
   function formatTime(timestamp: number) {
-    const now = Date.now()
+    const now = new Date().getTime()
     const diff = now - timestamp
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)

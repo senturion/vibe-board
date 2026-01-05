@@ -27,10 +27,14 @@ export function QuoteWidget() {
 
   useEffect(() => {
     // Get a random quote on mount, but consistent for the day
-    const today = new Date().toDateString()
-    const seed = today.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
-    const index = seed % QUOTES.length
-    setQuote(QUOTES[index])
+    const syncTimeout = setTimeout(() => {
+      const today = new Date().toDateString()
+      const seed = today.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+      const index = seed % QUOTES.length
+      setQuote(QUOTES[index])
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [])
 
   const getNewQuote = () => {
@@ -53,7 +57,7 @@ export function QuoteWidget() {
         </button>
       </div>
       <p className="text-[11px] text-[var(--text-secondary)] italic leading-relaxed mb-1">
-        "{quote.text}"
+        &ldquo;{quote.text}&rdquo;
       </p>
       <p className="text-[10px] text-[var(--text-tertiary)]">
         — {quote.author}

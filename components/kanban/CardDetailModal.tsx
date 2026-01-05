@@ -70,8 +70,12 @@ export function CardDetailModal({
   const selectedTags = getTagsForTask(taskTagIds)
 
   useEffect(() => {
-    setTitle(task.title)
-    setDescription(task.description || '')
+    const syncTimeout = setTimeout(() => {
+      setTitle(task.title)
+      setDescription(task.description || '')
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [task])
 
   useEffect(() => {

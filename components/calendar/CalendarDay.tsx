@@ -1,7 +1,8 @@
 'use client'
 
-import { CalendarDay as CalendarDayType, formatDateKey, MOOD_EMOJIS } from '@/lib/types'
+import { CalendarDay as CalendarDayType } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { MoodIcon, getMoodOption } from '@/components/journal/moods'
 
 interface CalendarDayCellProps {
   day: number
@@ -102,10 +103,10 @@ export function CalendarDayCell({
         </div>
       )}
 
-      {/* Mood emoji (small) */}
+      {/* Mood icon (small) */}
       {data?.journalMood && isCurrentMonth && (
-        <span className="text-[10px] leading-none">
-          {MOOD_EMOJIS.find(m => m.value === data.journalMood)?.emoji}
+        <span title={getMoodOption(data.journalMood)?.label}>
+          <MoodIcon mood={data.journalMood} size={12} />
         </span>
       )}
     </button>

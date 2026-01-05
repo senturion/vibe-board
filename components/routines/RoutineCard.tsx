@@ -16,6 +16,8 @@ interface RoutineCardProps {
   onEdit: () => void
   onDelete: () => void
   onAddItem: (title: string) => void
+  onUpdateItem: (itemId: string, updates: Partial<RoutineItem>) => void
+  onDeleteItem: (itemId: string) => void
   compact?: boolean
 }
 
@@ -28,11 +30,16 @@ export function RoutineCard({
   onEdit,
   onDelete,
   onAddItem,
+  onUpdateItem,
+  onDeleteItem,
   compact = false,
 }: RoutineCardProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [showAddItem, setShowAddItem] = useState(false)
   const [newItemTitle, setNewItemTitle] = useState('')
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const [editingTargetTime, setEditingTargetTime] = useState('')
 
   const getDaysLabel = () => {
     if (routine.daysOfWeek.length === 7) return 'Every day'
@@ -55,6 +62,32 @@ export function RoutineCard({
       setNewItemTitle('')
       setShowAddItem(false)
     }
+  }
+
+  const startEditing = (item: RoutineItem) => {
+    setEditingItemId(item.id)
+    setEditingTitle(item.title)
+    setEditingTargetTime(item.targetTime ? String(item.targetTime) : '')
+  }
+
+  const cancelEditing = () => {
+    setEditingItemId(null)
+    setEditingTitle('')
+    setEditingTargetTime('')
+  }
+
+  const saveEditing = () => {
+    if (!editingItemId) return
+    const nextTitle = editingTitle.trim()
+    if (!nextTitle) {
+      cancelEditing()
+      return
+    }
+
+    const nextTarget = editingTargetTime.trim()
+    const targetTime = nextTarget ? Math.max(1, parseInt(nextTarget, 10) || 0) : undefined
+    onUpdateItem(editingItemId, { title: nextTitle, targetTime })
+    cancelEditing()
   }
 
   if (compact) {
@@ -138,6 +171,7 @@ export function RoutineCard({
           <div className="space-y-1">
             {items.map(item => {
               const completed = isItemCompleted(item.id)
+              const isEditing = editingItemId === item.id
               return (
                 <div
                   key={item.id}
@@ -158,18 +192,77 @@ export function RoutineCard({
                     {completed && <Check size={12} className="text-[var(--bg-primary)]" />}
                   </button>
 
-                  <span className={cn(
-                    'flex-1 text-[13px]',
-                    completed ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-primary)]'
-                  )}>
-                    {item.title}
-                  </span>
+                  {isEditing ? (
+                    <div
+                      className="flex-1 flex items-center gap-2"
+                      onBlur={(e) => {
+                        const currentTarget = e.currentTarget
+                        setTimeout(() => {
+                          if (!currentTarget.contains(document.activeElement)) {
+                            saveEditing()
+                          }
+                        }, 0)
+                      }}
+                    >
+                      <input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEditing()
+                          if (e.key === 'Escape') cancelEditing()
+                        }}
+                        autoFocus
+                        className="flex-1 bg-[var(--bg-tertiary)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none border border-[var(--border)] focus:border-[var(--text-tertiary)]"
+                      />
+                      <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
+                        <Clock size={10} />
+                        <input
+                          type="number"
+                          min={1}
+                          value={editingTargetTime}
+                          onChange={(e) => setEditingTargetTime(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveEditing()
+                            if (e.key === 'Escape') cancelEditing()
+                          }}
+                          className="w-14 bg-[var(--bg-tertiary)] px-1 py-1 text-[11px] text-[var(--text-primary)] outline-none border border-[var(--border)] focus:border-[var(--text-tertiary)] text-center"
+                        />
+                        m
+                      </div>
+                    </div>
+                  ) : (
+                    <span className={cn(
+                      'flex-1 text-[13px]',
+                      completed ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-primary)]'
+                    )}>
+                      {item.title}
+                    </span>
+                  )}
 
                   {item.targetTime && (
                     <span className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-1">
                       <Clock size={10} />
                       {item.targetTime}m
                     </span>
+                  )}
+
+                  {!isEditing && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => startEditing(item)}
+                        className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                        title="Edit item"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                      <button
+                        onClick={() => onDeleteItem(item.id)}
+                        className="p-1 text-[var(--text-tertiary)] hover:text-red-400"
+                        title="Delete item"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   )}
                 </div>
               )

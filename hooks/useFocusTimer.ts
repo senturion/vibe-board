@@ -32,14 +32,17 @@ export function useFocusTimer() {
 
   // Fetch settings and recent sessions
   useEffect(() => {
-    if (!user) {
-      setSettings(DEFAULT_FOCUS_SETTINGS)
-      setSessions([])
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchData = async () => {
+      if (!user) {
+        if (isActive) {
+          setSettings(DEFAULT_FOCUS_SETTINGS)
+          setSessions([])
+          setLoading(false)
+        }
+        return
+      }
+
       // Fetch settings
       const { data: settingsData, error: settingsError } = await supabase
         .from('focus_settings')
@@ -66,7 +69,7 @@ export function useFocusTimer() {
         console.error('Error fetching sessions:', sessionsError)
       }
 
-      if (settingsData) {
+      if (settingsData && isActive) {
         const mappedSettings: FocusSettings = {
           workDuration: settingsData.work_duration,
           shortBreakDuration: settingsData.short_break_duration,
@@ -94,33 +97,17 @@ export function useFocusTimer() {
         endedAt: s.ended_at ? new Date(s.ended_at).getTime() : undefined,
       }))
 
-      setSessions(mappedSessions)
-      setLoading(false)
+      if (isActive) {
+        setSessions(mappedSessions)
+        setLoading(false)
+      }
     }
 
     fetchData()
-  }, [user, supabase])
-
-  // Timer tick
-  useEffect(() => {
-    if (isRunning && !isPaused && timeRemaining > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            handleSessionComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
+      isActive = false
     }
-  }, [isRunning, isPaused])
+  }, [user, supabase])
 
   // Get duration for session type
   const getDuration = useCallback((type: SessionType) => {
@@ -133,6 +120,46 @@ export function useFocusTimer() {
         return settings.longBreakDuration
     }
   }, [settings])
+
+  // Start timer
+  const start = useCallback(async () => {
+    if (!user) return
+
+    startTimeRef.current = Date.now()
+    setIsRunning(true)
+    setIsPaused(false)
+
+    // Create session in database
+    const { data, error } = await supabase
+      .from('focus_sessions')
+      .insert({
+        user_id: user.id,
+        session_type: currentSessionType,
+        planned_duration: getDuration(currentSessionType),
+        task_id: linkedTaskId || null,
+        goal_id: linkedGoalId || null,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating session:', error)
+    } else if (data) {
+      setCurrentSessionId(data.id)
+
+      const newSession: FocusSession = {
+        id: data.id,
+        sessionType: data.session_type as SessionType,
+        plannedDuration: data.planned_duration,
+        isCompleted: false,
+        taskId: data.task_id || undefined,
+        goalId: data.goal_id || undefined,
+        startedAt: new Date(data.started_at).getTime(),
+      }
+
+      setSessions(prev => [newSession, ...prev])
+    }
+  }, [user, supabase, currentSessionType, getDuration, linkedTaskId, linkedGoalId])
 
   // Handle session complete
   const handleSessionComplete = useCallback(async () => {
@@ -202,47 +229,28 @@ export function useFocusTimer() {
         setCurrentSessionId(null)
       }
     }
-  }, [currentSessionId, currentSessionType, sessionsCompleted, settings, user, supabase])
+  }, [currentSessionId, currentSessionType, sessionsCompleted, settings, user, supabase, start])
 
-  // Start timer
-  const start = useCallback(async () => {
-    if (!user) return
-
-    startTimeRef.current = Date.now()
-    setIsRunning(true)
-    setIsPaused(false)
-
-    // Create session in database
-    const { data, error } = await supabase
-      .from('focus_sessions')
-      .insert({
-        user_id: user.id,
-        session_type: currentSessionType,
-        planned_duration: getDuration(currentSessionType),
-        task_id: linkedTaskId || null,
-        goal_id: linkedGoalId || null,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating session:', error)
-    } else if (data) {
-      setCurrentSessionId(data.id)
-
-      const newSession: FocusSession = {
-        id: data.id,
-        sessionType: data.session_type as SessionType,
-        plannedDuration: data.planned_duration,
-        isCompleted: false,
-        taskId: data.task_id || undefined,
-        goalId: data.goal_id || undefined,
-        startedAt: new Date(data.started_at).getTime(),
-      }
-
-      setSessions(prev => [newSession, ...prev])
+  // Timer tick
+  useEffect(() => {
+    if (isRunning && !isPaused && timeRemaining > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            handleSessionComplete()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
     }
-  }, [user, supabase, currentSessionType, getDuration, linkedTaskId, linkedGoalId])
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+    }
+  }, [handleSessionComplete, isRunning, isPaused, timeRemaining])
 
   // Pause timer
   const pause = useCallback(() => {

@@ -181,6 +181,8 @@ export function RoutinesPage() {
     updateRoutine,
     deleteRoutine,
     addRoutineItem,
+    updateRoutineItem,
+    deleteRoutineItem,
     getRoutineItems,
     getTodaysRoutines,
     getRoutineProgress,
@@ -388,6 +390,8 @@ export function RoutinesPage() {
                   onEdit={() => handleEdit(routine)}
                   onDelete={() => deleteRoutine(routine.id)}
                   onAddItem={(title) => addRoutineItem(routine.id, title)}
+                  onUpdateItem={updateRoutineItem}
+                  onDeleteItem={deleteRoutineItem}
                 />
               ))}
             </div>

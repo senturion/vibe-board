@@ -23,6 +23,7 @@ create table public.tasks (
   due_date timestamptz,
   "order" integer not null default 0,
   created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null,
   completed_at timestamptz,
   archived_at timestamptz
 );
@@ -417,7 +418,7 @@ create table public.journal_entries (
   user_id uuid references auth.users(id) on delete cascade not null,
   entry_date date not null default current_date,
   content text default '' not null,
-  mood integer, -- 1-5 scale (or null if not tracked)
+  mood integer, -- 1-10 scale (or null if not tracked)
   mood_emoji text, -- optional emoji representation
   tags text[] default '{}',
   is_favorite boolean default false not null,

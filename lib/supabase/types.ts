@@ -43,6 +43,8 @@ export interface Database {
           due_date: string | null
           order: number
           created_at: string
+          updated_at: string
+          completed_at: string | null
           archived_at: string | null
         }
         Insert: {
@@ -58,6 +60,8 @@ export interface Database {
           due_date?: string | null
           order?: number
           created_at?: string
+          updated_at?: string
+          completed_at?: string | null
           archived_at?: string | null
         }
         Update: {
@@ -73,6 +77,8 @@ export interface Database {
           due_date?: string | null
           order?: number
           created_at?: string
+          updated_at?: string
+          completed_at?: string | null
           archived_at?: string | null
         }
       }

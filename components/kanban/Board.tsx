@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useEffect, useMemo } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -19,6 +19,7 @@ import { COLUMNS, ColumnId, KanbanTask, isOverdue, isDueSoon } from '@/lib/types
 import { useKanban } from '@/hooks/useKanban'
 import { useUndoRedo } from '@/contexts/UndoRedoContext'
 import { useColumnColors } from '@/hooks/useColumnColors'
+import { useTagsContext } from '@/contexts/TagsContext'
 import { Column } from './Column'
 import { CardDetailModal } from './CardDetailModal'
 import { ArchivePanel } from './ArchivePanel'
@@ -38,6 +39,7 @@ interface BoardProps {
 
 export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false }: BoardProps) {
   const { getColumnColor, setColumnColor } = useColumnColors()
+  const { getTaskTagIdsByTaskIds, taskTagsVersion } = useTagsContext()
   const {
     tasks,
     addTask: rawAddTask,
@@ -155,12 +157,33 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
   const [showQuickCapture, setShowQuickCapture] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [internalShowSearch, setInternalShowSearch] = useState(false)
+  const [taskTagMap, setTaskTagMap] = useState<Record<string, string[]>>({})
 
   // Support both controlled and uncontrolled search modes
   const showSearch = searchOpen !== undefined ? searchOpen : internalShowSearch
   const setShowSearch = onSearchClose
     ? (show: boolean) => { if (!show) onSearchClose(); else setInternalShowSearch(true); }
     : setInternalShowSearch
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadTaskTags = async () => {
+      if (tasks.length === 0) {
+        if (isActive) setTaskTagMap({})
+        return
+      }
+
+      const map = await getTaskTagIdsByTaskIds(tasks.map(task => task.id))
+      if (isActive) setTaskTagMap(map)
+    }
+
+    loadTaskTags()
+
+    return () => {
+      isActive = false
+    }
+  }, [tasks, getTaskTagIdsByTaskIds, taskTagsVersion])
 
   // Apply filters and sorting to tasks
   const getFilteredTasksByColumn = useCallback((column: ColumnId) => {
@@ -169,9 +192,9 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     // Apply filters
     if (filters) {
       // Label filter
-      if (filters.labels.length > 0) {
+      if (filters.tags.length > 0) {
         columnTasks = columnTasks.filter(task =>
-          filters.labels.some(label => (task.labels || []).includes(label))
+          filters.tags.some(tagId => (taskTagMap[task.id] || []).includes(tagId))
         )
       }
 
@@ -227,7 +250,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     }
 
     return columnTasks
-  }, [getTasksByColumn, filters, sort])
+  }, [getTasksByColumn, filters, sort, taskTagMap])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -406,12 +429,16 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
 
   // Keep selected task in sync with updates
   useEffect(() => {
-    if (selectedTask) {
+    if (!selectedTask) return
+
+    const syncTimeout = setTimeout(() => {
       const updated = getTaskById(selectedTask.id)
       if (updated && JSON.stringify(updated) !== JSON.stringify(selectedTask)) {
         setSelectedTask(updated)
       }
-    }
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [tasks, selectedTask, getTaskById])
 
   return (

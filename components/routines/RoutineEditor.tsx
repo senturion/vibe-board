@@ -25,7 +25,9 @@ export function RoutineEditor({
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+
+    const syncTimeout = setTimeout(() => {
       if (routine) {
         setName(routine.name)
         setDescription(routine.description || '')
@@ -38,7 +40,9 @@ export function RoutineEditor({
         setLocation('both')
       }
       setTimeout(() => nameInputRef.current?.focus(), 100)
-    }
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [isOpen, routine])
 
   const handleSubmit = (e: React.FormEvent) => {

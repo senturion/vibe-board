@@ -1,9 +1,8 @@
 'use client'
 
 import { useMemo } from 'react'
-import { X, TrendingUp, CheckCircle2, Clock, AlertTriangle, BarChart3 } from 'lucide-react'
+import { X, TrendingUp, CheckCircle2, AlertTriangle, BarChart3 } from 'lucide-react'
 import { KanbanTask, COLUMNS, PRIORITIES, LABELS, isOverdue } from '@/lib/types'
-import { cn } from '@/lib/utils'
 
 interface StatsDashboardProps {
   isOpen: boolean
@@ -42,7 +41,7 @@ export function StatsDashboard({ isOpen, onClose, tasks }: StatsDashboardProps) 
       : 0
 
     // Weekly activity (last 7 days)
-    const now = Date.now()
+    const now = new Date().getTime()
     const weekAgo = now - 7 * 24 * 60 * 60 * 1000
     const tasksThisWeek = tasks.filter(t => t.createdAt >= weekAgo).length
     const completedThisWeek = tasks.filter(t =>

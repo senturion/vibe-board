@@ -1,14 +1,102 @@
 'use client'
 
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  PointerSensor,
+  rectIntersection,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { X, Plus, Trash2, Edit2, Check, GripVertical, ChevronDown, ChevronRight } from 'lucide-react'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { Tag, TagCategory, TAG_COLORS } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { TagBadge } from './TagBadge'
 
 interface TagManagerProps {
   isOpen: boolean
   onClose: () => void
+}
+
+const UNCATEGORIZED_DROP_ID = 'uncategorized'
+const categoryDropId = (categoryId: string) => `category-${categoryId}`
+
+function TagDropZone({ id, children }: { id: string; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'ml-5 space-y-0.5 rounded',
+        isOver && 'bg-[var(--bg-tertiary)]/60'
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function DraggableTagRow({
+  tag,
+  onEdit,
+  onDelete,
+}: {
+  tag: Tag
+  onEdit: (tag: Tag) => void
+  onDelete: (tagId: string) => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: tag.id,
+  })
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 py-1 px-2 hover:bg-[var(--bg-tertiary)] rounded group"
+    >
+      <span
+        {...attributes}
+        {...listeners}
+        className="text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 cursor-grab touch-none"
+        aria-label="Drag tag"
+      >
+        <GripVertical size={12} />
+      </span>
+      <TagBadge tag={tag} size="md" />
+      <div className="flex-1" />
+      <button
+        onClick={() => onEdit(tag)}
+        className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded opacity-0 group-hover:opacity-100"
+      >
+        <Edit2 size={12} />
+      </button>
+      <button
+        onClick={() => onDelete(tag.id)}
+        className="p-1 text-[var(--text-tertiary)] hover:text-red-400 hover:bg-[var(--bg-secondary)] rounded opacity-0 group-hover:opacity-100"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  )
 }
 
 export function TagManager({ isOpen, onClose }: TagManagerProps) {
@@ -34,6 +122,13 @@ export function TagManager({ isOpen, onClose }: TagManagerProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(categories.map(c => c.id)))
   const [editName, setEditName] = useState('')
   const [editColorIndex, setEditColorIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  )
 
   if (!isOpen) return null
 
@@ -161,24 +256,36 @@ export function TagManager({ isOpen, onClose }: TagManagerProps) {
     }
 
     return (
-      <div key={tag.id} className="flex items-center gap-2 py-1 px-2 hover:bg-[var(--bg-tertiary)] rounded group">
-        <GripVertical size={12} className="text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 cursor-grab" />
-        <TagBadge tag={tag} size="md" />
-        <div className="flex-1" />
-        <button
-          onClick={() => handleStartEditTag(tag)}
-          className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded opacity-0 group-hover:opacity-100"
-        >
-          <Edit2 size={12} />
-        </button>
-        <button
-          onClick={() => handleDeleteTag(tag.id)}
-          className="p-1 text-[var(--text-tertiary)] hover:text-red-400 hover:bg-[var(--bg-secondary)] rounded opacity-0 group-hover:opacity-100"
-        >
-          <Trash2 size={12} />
-        </button>
-      </div>
+      <DraggableTagRow
+        key={tag.id}
+        tag={tag}
+        onEdit={handleStartEditTag}
+        onDelete={handleDeleteTag}
+      />
     )
+  }
+
+  const handleDragStart = (_event: DragStartEvent) => {
+    setIsDragging(true)
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setIsDragging(false)
+    const { active, over } = event
+    if (!over) return
+
+    const activeTag = tags.find(t => t.id === active.id)
+    if (!activeTag) return
+
+    const overId = String(over.id)
+    const nextCategoryId = overId === UNCATEGORIZED_DROP_ID
+      ? undefined
+      : overId.startsWith('category-')
+        ? overId.replace('category-', '')
+        : activeTag.categoryId
+
+    if (nextCategoryId === activeTag.categoryId) return
+    await updateTag(activeTag.id, { categoryId: nextCategoryId })
   }
 
   const renderNewTagInput = (categoryId?: string) => (
@@ -244,161 +351,169 @@ export function TagManager({ isOpen, onClose }: TagManagerProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Categories */}
-          {categories.map(category => {
-            const categoryTags = getTagsByCategory(category.id)
-            const isExpanded = expandedCategories.has(category.id)
-            const isEditing = editingCategoryId === category.id
+        <DndContext
+          sensors={sensors}
+          collisionDetection={rectIntersection}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setIsDragging(false)}
+        >
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Categories */}
+            {categories.map(category => {
+              const categoryTags = getTagsByCategory(category.id)
+              const isExpanded = expandedCategories.has(category.id)
+              const isEditing = editingCategoryId === category.id
 
-            return (
-              <div key={category.id} className="space-y-1">
-                {/* Category header */}
-                <div className="flex items-center gap-2 group">
-                  <button
-                    onClick={() => toggleCategory(category.id)}
-                    className="p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                  >
-                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  </button>
+              return (
+                <div key={category.id} className="space-y-1">
+                  {/* Category header */}
+                  <div className="flex items-center gap-2 group">
+                    <button
+                      onClick={() => toggleCategory(category.id)}
+                      className="p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                    >
+                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
 
-                  {isEditing ? (
-                    <>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveCategory(category.id)
-                          if (e.key === 'Escape') setEditingCategoryId(null)
-                        }}
-                        className="flex-1 px-2 py-0.5 text-sm font-medium bg-[var(--bg-secondary)] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)]"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => handleSaveCategory(category.id)}
-                        className="p-1 text-[var(--success)]"
-                      >
-                        <Check size={14} />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">
-                        {category.name}
-                      </span>
-                      <span className="text-xs text-[var(--text-tertiary)]">
-                        {categoryTags.length}
-                      </span>
-                      <button
-                        onClick={() => handleStartEditCategory(category)}
-                        className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100"
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCategory(category.id)}
-                        className="p-1 text-[var(--text-tertiary)] hover:text-red-400 opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Tags in category */}
-                {isExpanded && (
-                  <div className="ml-5 space-y-0.5">
-                    {categoryTags.map(renderTagRow)}
-
-                    {showNewTag === category.id ? (
-                      renderNewTagInput(category.id)
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveCategory(category.id)
+                            if (e.key === 'Escape') setEditingCategoryId(null)
+                          }}
+                          className="flex-1 px-2 py-0.5 text-sm font-medium bg-[var(--bg-secondary)] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)]"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleSaveCategory(category.id)}
+                          className="p-1 text-[var(--success)]"
+                        >
+                          <Check size={14} />
+                        </button>
+                      </>
                     ) : (
-                      <button
-                        onClick={() => setShowNewTag(category.id)}
-                        className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] py-1 px-2"
-                      >
-                        <Plus size={12} />
-                        Add tag
-                      </button>
+                      <>
+                        <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">
+                          {category.name}
+                        </span>
+                        <span className="text-xs text-[var(--text-tertiary)]">
+                          {categoryTags.length}
+                        </span>
+                        <button
+                          onClick={() => handleStartEditCategory(category)}
+                          className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(category.id)}
+                          className="p-1 text-[var(--text-tertiary)] hover:text-red-400 opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </>
                     )}
                   </div>
-                )}
-              </div>
-            )
-          })}
 
-          {/* Uncategorized tags */}
-          {(uncategorizedTags.length > 0 || showNewTag === 'uncategorized') && (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[var(--text-tertiary)]">Uncategorized</span>
-                <span className="text-xs text-[var(--text-tertiary)]">
-                  {uncategorizedTags.length}
-                </span>
-              </div>
-              <div className="ml-5 space-y-0.5">
-                {uncategorizedTags.map(renderTagRow)}
+                  {/* Tags in category */}
+                  {isExpanded && (
+                    <TagDropZone id={categoryDropId(category.id)}>
+                      {categoryTags.map(renderTagRow)}
 
-                {showNewTag === 'uncategorized' ? (
-                  renderNewTagInput()
-                ) : (
-                  <button
-                    onClick={() => setShowNewTag('uncategorized')}
-                    className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] py-1 px-2"
-                  >
-                    <Plus size={12} />
-                    Add tag
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+                      {showNewTag === category.id ? (
+                        renderNewTagInput(category.id)
+                      ) : (
+                        <button
+                          onClick={() => setShowNewTag(category.id)}
+                          className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] py-1 px-2"
+                        >
+                          <Plus size={12} />
+                          Add tag
+                        </button>
+                      )}
+                    </TagDropZone>
+                  )}
+                </div>
+              )
+            })}
 
-          {/* Add new category */}
-          {showNewCategory ? (
-            <div className="flex items-center gap-2 pt-2 border-t border-[var(--border)]">
-              <input
-                type="text"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddCategory()
-                  if (e.key === 'Escape') {
+            {/* Uncategorized tags */}
+            {(uncategorizedTags.length > 0 || showNewTag === 'uncategorized' || isDragging) && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-[var(--text-tertiary)]">Uncategorized</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">
+                    {uncategorizedTags.length}
+                  </span>
+                </div>
+                <TagDropZone id={UNCATEGORIZED_DROP_ID}>
+                  {uncategorizedTags.map(renderTagRow)}
+
+                  {showNewTag === 'uncategorized' ? (
+                    renderNewTagInput()
+                  ) : (
+                    <button
+                      onClick={() => setShowNewTag('uncategorized')}
+                      className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] py-1 px-2"
+                    >
+                      <Plus size={12} />
+                      Add tag
+                    </button>
+                  )}
+                </TagDropZone>
+              </div>
+            )}
+
+            {/* Add new category */}
+            {showNewCategory ? (
+              <div className="flex items-center gap-2 pt-2 border-t border-[var(--border)]">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddCategory()
+                    if (e.key === 'Escape') {
+                      setShowNewCategory(false)
+                      setNewCategoryName('')
+                    }
+                  }}
+                  placeholder="Category name..."
+                  className="flex-1 px-3 py-1.5 text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)]"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAddCategory}
+                  className="px-3 py-1.5 text-sm bg-[var(--accent)] text-white rounded hover:opacity-90"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => {
                     setShowNewCategory(false)
                     setNewCategoryName('')
-                  }
-                }}
-                placeholder="Category name..."
-                className="flex-1 px-3 py-1.5 text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)]"
-                autoFocus
-              />
+                  }}
+                  className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={handleAddCategory}
-                className="px-3 py-1.5 text-sm bg-[var(--accent)] text-white rounded hover:opacity-90"
+                onClick={() => setShowNewCategory(true)}
+                className="flex items-center gap-2 text-sm text-[var(--accent)] hover:opacity-80 pt-2 border-t border-[var(--border)]"
               >
-                Add
+                <Plus size={14} />
+                Add category
               </button>
-              <button
-                onClick={() => {
-                  setShowNewCategory(false)
-                  setNewCategoryName('')
-                }}
-                className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowNewCategory(true)}
-              className="flex items-center gap-2 text-sm text-[var(--accent)] hover:opacity-80 pt-2 border-t border-[var(--border)]"
-            >
-              <Plus size={14} />
-              Add category
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        </DndContext>
       </div>
     </div>
   )

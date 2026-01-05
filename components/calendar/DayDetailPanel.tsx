@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo } from 'react'
 import { X, Target, BookOpen, ListChecks, Check, ChevronRight } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 import { useJournal } from '@/hooks/useJournal'
 import { useRoutines } from '@/hooks/useRoutines'
 import { useNavigation } from '@/contexts/NavigationContext'
-import { CalendarDay, parseDateKey, formatDateKey, MOOD_EMOJIS } from '@/lib/types'
+import { CalendarDay, parseDateKey, formatDateKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { MoodIcon, getMoodOption } from '@/components/journal/moods'
 
 interface DayDetailPanelProps {
   date: string
@@ -34,21 +34,19 @@ export function DayDetailPanel({ date, data, onClose }: DayDetailPanelProps) {
   })
 
   // Get habits active on this day
-  const activeHabits = useMemo(() => {
-    return habits.filter(habit => {
-      if (!habit.isActive) return false
-      switch (habit.frequencyType) {
-        case 'daily':
-          return true
-        case 'specific_days':
-          return habit.specificDays?.includes(dayOfWeek as 1|2|3|4|5|6|7) ?? false
-        case 'weekly':
-          return true
-        default:
-          return false
-      }
-    })
-  }, [habits, dayOfWeek])
+  const activeHabits = habits.filter(habit => {
+    if (!habit.isActive) return false
+    switch (habit.frequencyType) {
+      case 'daily':
+        return true
+      case 'specific_days':
+        return habit.specificDays?.includes(dayOfWeek as 1|2|3|4|5|6|7) ?? false
+      case 'weekly':
+        return true
+      default:
+        return false
+    }
+  })
 
   // Get habit completion status for this day
   const getHabitStatus = (habitId: string) => {
@@ -62,16 +60,12 @@ export function DayDetailPanel({ date, data, onClose }: DayDetailPanelProps) {
   }
 
   // Get journal entry for this day
-  const journalEntry = useMemo(() => {
-    return entries.find(e => e.entryDate === date)
-  }, [entries, date])
+  const journalEntry = entries.find(e => e.entryDate === date)
 
   // Get routines active on this day
-  const activeRoutines = useMemo(() => {
-    return routines.filter(routine => {
-      return routine.isActive && routine.daysOfWeek.includes(dayOfWeek as 1|2|3|4|5|6|7)
-    })
-  }, [routines, dayOfWeek])
+  const activeRoutines = routines.filter(routine => {
+    return routine.isActive && routine.daysOfWeek.includes(dayOfWeek as 1|2|3|4|5|6|7)
+  })
 
   return (
     <div className="fixed inset-y-0 right-0 w-[400px] bg-[var(--bg-elevated)] border-l border-[var(--border)] shadow-2xl z-50 flex flex-col animate-slide-in">
@@ -179,11 +173,9 @@ export function DayDetailPanel({ date, data, onClose }: DayDetailPanelProps) {
             <div className="p-3 border border-[var(--border)] bg-[var(--bg-tertiary)]">
               {journalEntry.mood && (
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">
-                    {MOOD_EMOJIS.find(m => m.value === journalEntry.mood)?.emoji}
-                  </span>
+                  <MoodIcon mood={journalEntry.mood} size={18} />
                   <span className="text-[11px] text-[var(--text-tertiary)]">
-                    {MOOD_EMOJIS.find(m => m.value === journalEntry.mood)?.label}
+                    {getMoodOption(journalEntry.mood)?.label}
                   </span>
                 </div>
               )}

@@ -212,24 +212,28 @@ export function Sidebar() {
 
   // Load from localStorage after hydration to avoid mismatch
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SIDEBAR_WIDGETS_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored) as WidgetOrderItem[]
-        // Ensure all widgets are present (in case new ones were added)
-        const existingIds = new Set(parsed.map(p => p.id))
-        const merged = [
-          ...parsed,
-          ...SIDEBAR_WIDGETS
-            .filter(w => !existingIds.has(w.id))
-            .map(w => ({ id: w.id, visible: w.defaultVisible }))
-        ]
-        setWidgetOrder(merged)
+    const hydrateTimeout = setTimeout(() => {
+      try {
+        const stored = localStorage.getItem(SIDEBAR_WIDGETS_KEY)
+        if (stored) {
+          const parsed = JSON.parse(stored) as WidgetOrderItem[]
+          // Ensure all widgets are present (in case new ones were added)
+          const existingIds = new Set(parsed.map(p => p.id))
+          const merged = [
+            ...parsed,
+            ...SIDEBAR_WIDGETS
+              .filter(w => !existingIds.has(w.id))
+              .map(w => ({ id: w.id, visible: w.defaultVisible }))
+          ]
+          setWidgetOrder(merged)
+        }
+      } catch (e) {
+        console.error('Error loading sidebar widgets:', e)
       }
-    } catch (e) {
-      console.error('Error loading sidebar widgets:', e)
-    }
-    setIsHydrated(true)
+      setIsHydrated(true)
+    }, 0)
+
+    return () => clearTimeout(hydrateTimeout)
   }, [])
 
   const toggleWidget = (id: SidebarWidgetId) => {

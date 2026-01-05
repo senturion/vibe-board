@@ -243,7 +243,7 @@ export function useAllHabitsAnalytics(habits: Habit[], completions: HabitComplet
   const todayStats = useMemo(() => {
     const activeHabits = habits.filter(h => h.isActive)
     let completed = 0
-    let total = activeHabits.length
+    const total = activeHabits.length
 
     activeHabits.forEach(habit => {
       const habitCompletions = completions.filter(

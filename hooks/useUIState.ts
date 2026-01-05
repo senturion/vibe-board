@@ -28,7 +28,9 @@ export function useUIState() {
   // Load state from localStorage first (fast), then from Supabase (authoritative)
   useEffect(() => {
     // Load from localStorage immediately for fast UX
-    if (typeof window !== 'undefined' && !isHydrated) {
+    if (typeof window === 'undefined' || isHydrated) return
+
+    const hydrateTimeout = setTimeout(() => {
       try {
         const stored = localStorage.getItem(STORAGE_KEY)
         if (stored) {
@@ -39,17 +41,22 @@ export function useUIState() {
         console.error('Error loading UI state from localStorage:', e)
       }
       setIsHydrated(true)
-    }
+    }, 0)
+
+    return () => clearTimeout(hydrateTimeout)
   }, [isHydrated])
 
   // Load from Supabase when user is authenticated
   useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const loadFromCloud = async () => {
+      if (!user) {
+        if (isActive) {
+          setLoading(false)
+        }
+        return
+      }
+
       const { data, error } = await supabase
         .from('user_ui_state')
         .select('*')
@@ -61,7 +68,7 @@ export function useUIState() {
         console.error('Error loading UI state:', error)
       }
 
-      if (data) {
+      if (data && isActive) {
         const cloudState: UserUIState = {
           activeView: (data.active_view as ViewId) || DEFAULT_UI_STATE.activeView,
           widgetStates: (data.widget_states as Record<string, { collapsed: boolean }>) || {},
@@ -77,10 +84,15 @@ export function useUIState() {
         }
       }
 
-      setLoading(false)
+      if (isActive) {
+        setLoading(false)
+      }
     }
 
     loadFromCloud()
+    return () => {
+      isActive = false
+    }
   }, [user, supabase])
 
   // Debounced sync to Supabase

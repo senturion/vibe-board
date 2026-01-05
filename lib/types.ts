@@ -19,6 +19,7 @@ export interface KanbanTask {
   dueDate?: number
   order: number
   createdAt: number
+  updatedAt?: number
   completedAt?: number  // When task was moved to complete
   archivedAt?: number
   boardId?: string  // For multi-board support
@@ -395,7 +396,7 @@ export interface JournalEntry {
   id: string
   entryDate: string // YYYY-MM-DD
   content: string
-  mood?: number // 1-5 scale
+  mood?: number // 1-10 scale
   moodEmoji?: string
   tags: string[]
   isFavorite: boolean
@@ -403,14 +404,6 @@ export interface JournalEntry {
   createdAt: number
   updatedAt: number
 }
-
-export const MOOD_EMOJIS: { value: number; emoji: string; label: string }[] = [
-  { value: 1, emoji: '😢', label: 'Terrible' },
-  { value: 2, emoji: '😕', label: 'Bad' },
-  { value: 3, emoji: '😐', label: 'Okay' },
-  { value: 4, emoji: '🙂', label: 'Good' },
-  { value: 5, emoji: '😄', label: 'Great' },
-]
 
 export const DEFAULT_JOURNAL_PROMPTS: string[] = [
   'What are you grateful for today?',
@@ -566,7 +559,10 @@ export function isHabitActiveToday(habit: Habit): boolean {
 
 // Format date as YYYY-MM-DD
 export function formatDateKey(date: Date = new Date()): string {
-  return date.toISOString().split('T')[0]
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 // Parse YYYY-MM-DD to Date

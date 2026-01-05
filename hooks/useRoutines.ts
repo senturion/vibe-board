@@ -14,6 +14,25 @@ import {
   isRoutineActiveToday,
 } from '@/lib/types'
 
+// Parse PostgreSQL interval to minutes
+function parseInterval(interval: string): number {
+  // Interval format: "HH:MM:SS" or "00:10:00" for 10 minutes
+  const parts = interval.split(':')
+  if (parts.length === 3) {
+    const hours = parseInt(parts[0], 10)
+    const minutes = parseInt(parts[1], 10)
+    return hours * 60 + minutes
+  }
+  return 0
+}
+
+// Format minutes to PostgreSQL interval
+function formatInterval(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`
+}
+
 export function useRoutines() {
   const [routines, setRoutines] = useState<Routine[]>([])
   const [items, setItems] = useState<RoutineItem[]>([])
@@ -24,15 +43,18 @@ export function useRoutines() {
 
   // Fetch routines, items, and today's completions
   useEffect(() => {
-    if (!user) {
-      setRoutines([])
-      setItems([])
-      setCompletions([])
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchData = async () => {
+      if (!user) {
+        if (isActive) {
+          setRoutines([])
+          setItems([])
+          setCompletions([])
+          setLoading(false)
+        }
+        return
+      }
+
       // Fetch routines
       const { data: routinesData, error: routinesError } = await supabase
         .from('routines')
@@ -98,33 +120,19 @@ export function useRoutines() {
         duration: c.duration ? parseInterval(c.duration) : undefined,
       }))
 
-      setRoutines(mappedRoutines)
-      setItems(mappedItems)
-      setCompletions(mappedCompletions)
-      setLoading(false)
+      if (isActive) {
+        setRoutines(mappedRoutines)
+        setItems(mappedItems)
+        setCompletions(mappedCompletions)
+        setLoading(false)
+      }
     }
 
     fetchData()
-  }, [user, supabase])
-
-  // Parse PostgreSQL interval to minutes
-  function parseInterval(interval: string): number {
-    // Interval format: "HH:MM:SS" or "00:10:00" for 10 minutes
-    const parts = interval.split(':')
-    if (parts.length === 3) {
-      const hours = parseInt(parts[0], 10)
-      const minutes = parseInt(parts[1], 10)
-      return hours * 60 + minutes
+    return () => {
+      isActive = false
     }
-    return 0
-  }
-
-  // Format minutes to PostgreSQL interval
-  function formatInterval(minutes: number): string {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`
-  }
+  }, [user, supabase])
 
   // Add a new routine
   const addRoutine = useCallback(async (name: string, daysOfWeek: DayOfWeek[], description?: string, location?: WorkLocation) => {
@@ -187,7 +195,7 @@ export function useRoutines() {
     }
 
     setRoutines(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r))
-  }, [user, supabase])
+  }, [user, supabase, items])
 
   // Delete a routine
   const deleteRoutine = useCallback(async (id: string) => {
@@ -206,7 +214,7 @@ export function useRoutines() {
 
     setRoutines(prev => prev.filter(r => r.id !== id))
     setItems(prev => prev.filter(i => i.routineId !== id))
-  }, [user, supabase])
+  }, [user, supabase, items])
 
   // Add routine item
   const addRoutineItem = useCallback(async (routineId: string, title: string, targetTime?: number) => {
@@ -241,7 +249,7 @@ export function useRoutines() {
 
     setItems(prev => [...prev, newItem])
     return newItem.id
-  }, [user, supabase])
+  }, [user, supabase, items])
 
   // Update routine item
   const updateRoutineItem = useCallback(async (id: string, updates: Partial<RoutineItem>) => {

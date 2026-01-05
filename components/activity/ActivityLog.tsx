@@ -44,8 +44,7 @@ export function ActivityLog() {
 
   const activities = useMemo(() => {
     const items: ActivityItem[] = []
-    const now = Date.now()
-    const today = formatDateKey(new Date())
+    const now = new Date().getTime()
 
     // Calculate date threshold based on range
     let threshold = 0
@@ -84,7 +83,7 @@ export function ActivityLog() {
         })
     }
 
-    // Task completions
+    // Task completions and updates
     if (filter === 'all' || filter === 'tasks') {
       tasks
         .filter(t => t.column === 'complete' && t.completedAt && t.completedAt > threshold)
@@ -97,6 +96,26 @@ export function ActivityLog() {
             timestamp: task.completedAt!,
             icon: CheckSquare,
             color: '#60a5fa',
+          })
+        })
+
+      tasks
+        .filter(task => {
+          if (task.archivedAt) return false
+          const updatedAt = task.updatedAt ?? task.createdAt
+          if (updatedAt <= threshold) return false
+          return !(task.completedAt && task.completedAt >= updatedAt)
+        })
+        .forEach(task => {
+          const updatedAt = task.updatedAt ?? task.createdAt
+          items.push({
+            id: `task-updated-${task.id}`,
+            type: 'tasks',
+            title: task.title,
+            description: 'Task updated',
+            timestamp: updatedAt,
+            icon: Clock,
+            color: '#93c5fd',
           })
         })
     }
@@ -176,7 +195,7 @@ export function ActivityLog() {
   }, [filter, dateRange, completions, habits, tasks, entries, goals, milestones, routineCompletions, routines, routineItems])
 
   const formatTimestamp = (timestamp: number) => {
-    const now = Date.now()
+    const now = new Date().getTime()
     const diff = now - timestamp
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)

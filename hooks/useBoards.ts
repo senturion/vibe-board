@@ -18,14 +18,17 @@ export function useBoards() {
 
   // Fetch boards from Supabase
   useEffect(() => {
-    if (!user) {
-      setBoards([])
-      setActiveBoardIdState(null)
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchBoards = async () => {
+      if (!user) {
+        if (isActive) {
+          setBoards([])
+          setActiveBoardIdState(null)
+          setLoading(false)
+        }
+        return
+      }
+
       const { data, error } = await supabase
         .from('boards')
         .select('*')
@@ -33,7 +36,9 @@ export function useBoards() {
 
       if (error) {
         console.error('Error fetching boards:', error)
-        setLoading(false)
+        if (isActive) {
+          setLoading(false)
+        }
         return
       }
 
@@ -43,7 +48,9 @@ export function useBoards() {
         createdAt: new Date(b.created_at).getTime(),
       }))
 
-      setBoards(mappedBoards)
+      if (isActive) {
+        setBoards(mappedBoards)
+      }
 
       // Fetch user settings to get active board
       const { data: settingsData } = await supabase
@@ -53,9 +60,13 @@ export function useBoards() {
 
       const settings = settingsData as UserSettingsRow | null
       if (settings?.active_board_id && mappedBoards.some(b => b.id === settings.active_board_id)) {
-        setActiveBoardIdState(settings.active_board_id)
+        if (isActive) {
+          setActiveBoardIdState(settings.active_board_id)
+        }
       } else if (mappedBoards.length > 0) {
-        setActiveBoardIdState(mappedBoards[0].id)
+        if (isActive) {
+          setActiveBoardIdState(mappedBoards[0].id)
+        }
       }
 
       // Create default board if none exist
@@ -76,15 +87,22 @@ export function useBoards() {
             name: newBoard.name,
             createdAt: new Date(newBoard.created_at).getTime(),
           }
-          setBoards([board])
-          setActiveBoardIdState(newBoard.id)
+          if (isActive) {
+            setBoards([board])
+            setActiveBoardIdState(newBoard.id)
+          }
         }
       }
 
-      setLoading(false)
+      if (isActive) {
+        setLoading(false)
+      }
     }
 
     fetchBoards()
+    return () => {
+      isActive = false
+    }
   }, [user, supabase])
 
   const addBoard = useCallback(async (name: string) => {
@@ -172,7 +190,7 @@ export function useBoards() {
     }
   }, [user, supabase])
 
-  const activeBoard = boards.find(b => b.id === activeBoardId) || boards[0] || { id: '', name: 'Loading...', createdAt: Date.now() }
+  const activeBoard = boards.find(b => b.id === activeBoardId) || boards[0] || { id: '', name: 'Loading...', createdAt: new Date().getTime() }
 
   return {
     boards,

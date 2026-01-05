@@ -19,9 +19,16 @@ export function QuickCapture({ isOpen, onClose, onAdd }: QuickCaptureProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
-      setTitle('')
-      setPriority('medium')
-      setTimeout(() => inputRef.current?.focus(), 50)
+      const syncTimeout = setTimeout(() => {
+        setTitle('')
+        setPriority('medium')
+        setTimeout(() => inputRef.current?.focus(), 50)
+      }, 0)
+
+      return () => {
+        clearTimeout(syncTimeout)
+        document.body.style.overflow = ''
+      }
     } else {
       document.body.style.overflow = ''
     }

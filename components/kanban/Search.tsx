@@ -27,21 +27,29 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
 
   useEffect(() => {
     if (isOpen) {
-      setQuery('')
-      setResults([])
-      setSelectedIndex(0)
-      setTimeout(() => inputRef.current?.focus(), 0)
+      const syncTimeout = setTimeout(() => {
+        setQuery('')
+        setResults([])
+        setSelectedIndex(0)
+        setTimeout(() => inputRef.current?.focus(), 0)
+      }, 0)
+
+      return () => clearTimeout(syncTimeout)
     }
   }, [isOpen])
 
   useEffect(() => {
-    if (query.trim()) {
-      const searchResults = onSearch(query)
-      setResults(searchResults)
-      setSelectedIndex(0)
-    } else {
-      setResults([])
-    }
+    const syncTimeout = setTimeout(() => {
+      if (query.trim()) {
+        const searchResults = onSearch(query)
+        setResults(searchResults)
+        setSelectedIndex(0)
+      } else {
+        setResults([])
+      }
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [query, onSearch])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

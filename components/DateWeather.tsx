@@ -14,13 +14,10 @@ const weatherIcons = {
 }
 
 export function DateWeather() {
-  const [mounted, setMounted] = useState(false)
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(() => new Date())
   const { weather, loading, error } = useWeather()
 
   useEffect(() => {
-    setMounted(true)
-
     // Update date every minute
     const interval = setInterval(() => {
       setCurrentDate(new Date())
@@ -28,10 +25,6 @@ export function DateWeather() {
 
     return () => clearInterval(interval)
   }, [])
-
-  if (!mounted) {
-    return <div className="h-8" /> // Placeholder to prevent layout shift
-  }
 
   const formattedDate = currentDate.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -44,7 +37,7 @@ export function DateWeather() {
   return (
     <div className="flex items-center gap-4 text-[var(--text-secondary)]">
       {/* Date */}
-      <time className="font-display text-[14px] italic tracking-wide">
+      <time className="font-display text-[14px] italic tracking-wide" suppressHydrationWarning>
         {formattedDate}
       </time>
 

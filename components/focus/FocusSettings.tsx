@@ -22,7 +22,9 @@ export function FocusSettings({ isOpen, onClose, settings, onSave }: FocusSettin
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled)
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+
+    const syncTimeout = setTimeout(() => {
       setWorkDuration(settings.workDuration)
       setShortBreakDuration(settings.shortBreakDuration)
       setLongBreakDuration(settings.longBreakDuration)
@@ -30,7 +32,9 @@ export function FocusSettings({ isOpen, onClose, settings, onSave }: FocusSettin
       setAutoStartBreaks(settings.autoStartBreaks)
       setAutoStartWork(settings.autoStartWork)
       setSoundEnabled(settings.soundEnabled)
-    }
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [isOpen, settings])
 
   const handleSave = () => {

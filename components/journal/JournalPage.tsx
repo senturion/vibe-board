@@ -3,12 +3,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { BookOpen, ChevronLeft, ChevronRight, Star, Sparkles, Calendar } from 'lucide-react'
 import { useJournal } from '@/hooks/useJournal'
-import { JournalEntry, MOOD_EMOJIS, formatDateKey } from '@/lib/types'
+import { formatDateKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
-import { EmptyState, LoadingState } from '@/components/ui/EmptyState'
+import { LoadingState } from '@/components/ui/EmptyState'
 import { MoodBadge } from '@/components/ui/Badge'
 import { MoodPicker } from './MoodPicker'
+import { MOOD_OPTIONS, MoodIcon, MoodPlaceholderIcon, MoodValue, getMoodOption } from './moods'
 
 export function JournalPage() {
   const {
@@ -25,7 +26,6 @@ export function JournalPage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [content, setContent] = useState('')
   const [mood, setMood] = useState<number | undefined>()
-  const [moodEmoji, setMoodEmoji] = useState<string | undefined>()
   const [showPrompt, setShowPrompt] = useState(false)
   const [currentPrompt, setCurrentPrompt] = useState('')
 
@@ -33,31 +33,64 @@ export function JournalPage() {
   const isToday = dateKey === formatDateKey(new Date())
 
   const stats = useMemo(() => getWritingStats(), [getWritingStats])
+  const moodTrend = useMemo(() => getMoodTrend(14), [getMoodTrend])
+  const moodSummary = useMemo(() => {
+    const moodValues = moodTrend
+      .map(point => point.mood)
+      .filter((value): value is number => value !== null)
+
+    if (moodValues.length === 0) {
+      return {
+        averageMood: null,
+        averageOption: null,
+        bestMood: null,
+        worstMood: null,
+        trackedDays: 0,
+        commonMood: null,
+      }
+    }
+
+    const averageMood = moodValues.reduce((sum, value) => sum + value, 0) / moodValues.length
+    const counts = new Map<number, number>()
+    moodValues.forEach(value => counts.set(value, (counts.get(value) || 0) + 1))
+    const commonMood = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+
+    return {
+      averageMood,
+      averageOption: getMoodOption(Math.round(averageMood)),
+      bestMood: Math.max(...moodValues),
+      worstMood: Math.min(...moodValues),
+      trackedDays: moodValues.length,
+      commonMood,
+    }
+  }, [moodTrend])
 
   // Load entry when date changes
   useEffect(() => {
-    const entry = getEntry(selectedDate)
-    if (entry) {
-      setContent(entry.content)
-      setMood(entry.mood)
-      setMoodEmoji(entry.moodEmoji)
-    } else {
-      setContent('')
-      setMood(undefined)
-      setMoodEmoji(undefined)
-    }
+    const syncTimeout = setTimeout(() => {
+      const entry = getEntry(selectedDate)
+      if (entry) {
+        setContent(entry.content)
+        setMood(entry.mood)
+      } else {
+        setContent('')
+        setMood(undefined)
+      }
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [selectedDate, getEntry])
 
   // Auto-save when content changes
   useEffect(() => {
     const timer = setTimeout(() => {
       if (content.trim() || mood) {
-        saveEntry(selectedDate, content, mood, moodEmoji)
+        saveEntry(selectedDate, content, mood)
       }
     }, 1000)
 
     return () => clearTimeout(timer)
-  }, [content, mood, moodEmoji, selectedDate, saveEntry])
+  }, [content, mood, selectedDate, saveEntry])
 
   const goToPreviousDay = () => {
     const newDate = new Date(selectedDate)
@@ -84,9 +117,7 @@ export function JournalPage() {
   }
 
   const handleMoodChange = (value: number) => {
-    const moodData = MOOD_EMOJIS.find(m => m.value === value)
     setMood(value)
-    setMoodEmoji(moodData?.emoji)
   }
 
   const currentEntry = getEntry(selectedDate)
@@ -176,6 +207,104 @@ export function JournalPage() {
             </Card>
           </div>
 
+          {/* Mood tracker */}
+          <Card variant="bordered" padding="md">
+            <CardHeader>
+              <CardTitle>
+                Mood Tracker
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-3 border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/60">
+                  {moodSummary.averageOption ? (
+                    <MoodIcon mood={moodSummary.averageOption.value} size={20} />
+                  ) : (
+                    <MoodPlaceholderIcon size={20} />
+                  )}
+                  <div>
+                    <p className="text-[14px] font-medium text-[var(--text-primary)]">
+                      {moodSummary.averageMood ? moodSummary.averageMood.toFixed(1) : '—'}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                      Avg (14d)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/60">
+                  {moodSummary.commonMood ? (
+                    <MoodIcon mood={moodSummary.commonMood} size={20} />
+                  ) : (
+                    <MoodPlaceholderIcon size={20} />
+                  )}
+                  <div>
+                    <p className="text-[14px] font-medium text-[var(--text-primary)]">
+                      {moodSummary.commonMood ? getMoodOption(moodSummary.commonMood)?.label : '—'}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                      Most common
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 border border-[var(--border-subtle)]">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+                  <span>Last 14 days</span>
+                  <span>{moodSummary.trackedDays}/14 tracked</span>
+                </div>
+                <div className="flex items-end gap-1 h-20">
+                  {moodTrend.map((point, index) => {
+                    const maxMood = MOOD_OPTIONS[MOOD_OPTIONS.length - 1].value
+                    const height = point.mood
+                      ? Math.max(12, Math.round((point.mood / maxMood) * 72))
+                      : 8
+                    const option = point.mood ? getMoodOption(point.mood) : null
+                    const color = option ? option.color : 'var(--border)'
+                    const label = option ? option.label : 'No mood'
+                    return (
+                      <div
+                        key={`${point.date}-${index}`}
+                        className="flex-1 rounded-sm transition-all hover:opacity-90"
+                        title={`${point.date} · ${label}`}
+                        style={{
+                          height,
+                          backgroundColor: color,
+                          opacity: point.mood ? 1 : 0.35,
+                        }}
+                      />
+                    )
+                  })}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] text-[var(--text-tertiary)]">
+                  <div className="flex items-center gap-2">
+                    <span>Best:</span>
+                    {moodSummary.bestMood ? (
+                      <>
+                        <MoodIcon mood={moodSummary.bestMood} size={14} />
+                        <span>{getMoodOption(moodSummary.bestMood)?.label}</span>
+                      </>
+                    ) : (
+                      <span>—</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>Lowest:</span>
+                    {moodSummary.worstMood ? (
+                      <>
+                        <MoodIcon mood={moodSummary.worstMood} size={14} />
+                        <span>{getMoodOption(moodSummary.worstMood)?.label}</span>
+                      </>
+                    ) : (
+                      <span>—</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Journal Entry */}
           <Card variant="bordered" padding="none">
             {/* Entry header */}
@@ -240,7 +369,7 @@ export function JournalPage() {
             {mood && (
               <div className="px-4 py-2 border-b border-[var(--border-subtle)] flex items-center gap-2">
                 <span className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Mood:</span>
-                <MoodBadge mood={mood as 1 | 2 | 3 | 4 | 5} showLabel size="sm" />
+                <MoodBadge mood={mood as MoodValue} showLabel size="sm" />
               </div>
             )}
 
@@ -291,7 +420,7 @@ export function JournalPage() {
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        {entry.mood && <MoodBadge mood={entry.mood as 1 | 2 | 3 | 4 | 5} size="sm" />}
+                        {entry.mood && <MoodBadge mood={entry.mood as MoodValue} size="sm" />}
                         <div>
                           <p className="text-[12px] font-medium text-[var(--text-primary)]">
                             {new Date(entry.entryDate + 'T00:00:00').toLocaleDateString('en-US', {

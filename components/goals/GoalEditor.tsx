@@ -31,7 +31,9 @@ export function GoalEditor({
   const titleInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+
+    const syncTimeout = setTimeout(() => {
       if (goal) {
         setTitle(goal.title)
         setDescription(goal.description || '')
@@ -51,7 +53,9 @@ export function GoalEditor({
         setMilestones([''])
       }
       setTimeout(() => titleInputRef.current?.focus(), 100)
-    }
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [isOpen, goal, existingMilestones])
 
   const handleSubmit = (e: React.FormEvent) => {

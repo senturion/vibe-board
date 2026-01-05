@@ -39,7 +39,9 @@ export function HabitEditor({
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+
+    const syncTimeout = setTimeout(() => {
       if (habit) {
         setName(habit.name)
         setDescription(habit.description || '')
@@ -60,7 +62,9 @@ export function HabitEditor({
         setColor(HABIT_COLORS[0])
       }
       setTimeout(() => nameInputRef.current?.focus(), 100)
-    }
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [isOpen, habit])
 
   const handleSubmit = (e: React.FormEvent) => {

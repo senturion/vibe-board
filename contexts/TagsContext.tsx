@@ -27,7 +27,9 @@ interface TagsContextType {
   addTagToTask: (taskId: string, tagId: string) => Promise<void>
   removeTagFromTask: (taskId: string, tagId: string) => Promise<void>
   getTaskTagIds: (taskId: string) => Promise<string[]>
+  getTaskTagIdsByTaskIds: (taskIds: string[]) => Promise<Record<string, string[]>>
   setTaskTags: (taskId: string, tagIds: string[]) => Promise<void>
+  taskTagsVersion: number
 }
 
 const TagsContext = createContext<TagsContextType | null>(null)

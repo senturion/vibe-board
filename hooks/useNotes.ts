@@ -11,7 +11,7 @@ type NoteRow = Database['public']['Tables']['notes']['Row']
 export function useNotes() {
   const [note, setNote] = useState<Note>({
     content: '',
-    updatedAt: Date.now(),
+    updatedAt: new Date().getTime(),
   })
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
@@ -20,13 +20,16 @@ export function useNotes() {
 
   // Fetch note from Supabase
   useEffect(() => {
-    if (!user) {
-      setNote({ content: '', updatedAt: Date.now() })
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchNote = async () => {
+      if (!user) {
+        if (isActive) {
+          setNote({ content: '', updatedAt: new Date().getTime() })
+          setLoading(false)
+        }
+        return
+      }
+
       const { data, error } = await supabase
         .from('notes')
         .select('*')
@@ -35,11 +38,13 @@ export function useNotes() {
       if (error && error.code !== 'PGRST116') {
         // PGRST116 = no rows returned
         console.error('Error fetching note:', error)
-        setLoading(false)
+        if (isActive) {
+          setLoading(false)
+        }
         return
       }
 
-      if (data) {
+      if (data && isActive) {
         const noteData = data as NoteRow
         setNote({
           content: noteData.content,
@@ -47,10 +52,15 @@ export function useNotes() {
         })
       }
 
-      setLoading(false)
+      if (isActive) {
+        setLoading(false)
+      }
     }
 
     fetchNote()
+    return () => {
+      isActive = false
+    }
   }, [user, supabase])
 
   const updateNote = useCallback((content: string) => {
@@ -59,7 +69,7 @@ export function useNotes() {
     // Update local state immediately
     setNote({
       content,
-      updatedAt: Date.now(),
+      updatedAt: new Date().getTime(),
     })
 
     // Debounce the database update

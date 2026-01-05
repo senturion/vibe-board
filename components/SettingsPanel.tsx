@@ -1,15 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import type { ElementType } from 'react'
 import {
   X, Moon, Sun, LayoutList, LayoutGrid, RotateCcw,
   ChevronDown, ChevronUp, Home, Building2, Target,
-  ListChecks, BookOpen, Timer, CalendarDays, Kanban
+  ListChecks, BookOpen, Timer, CalendarDays, Kanban, Tag
 } from 'lucide-react'
 import { ColumnId, COLUMNS, VIEWS, DAYS_OF_WEEK, WorkLocation } from '@/lib/types'
 import { COLOR_PALETTE } from '@/hooks/useColumnColors'
-import { useSettings, DEFAULT_SETTINGS } from '@/hooks/useSettings'
+import { useSettings } from '@/hooks/useSettings'
 import { cn } from '@/lib/utils'
+import { TagManager } from '@/components/tags'
 
 interface SettingsPanelProps {
   isOpen: boolean
@@ -26,38 +28,18 @@ interface SettingsPanelProps {
 
 type SettingsSection = 'general' | 'board' | 'workLocation' | 'habits' | 'routines' | 'journal' | 'focus' | 'calendar'
 
-export function SettingsPanel({
-  isOpen,
-  onClose,
-  isDark,
-  onToggleTheme,
-  compact,
-  onToggleCompact,
-  columnColors,
-  onColumnColorChange,
-  onResetColors,
-}: SettingsPanelProps) {
-  const { settings, updateSetting, resetSettings } = useSettings()
-  const [expandedSection, setExpandedSection] = useState<SettingsSection | null>('general')
-  const [expandedColumn, setExpandedColumn] = useState<ColumnId | null>(null)
+interface SectionHeaderProps {
+  section: SettingsSection
+  icon: ElementType
+  title: string
+  expanded: boolean
+  onToggle: (section: SettingsSection) => void
+}
 
-  if (!isOpen) return null
-
-  const toggleSection = (section: SettingsSection) => {
-    setExpandedSection(expandedSection === section ? null : section)
-  }
-
-  const SectionHeader = ({
-    section,
-    icon: Icon,
-    title
-  }: {
-    section: SettingsSection
-    icon: React.ElementType
-    title: string
-  }) => (
+function SectionHeader({ section, icon: Icon, title, expanded, onToggle }: SectionHeaderProps) {
+  return (
     <button
-      onClick={() => toggleSection(section)}
+      onClick={() => onToggle(section)}
       className="w-full flex items-center justify-between py-3 text-left"
     >
       <div className="flex items-center gap-2">
@@ -66,23 +48,23 @@ export function SettingsPanel({
           {title}
         </span>
       </div>
-      {expandedSection === section ? (
+      {expanded ? (
         <ChevronUp size={14} className="text-[var(--text-tertiary)]" />
       ) : (
         <ChevronDown size={14} className="text-[var(--text-tertiary)]" />
       )}
     </button>
   )
+}
 
-  const Toggle = ({
-    checked,
-    onChange,
-    label
-  }: {
-    checked: boolean
-    onChange: (val: boolean) => void
-    label: string
-  }) => (
+interface ToggleProps {
+  checked: boolean
+  onChange: (val: boolean) => void
+  label: string
+}
+
+function Toggle({ checked, onChange, label }: ToggleProps) {
+  return (
     <div className="flex items-center justify-between py-2">
       <span className="text-[12px] text-[var(--text-secondary)]">{label}</span>
       <button
@@ -101,22 +83,19 @@ export function SettingsPanel({
       </button>
     </div>
   )
+}
 
-  const NumberInput = ({
-    value,
-    onChange,
-    label,
-    min = 1,
-    max = 999,
-    suffix,
-  }: {
-    value: number
-    onChange: (val: number) => void
-    label: string
-    min?: number
-    max?: number
-    suffix?: string
-  }) => (
+interface NumberInputProps {
+  value: number
+  onChange: (val: number) => void
+  label: string
+  min?: number
+  max?: number
+  suffix?: string
+}
+
+function NumberInput({ value, onChange, label, min = 1, max = 999, suffix }: NumberInputProps) {
+  return (
     <div className="flex items-center justify-between py-2">
       <span className="text-[12px] text-[var(--text-secondary)]">{label}</span>
       <div className="flex items-center gap-2">
@@ -135,6 +114,29 @@ export function SettingsPanel({
       </div>
     </div>
   )
+}
+
+export function SettingsPanel({
+  isOpen,
+  onClose,
+  isDark,
+  onToggleTheme,
+  compact,
+  onToggleCompact,
+  columnColors,
+  onColumnColorChange,
+  onResetColors,
+}: SettingsPanelProps) {
+  const { settings, updateSetting, resetSettings } = useSettings()
+  const [expandedSection, setExpandedSection] = useState<SettingsSection | null>('general')
+  const [expandedColumn, setExpandedColumn] = useState<ColumnId | null>(null)
+  const [showTagManager, setShowTagManager] = useState(false)
+
+  if (!isOpen) return null
+
+  const toggleSection = (section: SettingsSection) => {
+    setExpandedSection(expandedSection === section ? null : section)
+  }
 
   return (
     <>
@@ -171,7 +173,13 @@ export function SettingsPanel({
           <div className="p-4 space-y-1">
             {/* General Section */}
             <div className="border-b border-[var(--border-subtle)]">
-              <SectionHeader section="general" icon={Sun} title="General" />
+              <SectionHeader
+                section="general"
+                icon={Sun}
+                title="General"
+                expanded={expandedSection === 'general'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'general' && (
                 <div className="pb-4 space-y-3">
                   {/* Theme */}
@@ -253,7 +261,13 @@ export function SettingsPanel({
 
             {/* Board/Kanban Section */}
             <div className="border-b border-[var(--border-subtle)]">
-              <SectionHeader section="board" icon={Kanban} title="Board" />
+              <SectionHeader
+                section="board"
+                icon={Kanban}
+                title="Board"
+                expanded={expandedSection === 'board'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'board' && (
                 <div className="pb-4 space-y-3">
                   {/* Card View */}
@@ -359,13 +373,27 @@ export function SettingsPanel({
                       ))}
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => setShowTagManager(true)}
+                    className="flex items-center gap-2 text-[11px] text-[var(--accent)] hover:opacity-80 pt-1"
+                  >
+                    <Tag size={12} />
+                    Manage tags
+                  </button>
                 </div>
               )}
             </div>
 
             {/* Work Location Section */}
             <div className="border-b border-[var(--border-subtle)]">
-              <SectionHeader section="workLocation" icon={Building2} title="Work Location" />
+              <SectionHeader
+                section="workLocation"
+                icon={Building2}
+                title="Work Location"
+                expanded={expandedSection === 'workLocation'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'workLocation' && (
                 <div className="pb-4 space-y-3">
                   <p className="text-[11px] text-[var(--text-tertiary)]">
@@ -428,7 +456,13 @@ export function SettingsPanel({
 
             {/* Habits Section */}
             <div className="border-b border-[var(--border-subtle)]">
-              <SectionHeader section="habits" icon={Target} title="Habits" />
+              <SectionHeader
+                section="habits"
+                icon={Target}
+                title="Habits"
+                expanded={expandedSection === 'habits'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'habits' && (
                 <div className="pb-4 space-y-2">
                   <NumberInput
@@ -449,7 +483,13 @@ export function SettingsPanel({
 
             {/* Routines Section */}
             <div className="border-b border-[var(--border-subtle)]">
-              <SectionHeader section="routines" icon={ListChecks} title="Routines" />
+              <SectionHeader
+                section="routines"
+                icon={ListChecks}
+                title="Routines"
+                expanded={expandedSection === 'routines'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'routines' && (
                 <div className="pb-4 space-y-2">
                   <Toggle
@@ -473,7 +513,13 @@ export function SettingsPanel({
 
             {/* Journal Section */}
             <div className="border-b border-[var(--border-subtle)]">
-              <SectionHeader section="journal" icon={BookOpen} title="Journal" />
+              <SectionHeader
+                section="journal"
+                icon={BookOpen}
+                title="Journal"
+                expanded={expandedSection === 'journal'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'journal' && (
                 <div className="pb-4 space-y-2">
                   <Toggle
@@ -507,7 +553,13 @@ export function SettingsPanel({
 
             {/* Focus Timer Section */}
             <div className="border-b border-[var(--border-subtle)]">
-              <SectionHeader section="focus" icon={Timer} title="Focus Timer" />
+              <SectionHeader
+                section="focus"
+                icon={Timer}
+                title="Focus Timer"
+                expanded={expandedSection === 'focus'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'focus' && (
                 <div className="pb-4 space-y-2">
                   <NumberInput
@@ -575,7 +627,13 @@ export function SettingsPanel({
 
             {/* Calendar Section */}
             <div>
-              <SectionHeader section="calendar" icon={CalendarDays} title="Calendar" />
+              <SectionHeader
+                section="calendar"
+                icon={CalendarDays}
+                title="Calendar"
+                expanded={expandedSection === 'calendar'}
+                onToggle={toggleSection}
+              />
               {expandedSection === 'calendar' && (
                 <div className="pb-4 space-y-2">
                   <Toggle
@@ -601,6 +659,7 @@ export function SettingsPanel({
           </p>
         </div>
       </div>
+      <TagManager isOpen={showTagManager} onClose={() => setShowTagManager(false)} />
     </>
   )
 }

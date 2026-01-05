@@ -12,7 +12,11 @@ export function Notes({ compact = false }: NotesProps) {
   const [localContent, setLocalContent] = useState('')
 
   useEffect(() => {
-    setLocalContent(note.content)
+    const syncTimeout = setTimeout(() => {
+      setLocalContent(note.content)
+    }, 0)
+
+    return () => clearTimeout(syncTimeout)
   }, [note.content])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

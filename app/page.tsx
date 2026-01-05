@@ -46,7 +46,7 @@ export default function Home() {
 
   // Filter & Sort state
   const [filters, setFilters] = useState<FilterState>({
-    labels: [],
+    tags: [],
     priorities: [],
     dueDate: 'all',
   })
@@ -58,7 +58,7 @@ export default function Home() {
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
     let count = 0
-    if (filters.labels.length > 0) count += filters.labels.length
+    if (filters.tags.length > 0) count += filters.tags.length
     if (filters.priorities.length > 0) count += filters.priorities.length
     if (filters.dueDate !== 'all') count += 1
     return count

@@ -1,15 +1,16 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Activity, CheckCircle, Target, BookOpen, Timer, Flag, ListChecks } from 'lucide-react'
+import { Activity, CheckCircle, Target, BookOpen, Timer, Flag, ListChecks, CheckSquare } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 import { useJournal } from '@/hooks/useJournal'
 import { useGoals } from '@/hooks/useGoals'
+import { useKanban } from '@/hooks/useKanban'
 import { formatDateKey } from '@/lib/types'
 
 interface ActivityItem {
   id: string
-  type: 'habit' | 'journal' | 'goal' | 'milestone' | 'routine'
+  type: 'habit' | 'journal' | 'goal' | 'milestone' | 'routine' | 'task'
   title: string
   description?: string
   timestamp: number
@@ -25,11 +26,14 @@ export function ActivityFeedWidget({ maxItems = 10 }: ActivityFeedWidgetProps) {
   const { completions, habits } = useHabits()
   const { entries } = useJournal()
   const { goals, milestones } = useGoals()
+  const { tasks } = useKanban()
 
   const activities = useMemo(() => {
     const items: ActivityItem[] = []
-    const today = formatDateKey(new Date())
-    const yesterday = formatDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000))
+    const now = new Date()
+    const today = formatDateKey(now)
+    const yesterday = formatDateKey(new Date(now.getTime() - 24 * 60 * 60 * 1000))
+    const twoDaysAgo = now.getTime() - 2 * 24 * 60 * 60 * 1000
 
     // Add habit completions from today and yesterday
     completions
@@ -96,12 +100,50 @@ export function ActivityFeedWidget({ maxItems = 10 }: ActivityFeedWidgetProps) {
         })
       })
 
+    // Add completed tasks (last 2 days)
+    tasks
+      .filter(t => t.column === 'complete' && !t.archivedAt && t.completedAt && t.completedAt > twoDaysAgo)
+      .slice(0, 3)
+      .forEach(task => {
+        items.push({
+          id: `task-${task.id}`,
+          type: 'task',
+          title: task.title,
+          description: 'Task completed',
+          timestamp: task.completedAt!,
+          icon: CheckSquare,
+          color: '#60a5fa',
+        })
+      })
+
+    // Add recently updated tasks (last 2 days)
+    tasks
+      .filter(task => {
+        if (task.archivedAt) return false
+        const updatedAt = task.updatedAt ?? task.createdAt
+        if (updatedAt <= twoDaysAgo) return false
+        return !(task.completedAt && task.completedAt >= updatedAt)
+      })
+      .slice(0, 3)
+      .forEach(task => {
+        const updatedAt = task.updatedAt ?? task.createdAt
+        items.push({
+          id: `task-updated-${task.id}`,
+          type: 'task',
+          title: task.title,
+          description: 'Task updated',
+          timestamp: updatedAt,
+          icon: ListChecks,
+          color: '#93c5fd',
+        })
+      })
+
     // Sort by timestamp (most recent first)
     return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, maxItems)
-  }, [completions, habits, entries, goals, milestones, maxItems])
+  }, [completions, habits, entries, goals, milestones, tasks, maxItems])
 
   const formatTime = (timestamp: number) => {
-    const now = Date.now()
+    const now = new Date().getTime()
     const diff = now - timestamp
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)

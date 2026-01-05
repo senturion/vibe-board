@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react'
 import { Flame, Trophy, Star, Zap, Target } from 'lucide-react'
+import { MoodIcon, MoodValue, getMoodOption } from '@/components/journal/moods'
 import { cn } from '@/lib/utils'
 
 interface BadgeProps {
@@ -155,27 +156,20 @@ export function StatBadge({
 }
 
 interface MoodBadgeProps {
-  mood: 1 | 2 | 3 | 4 | 5
+  mood: MoodValue
   showLabel?: boolean
   size?: 'sm' | 'md' | 'lg'
   className?: string
 }
 
-const MOOD_DATA = {
-  1: { emoji: '😢', label: 'Terrible', color: 'var(--journal-mood-1)' },
-  2: { emoji: '😕', label: 'Bad', color: 'var(--journal-mood-2)' },
-  3: { emoji: '😐', label: 'Okay', color: 'var(--journal-mood-3)' },
-  4: { emoji: '🙂', label: 'Good', color: 'var(--journal-mood-4)' },
-  5: { emoji: '😄', label: 'Great', color: 'var(--journal-mood-5)' },
-}
-
 export function MoodBadge({ mood, showLabel = false, size = 'md', className }: MoodBadgeProps) {
-  const data = MOOD_DATA[mood]
+  const data = getMoodOption(mood)
+  if (!data) return null
 
   const sizeClasses = {
-    sm: { container: 'text-sm', label: 'text-[10px]' },
-    md: { container: 'text-lg', label: 'text-[11px]' },
-    lg: { container: 'text-2xl', label: 'text-[12px]' },
+    sm: { icon: 12, label: 'text-[10px]' },
+    md: { icon: 16, label: 'text-[11px]' },
+    lg: { icon: 20, label: 'text-[12px]' },
   }
 
   const sizes = sizeClasses[size]
@@ -185,7 +179,7 @@ export function MoodBadge({ mood, showLabel = false, size = 'md', className }: M
       className={cn('inline-flex items-center gap-1.5', className)}
       style={{ color: data.color }}
     >
-      <span className={sizes.container}>{data.emoji}</span>
+      <MoodIcon mood={mood} size={sizes.icon} />
       {showLabel && (
         <span className={cn(sizes.label, 'font-medium')}>{data.label}</span>
       )}

@@ -47,13 +47,16 @@ export function WorkLocationProvider({ children }: { children: ReactNode }) {
 
   // Fetch locations for current and next week
   useEffect(() => {
-    if (!user) {
-      setLocations([])
-      setLoading(false)
-      return
-    }
-
+    let isActive = true
     const fetchLocations = async () => {
+      if (!user) {
+        if (isActive) {
+          setLocations([])
+          setLoading(false)
+        }
+        return
+      }
+
       // Fetch 2 weeks of data
       const weekStart = getWeekStart()
       const twoWeeksEnd = new Date(weekStart)
@@ -70,7 +73,7 @@ export function WorkLocationProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching work locations:', error)
       }
 
-      if (data) {
+      if (data && isActive) {
         setLocations(data.map(row => ({
           id: row.id,
           date: row.date,
@@ -79,10 +82,15 @@ export function WorkLocationProvider({ children }: { children: ReactNode }) {
         })))
       }
 
-      setLoading(false)
+      if (isActive) {
+        setLoading(false)
+      }
     }
 
     fetchLocations()
+    return () => {
+      isActive = false
+    }
   }, [user, supabase])
 
   const getLocationForDate = useCallback((date: string): WorkLocation | null => {

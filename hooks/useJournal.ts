@@ -102,7 +102,7 @@ export function useJournal() {
     date: Date,
     content: string,
     mood?: number,
-    moodEmoji?: string
+    moodIcon?: string
   ) => {
     if (!user) return
 
@@ -119,7 +119,7 @@ export function useJournal() {
     if (existingEntry) {
       setEntries(prev => prev.map(e =>
         e.entryDate === dateKey
-          ? { ...e, content, mood, moodEmoji, wordCount, updatedAt: Date.now() }
+          ? { ...e, content, mood, moodEmoji: moodIcon, wordCount, updatedAt: Date.now() }
           : e
       ))
     } else {
@@ -128,7 +128,7 @@ export function useJournal() {
         entryDate: dateKey,
         content,
         mood,
-        moodEmoji,
+        moodEmoji: moodIcon,
         tags: [],
         isFavorite: false,
         wordCount,
@@ -146,7 +146,7 @@ export function useJournal() {
           .update({
             content,
             mood: mood || null,
-            mood_emoji: moodEmoji || null,
+            mood_emoji: moodIcon || null,
             word_count: wordCount,
             updated_at: new Date().toISOString(),
           })
@@ -163,7 +163,7 @@ export function useJournal() {
             entry_date: dateKey,
             content,
             mood: mood || null,
-            mood_emoji: moodEmoji || null,
+            mood_emoji: moodIcon || null,
             word_count: wordCount,
           }, {
             onConflict: 'user_id,entry_date',
@@ -235,17 +235,17 @@ export function useJournal() {
   }, [user, supabase, entries])
 
   // Update mood for an entry
-  const updateMood = useCallback(async (entryId: string, mood: number, moodEmoji: string) => {
+  const updateMood = useCallback(async (entryId: string, mood: number, moodIcon?: string) => {
     if (!user) return
 
     // Optimistic update
     setEntries(prev => prev.map(e =>
-      e.id === entryId ? { ...e, mood, moodEmoji } : e
+      e.id === entryId ? { ...e, mood, moodEmoji: moodIcon } : e
     ))
 
     const { error } = await supabase
       .from('journal_entries')
-      .update({ mood, mood_emoji: moodEmoji })
+      .update({ mood, mood_emoji: moodIcon || null })
       .eq('id', entryId)
 
     if (error) {

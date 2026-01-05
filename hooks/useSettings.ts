@@ -115,37 +115,45 @@ export function useSettings() {
 
   // Load settings from localStorage first, then sync with Supabase
   useEffect(() => {
-    // Load from localStorage for instant access
-    const stored = localStorage.getItem(SETTINGS_KEY)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed })
-      } catch {
-        // Invalid JSON, use defaults
-      }
-    }
+    let isActive = true
 
-    // If user is logged in, fetch from Supabase
-    if (user) {
-      const fetchSettings = async () => {
+    const loadSettings = async () => {
+      // Load from localStorage for instant access
+      const stored = localStorage.getItem(SETTINGS_KEY)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (isActive) {
+            setSettings({ ...DEFAULT_SETTINGS, ...parsed })
+          }
+        } catch {
+          // Invalid JSON, use defaults
+        }
+      }
+
+      // If user is logged in, fetch from Supabase
+      if (user) {
         const { data, error } = await supabase
           .from('user_settings')
           .select('app_settings')
           .eq('user_id', user.id)
           .single()
 
-        if (!error && data?.app_settings) {
+        if (!error && data?.app_settings && isActive) {
           const cloudSettings = { ...DEFAULT_SETTINGS, ...data.app_settings }
           setSettings(cloudSettings)
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings))
         }
-        setLoading(false)
       }
 
-      fetchSettings()
-    } else {
-      setLoading(false)
+      if (isActive) {
+        setLoading(false)
+      }
+    }
+
+    loadSettings()
+    return () => {
+      isActive = false
     }
   }, [user, supabase])
 
