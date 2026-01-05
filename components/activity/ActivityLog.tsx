@@ -40,7 +40,7 @@ export function ActivityLog() {
   const { entries } = useJournal()
   const { goals, milestones } = useGoals()
   const { tasks } = useKanban()
-  const { completions: routineCompletions, routines } = useRoutines()
+  const { completions: routineCompletions, routines, items: routineItems } = useRoutines()
 
   const activities = useMemo(() => {
     const items: ActivityItem[] = []
@@ -155,13 +155,14 @@ export function ActivityLog() {
       routineCompletions
         .filter(c => c.completedAt > threshold)
         .forEach(completion => {
-          const routine = routines.find(r => r.id === completion.routineId)
-          if (routine) {
+          const routineItem = routineItems.find(item => item.id === completion.routineItemId)
+          const routine = routineItem ? routines.find(r => r.id === routineItem.routineId) : null
+          if (routine && routineItem) {
             items.push({
               id: `routine-${completion.id}`,
               type: 'routines',
-              title: routine.name,
-              description: 'Routine completed',
+              title: routineItem.title,
+              description: `${routine.name}`,
               timestamp: completion.completedAt,
               icon: Calendar,
               color: '#a78bfa',
@@ -172,7 +173,7 @@ export function ActivityLog() {
 
     // Sort by timestamp (most recent first)
     return items.sort((a, b) => b.timestamp - a.timestamp)
-  }, [filter, dateRange, completions, habits, tasks, entries, goals, milestones, routineCompletions, routines])
+  }, [filter, dateRange, completions, habits, tasks, entries, goals, milestones, routineCompletions, routines, routineItems])
 
   const formatTimestamp = (timestamp: number) => {
     const now = Date.now()
