@@ -445,6 +445,73 @@ create policy "Users can update own journal_entries" on public.journal_entries f
 create policy "Users can delete own journal_entries" on public.journal_entries for delete using (auth.uid() = user_id);
 
 -- =====================================================
+-- NOTIFICATIONS
+-- =====================================================
+
+create table public.notification_settings (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  enabled boolean default false not null,
+  daily_time time default '20:00' not null,
+  timezone text default 'UTC' not null,
+  last_sent_at timestamptz,
+  reminder_message text default 'Time to journal?' not null,
+  quiet_start time default '22:00' not null,
+  quiet_end time default '07:00' not null,
+  channel_journal boolean default true not null,
+  channel_habits boolean default false not null,
+  channel_routines boolean default false not null,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
+create table public.push_subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  endpoint text not null,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null,
+  unique(user_id, endpoint)
+);
+
+alter table public.notification_settings enable row level security;
+alter table public.push_subscriptions enable row level security;
+
+create policy "Users can view own notification_settings"
+  on public.notification_settings for select
+  using (auth.uid() = user_id);
+
+create policy "Users can create own notification_settings"
+  on public.notification_settings for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own notification_settings"
+  on public.notification_settings for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete own notification_settings"
+  on public.notification_settings for delete
+  using (auth.uid() = user_id);
+
+create policy "Users can view own push_subscriptions"
+  on public.push_subscriptions for select
+  using (auth.uid() = user_id);
+
+create policy "Users can create own push_subscriptions"
+  on public.push_subscriptions for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own push_subscriptions"
+  on public.push_subscriptions for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete own push_subscriptions"
+  on public.push_subscriptions for delete
+  using (auth.uid() = user_id);
+
+-- =====================================================
 -- FOCUS TIMER (POMODORO)
 -- =====================================================
 

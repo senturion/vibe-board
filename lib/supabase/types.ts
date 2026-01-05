@@ -148,6 +148,85 @@ export interface Database {
           column_colors?: Json
         }
       }
+      notification_settings: {
+        Row: {
+          user_id: string
+          enabled: boolean
+          daily_time: string
+          timezone: string
+          last_sent_at: string | null
+          reminder_message: string
+          quiet_start: string
+          quiet_end: string
+          channel_journal: boolean
+          channel_habits: boolean
+          channel_routines: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          enabled?: boolean
+          daily_time?: string
+          timezone?: string
+          last_sent_at?: string | null
+          reminder_message?: string
+          quiet_start?: string
+          quiet_end?: string
+          channel_journal?: boolean
+          channel_habits?: boolean
+          channel_routines?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          enabled?: boolean
+          daily_time?: string
+          timezone?: string
+          last_sent_at?: string | null
+          reminder_message?: string
+          quiet_start?: string
+          quiet_end?: string
+          channel_journal?: boolean
+          channel_habits?: boolean
+          channel_routines?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

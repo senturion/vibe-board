@@ -1,0 +1,50 @@
+
+> vibe-board@0.1.0 start
+> next start
+
+▲ Next.js 16.1.1
+- Local:         http://localhost:3000
+- Network:       http://192.168.5.43:3000
+
+✓ Starting...
+✓ Ready in 751ms
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at d5 (.next/server/middleware.js:36:46176)
+    at async d7 (.next/server/middleware.js:36:47120)
+    at async d6 (.next/server/middleware.js:36:46560)
+    at async c (.next/server/middleware.js:49:24788)
+    at async (.next/server/middleware.js:49:25051) {
+  __isAuthError: true,
+  status: 400,
+  code: 'refresh_token_not_found'
+}
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at d5 (.next/server/middleware.js:36:46176)
+    at async d7 (.next/server/middleware.js:36:47120)
+    at async d6 (.next/server/middleware.js:36:46560)
+    at async c (.next/server/middleware.js:49:24788)
+    at async (.next/server/middleware.js:49:25051) {
+  __isAuthError: true,
+  status: 400,
+  code: 'refresh_token_not_found'
+}
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at d5 (.next/server/middleware.js:36:46176)
+    at async d7 (.next/server/middleware.js:36:47120)
+    at async d6 (.next/server/middleware.js:36:46560)
+    at async c (.next/server/middleware.js:49:24788)
+    at async (.next/server/middleware.js:49:25051) {
+  __isAuthError: true,
+  status: 400,
+  code: 'refresh_token_not_found'
+}
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at d5 (.next/server/middleware.js:36:46176)
+    at async d7 (.next/server/middleware.js:36:47120)
+    at async d6 (.next/server/middleware.js:36:46560)
+    at async c (.next/server/middleware.js:49:24788)
+    at async (.next/server/middleware.js:49:25051) {
+  __isAuthError: true,
+  status: 400,
+  code: 'refresh_token_not_found'
+}
