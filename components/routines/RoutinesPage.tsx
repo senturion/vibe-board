@@ -193,6 +193,7 @@ export function RoutinesPage() {
   const { getTodaysLocation } = useWorkLocation()
 
   const [viewMode, setViewMode] = useState<ViewMode>('today')
+  const [showMobileViewMenu, setShowMobileViewMenu] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState<Routine | undefined>()
 
@@ -244,19 +245,66 @@ export function RoutinesPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="flex items-center gap-2">
             <ListChecks size={20} className="text-[var(--accent)]" />
             <h1 className="text-lg font-medium text-[var(--text-primary)]">Routines</h1>
           </div>
 
           {/* View mode tabs */}
-          <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
+          <div className="relative sm:hidden">
+            <button
+              onClick={() => setShowMobileViewMenu((prev) => !prev)}
+              className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)]"
+            >
+              View: {viewMode === 'today' ? 'Today' : 'All'}
+            </button>
+            {showMobileViewMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowMobileViewMenu(false)}
+                />
+                <div className="absolute left-0 mt-2 w-[180px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/40 z-20">
+                  <button
+                    onClick={() => {
+                      setViewMode('today')
+                      setShowMobileViewMenu(false)
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                      viewMode === 'today'
+                        ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+                        : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                    )}
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => {
+                      setViewMode('all')
+                      setShowMobileViewMenu(false)
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                      viewMode === 'all'
+                        ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+                        : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                    )}
+                  >
+                    All Routines
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1 overflow-x-auto whitespace-nowrap max-w-[55vw] sm:max-w-none">
             <button
               onClick={() => setViewMode('today')}
               className={cn(
-                'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                'px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors sm:px-3 sm:py-1.5 sm:text-[11px]',
                 viewMode === 'today'
                   ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -267,13 +315,14 @@ export function RoutinesPage() {
             <button
               onClick={() => setViewMode('all')}
               className={cn(
-                'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                'px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors sm:px-3 sm:py-1.5 sm:text-[11px]',
                 viewMode === 'all'
                   ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               )}
             >
-              All Routines
+              <span className="sm:hidden">All</span>
+              <span className="hidden sm:inline">All Routines</span>
             </button>
           </div>
         </div>
@@ -283,15 +332,15 @@ export function RoutinesPage() {
             setEditingRoutine(undefined)
             setShowEditor(true)
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--bg-primary)] text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
+          className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[var(--accent)] text-[var(--bg-primary)] text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
         >
           <Plus size={14} />
-          New Routine
+          <span className="hidden sm:inline">New Routine</span>
         </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Today's Stats (only show in today view) */}
           {viewMode === 'today' && (
@@ -299,7 +348,7 @@ export function RoutinesPage() {
               {/* Work location indicator */}
               {todaysLocation && (
                 <div className={cn(
-                  'flex items-center gap-2 px-3 py-2 border',
+                  'flex items-center gap-2 px-3 py-2 border text-[11px]',
                   todaysLocation === 'wfh'
                     ? 'bg-indigo-500/5 border-indigo-500/20'
                     : 'bg-amber-500/5 border-amber-500/20'
@@ -318,7 +367,7 @@ export function RoutinesPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 <Card variant="bordered" padding="md">
                   <div className="flex items-center gap-4">
                     <ProgressRing

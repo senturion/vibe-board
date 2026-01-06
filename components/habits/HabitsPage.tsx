@@ -35,6 +35,7 @@ export function HabitsPage() {
   } = useHabits()
 
   const [viewMode, setViewMode] = useState<ViewMode>('today')
+  const [showMobileViewMenu, setShowMobileViewMenu] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingHabit, setEditingHabit] = useState<Habit | undefined>()
   const [selectedHabitForStats, setSelectedHabitForStats] = useState<Habit | undefined>()
@@ -81,15 +82,55 @@ export function HabitsPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="flex items-center gap-2">
             <Target size={20} className="text-[var(--accent)]" />
             <h1 className="text-lg font-medium text-[var(--text-primary)]">Habits</h1>
           </div>
 
           {/* View mode tabs */}
-          <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
+          <div className="relative sm:hidden">
+            <button
+              onClick={() => setShowMobileViewMenu((prev) => !prev)}
+              className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)]"
+            >
+              View: {viewMode === 'today' ? 'Today' : viewMode === 'all' ? 'All' : viewMode === 'calendar' ? 'Calendar' : 'Analytics'}
+            </button>
+            {showMobileViewMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowMobileViewMenu(false)}
+                />
+                <div className="absolute left-0 mt-2 w-[180px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/40 z-20">
+                  {(['today', 'all', 'calendar', 'analytics'] as ViewMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        setViewMode(mode)
+                        if (mode !== 'analytics') setSelectedHabitForStats(undefined)
+                        setShowMobileViewMenu(false)
+                      }}
+                      className={cn(
+                        'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                        viewMode === mode
+                          ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                      )}
+                    >
+                      {mode === 'today' && 'Today'}
+                      {mode === 'all' && 'All Habits'}
+                      {mode === 'calendar' && 'Calendar'}
+                      {mode === 'analytics' && 'Analytics'}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1 overflow-x-auto whitespace-nowrap max-w-[55vw] sm:max-w-none">
             {(['today', 'all', 'calendar', 'analytics'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
@@ -98,21 +139,32 @@ export function HabitsPage() {
                   if (mode !== 'analytics') setSelectedHabitForStats(undefined)
                 }}
                 className={cn(
-                  'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors flex items-center gap-1.5',
+                  'px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors flex items-center gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]',
                   viewMode === mode
                     ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
                 )}
               >
                 {mode === 'today' && 'Today'}
-                {mode === 'all' && 'All Habits'}
+                {mode === 'all' && (
+                  <>
+                    <span className="sm:hidden">All</span>
+                    <span className="hidden sm:inline">All Habits</span>
+                  </>
+                )}
                 {mode === 'calendar' && (
                   <>
                     <CalendarDays size={12} />
-                    Calendar
+                    <span className="sm:hidden">Cal</span>
+                    <span className="hidden sm:inline">Calendar</span>
                   </>
                 )}
-                {mode === 'analytics' && 'Analytics'}
+                {mode === 'analytics' && (
+                  <>
+                    <span className="sm:hidden">Stats</span>
+                    <span className="hidden sm:inline">Analytics</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -123,19 +175,19 @@ export function HabitsPage() {
             setEditingHabit(undefined)
             setShowEditor(true)
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--bg-primary)] text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
+          className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[var(--accent)] text-[var(--bg-primary)] text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
         >
           <Plus size={14} />
-          New Habit
+          <span className="hidden sm:inline">New Habit</span>
         </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
         {viewMode === 'today' && (
           <div className="max-w-3xl mx-auto space-y-6">
             {/* Today's Stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <Card variant="bordered" padding="md">
                 <div className="flex items-center gap-4">
                   <ProgressRing

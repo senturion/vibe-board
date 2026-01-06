@@ -32,6 +32,7 @@ export function GoalsPage() {
   const [showEditor, setShowEditor] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>()
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [showMobileFilterMenu, setShowMobileFilterMenu] = useState(false)
 
   const activeGoals = useMemo(() => getActiveGoals(), [getActiveGoals])
 
@@ -82,19 +83,69 @@ export function GoalsPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="flex items-center gap-2">
             <Flag size={20} className="text-[var(--accent)]" />
             <h1 className="text-lg font-medium text-[var(--text-primary)]">Goals</h1>
           </div>
 
           {/* Filter tabs */}
-          <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
+          <div className="relative sm:hidden">
+            <button
+              onClick={() => setShowMobileFilterMenu((prev) => !prev)}
+              className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)]"
+            >
+              Filter: {filterStatus === 'all' ? 'All' : filterStatus}
+            </button>
+            {showMobileFilterMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowMobileFilterMenu(false)}
+                />
+                <div className="absolute left-0 mt-2 w-[180px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/40 z-20">
+                  <button
+                    onClick={() => {
+                      setFilterStatus('all')
+                      setShowMobileFilterMenu(false)
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                      filterStatus === 'all'
+                        ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+                        : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                    )}
+                  >
+                    All
+                  </button>
+                  {GOAL_STATUSES.map((status) => (
+                    <button
+                      key={status.id}
+                      onClick={() => {
+                        setFilterStatus(status.id)
+                        setShowMobileFilterMenu(false)
+                      }}
+                      className={cn(
+                        'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                        filterStatus === status.id
+                          ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                      )}
+                    >
+                      {status.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1 overflow-x-auto whitespace-nowrap max-w-[55vw] sm:max-w-none">
             <button
               onClick={() => setFilterStatus('all')}
               className={cn(
-                'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                'px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors sm:px-3 sm:py-1.5 sm:text-[11px]',
                 filterStatus === 'all'
                   ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -107,7 +158,7 @@ export function GoalsPage() {
                 key={status.id}
                 onClick={() => setFilterStatus(status.id)}
                 className={cn(
-                  'px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                  'px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors sm:px-3 sm:py-1.5 sm:text-[11px]',
                   filterStatus === status.id
                     ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -124,18 +175,18 @@ export function GoalsPage() {
             setEditingGoal(undefined)
             setShowEditor(true)
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--bg-primary)] text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
+          className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[var(--accent)] text-[var(--bg-primary)] text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
         >
           <Plus size={14} />
-          New Goal
+          <span className="hidden sm:inline">New Goal</span>
         </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Stats Overview */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <Card variant="bordered" padding="md">
               <div className="text-center">
                 <p className="text-3xl font-medium text-[var(--text-primary)]">{stats.total}</p>
