@@ -496,7 +496,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
 
   return (
     <>
-      <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-8 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] lg:hidden overflow-x-auto">
+      <div className="sticky top-0 z-20 flex items-center gap-2 px-4 sm:px-6 lg:px-8 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] lg:hidden overflow-x-auto">
         {COLUMNS.map((column) => (
           <button
             key={column.id}
@@ -529,7 +529,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
       >
         <div
           ref={lanesRef}
-          className="flex gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 h-full overflow-x-auto snap-x snap-mandatory sm:snap-none scroll-px-4 sm:scroll-px-0"
+          className="flex gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 h-full overflow-x-auto overflow-y-hidden touch-pan-x overscroll-x-contain overscroll-y-none snap-x snap-mandatory sm:snap-none sm:touch-auto sm:overscroll-auto scroll-px-4 sm:scroll-px-0"
         >
           {COLUMNS.map((column, index) => (
             <Column
