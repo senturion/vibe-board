@@ -41,7 +41,8 @@ export function Column({
 
   return (
     <div
-      className="flex flex-col min-w-[300px] max-w-[300px] animate-fade-up"
+      id={`lane-${id}`}
+      className="flex flex-col min-w-[88vw] max-w-[88vw] sm:min-w-[300px] sm:max-w-[300px] animate-fade-up snap-start sm:snap-none"
       style={{ animationDelay: `${index * 0.1}s`, opacity: 0 }}
     >
       {/* Editorial Column Header */}

@@ -11,6 +11,7 @@ export type DueDateFilter = 'all' | 'overdue' | 'due-soon' | 'no-date'
 
 export interface FilterState {
   tags: string[]
+  noTag: boolean
   priorities: Priority[]
   dueDate: DueDateFilter
 }
@@ -60,6 +61,10 @@ export function FilterSort({
     onFilterChange({ ...filters, tags: newTags })
   }
 
+  const toggleNoTag = () => {
+    onFilterChange({ ...filters, noTag: !filters.noTag })
+  }
+
   const togglePriority = (priority: Priority) => {
     const newPriorities = filters.priorities.includes(priority)
       ? filters.priorities.filter(p => p !== priority)
@@ -72,7 +77,7 @@ export function FilterSort({
   }
 
   const clearFilters = () => {
-    onFilterChange({ tags: [], priorities: [], dueDate: 'all' })
+    onFilterChange({ tags: [], noTag: false, priorities: [], dueDate: 'all' })
   }
 
   const setSortOption = (by: SortOption) => {
@@ -108,7 +113,7 @@ export function FilterSort({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-[320px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/30 z-30 animate-fade-up">
+          <div className="absolute right-0 top-full mt-2 w-[90vw] max-w-[320px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/30 z-30 animate-fade-up">
             {/* Tabs */}
             <div className="flex border-b border-[var(--border)]">
               <button
@@ -146,30 +151,41 @@ export function FilterSort({
                     <label className="block text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)] mb-3">
                       Tags
                     </label>
-                    {tags.length === 0 ? (
-                      <p className="text-[11px] text-[var(--text-tertiary)]">No tags yet.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map(tag => {
-                          const isActive = filters.tags.includes(tag.id)
-                          return (
-                            <button
-                              key={tag.id}
-                              onClick={() => toggleTag(tag.id)}
-                              className={cn(
-                                'px-2.5 py-1.5 text-[10px] uppercase tracking-[0.05em] font-medium transition-all',
-                                isActive
-                                  ? 'ring-1 ring-[var(--accent)]'
-                                  : 'opacity-60 hover:opacity-100'
-                              )}
-                              style={{ color: tag.color, backgroundColor: tag.bgColor }}
-                            >
-                              {isActive && <Check size={10} className="inline mr-1" />}
-                              {tag.name}
-                            </button>
-                          )
-                        })}
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={toggleNoTag}
+                        className={cn(
+                          'px-2.5 py-1.5 text-[10px] uppercase tracking-[0.05em] font-medium transition-all border',
+                          filters.noTag
+                            ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-glow)]'
+                            : 'border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                        )}
+                      >
+                        {filters.noTag && <Check size={10} className="inline mr-1" />}
+                        No Tag
+                      </button>
+                      {tags.map(tag => {
+                        const isActive = filters.tags.includes(tag.id)
+                        return (
+                          <button
+                            key={tag.id}
+                            onClick={() => toggleTag(tag.id)}
+                            className={cn(
+                              'px-2.5 py-1.5 text-[10px] uppercase tracking-[0.05em] font-medium transition-all',
+                              isActive
+                                ? 'ring-1 ring-[var(--accent)]'
+                                : 'opacity-60 hover:opacity-100'
+                            )}
+                            style={{ color: tag.color, backgroundColor: tag.bgColor }}
+                          >
+                            {isActive && <Check size={10} className="inline mr-1" />}
+                            {tag.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {tags.length === 0 && (
+                      <p className="text-[11px] text-[var(--text-tertiary)] mt-2">No tags yet.</p>
                     )}
                   </div>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -20,7 +20,7 @@ export function useGoals() {
   const [taskLinks, setTaskLinks] = useState<GoalTaskLink[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Fetch goals, categories, milestones, and task links
   useEffect(() => {
@@ -141,7 +141,7 @@ export function useGoals() {
     return () => {
       isActive = false
     }
-  }, [user, supabase, milestones])
+  }, [user, supabase])
 
   // Add a new goal
   const addGoal = useCallback(async (goal: Omit<Goal, 'id' | 'createdAt' | 'order'>) => {

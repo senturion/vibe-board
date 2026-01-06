@@ -418,7 +418,7 @@ export function HabitsPage() {
             {selectedHabitForStats ? (
               <>
                 {/* Stats overview */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <StatBadge
                     value={selectedHabitAnalytics.stats.totalCompletions}
                     label="Total Completions"

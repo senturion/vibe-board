@@ -240,6 +240,13 @@ button:not(:disabled),
 /* Typography utilities */
 .font-display {
   font-family: var(--font-display);
+  letter-spacing: 0.01em;
+  font-kerning: normal;
+  font-feature-settings: 'kern' on, 'ss01' on, 'ss02' on;
+}
+
+.font-display.tracking-tight {
+  letter-spacing: 0.02em;
 }
 
 .font-body {
@@ -473,4 +480,10 @@ button:not(:disabled),
   display: grid;
   grid-template-columns: repeat(53, 1fr);
   gap: 2px;
+}
+
+@media (max-width: 640px) {
+  .widget-grid {
+    grid-template-columns: 1fr;
+  }
 }

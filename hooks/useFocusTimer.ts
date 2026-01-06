@@ -48,9 +48,9 @@ export function useFocusTimer() {
         .from('focus_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (settingsError && settingsError.code !== 'PGRST116') {
+      if (settingsError) {
         console.error('Error fetching settings:', settingsError)
       }
 

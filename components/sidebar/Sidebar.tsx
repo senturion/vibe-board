@@ -273,7 +273,7 @@ export function Sidebar() {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed right-8 top-3 p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors z-20"
+        className="hidden lg:block fixed right-8 top-3 p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors z-30"
         title={isOpen ? 'Close sidebar' : 'Open sidebar'}
       >
         {isOpen ? <PanelRightClose size={20} /> : <PanelRight size={20} />}
@@ -282,7 +282,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'h-screen bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)] flex flex-col transition-all duration-300 ease-out',
+          'hidden lg:flex h-screen bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)] flex-col transition-all duration-300 ease-out',
           isOpen ? 'w-[320px] animate-slide-in' : 'w-0 overflow-hidden'
         )}
       >

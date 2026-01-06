@@ -64,7 +64,7 @@ export function MainNav({ className, compact = false }: MainNavProps) {
 }
 
 // Smaller pill-style nav for mobile or sidebar
-export function MobileNav({ className }: { className?: string }) {
+export function MobileNav({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
   const { activeView, setActiveView, isTransitioning } = useNavigation()
 
   return (
@@ -76,7 +76,10 @@ export function MobileNav({ className }: { className?: string }) {
         return (
           <button
             key={view.id}
-            onClick={() => setActiveView(view.id)}
+            onClick={() => {
+              setActiveView(view.id)
+              onNavigate?.()
+            }}
             disabled={isTransitioning}
             className={cn(
               'flex items-center gap-3 px-3 py-2 text-left transition-all duration-150',

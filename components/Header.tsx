@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings, LogOut } from 'lucide-react'
+import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings, LogOut, SlidersHorizontal } from 'lucide-react'
 import { Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { FilterSort, FilterState, SortState } from './FilterSort'
@@ -49,6 +49,7 @@ export function Header({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showMobileControls, setShowMobileControls] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
   const { user, signOut } = useAuth()
@@ -89,11 +90,11 @@ export function Header({
 
   return (
     <>
-      <header className="flex items-center justify-between px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
+      <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-4 border-b border-[var(--border-subtle)] theme-transition">
       {/* Left: Logo & Board Selector */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
         {/* Logo */}
-        <h1 className="font-display text-xl tracking-tight text-[var(--text-primary)]">
+        <h1 className="hidden sm:block font-display text-lg sm:text-xl tracking-tight text-[var(--text-primary)]">
           <span className="italic">Vibe</span>
           <span className="text-[var(--accent)]">Board</span>
         </h1>
@@ -102,9 +103,9 @@ export function Header({
         <div className="relative">
           <button
             onClick={() => setShowBoardMenu(!showBoardMenu)}
-            className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+            className="flex items-center gap-2 px-2.5 py-1.5 sm:px-3 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
           >
-            <span className="max-w-[150px] truncate">{activeBoard?.name || 'Loading...'}</span>
+            <span className="max-w-[50vw] sm:max-w-[150px] truncate">{activeBoard?.name || 'Loading...'}</span>
             <ChevronDown size={14} className={cn(
               'transition-transform',
               showBoardMenu && 'rotate-180'
@@ -251,7 +252,91 @@ export function Header({
       </div>
 
       {/* Right: Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <div className="relative sm:hidden">
+          <button
+            onClick={() => setShowMobileControls((prev) => !prev)}
+            className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-secondary)] border border-[var(--border)]"
+          >
+            <SlidersHorizontal size={14} />
+            Controls
+          </button>
+          {showMobileControls && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowMobileControls(false)}
+              />
+              <div className="absolute right-0 mt-2 w-[90vw] max-w-[320px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/40 z-20">
+                <div className="p-3 space-y-2">
+                  <FilterSort
+                    filters={filters}
+                    sort={sort}
+                    onFilterChange={onFilterChange}
+                    onSortChange={onSortChange}
+                    activeFilterCount={activeFilterCount}
+                  />
+                  <button
+                    onClick={() => {
+                      setShowMobileControls(false)
+                      onOpenSearch()
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                  >
+                    <Search size={14} />
+                    Search
+                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setShowMobileControls(false)
+                        onOpenStats()
+                      }}
+                      className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                    >
+                      <BarChart3 size={14} />
+                      Stats
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMobileControls(false)
+                        onOpenDataManager()
+                      }}
+                      className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                    >
+                      <Database size={14} />
+                      Data
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMobileControls(false)
+                        onOpenSettings()
+                      }}
+                      className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                    >
+                      <Settings size={14} />
+                      Settings
+                    </button>
+                    {user && (
+                      <button
+                        onClick={() => {
+                          setShowMobileControls(false)
+                          setShowLogoutConfirm(true)
+                        }}
+                        className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-red-400 border border-red-400/40"
+                      >
+                        <LogOut size={14} />
+                        Sign out
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+      <div className="hidden sm:flex flex-wrap items-center gap-2 sm:gap-3">
         {/* Filter & Sort */}
         <FilterSort
           filters={filters}
@@ -268,11 +353,11 @@ export function Header({
         >
           <Search size={14} />
           <span className="hidden sm:inline">Search</span>
-          <kbd className="px-1.5 py-0.5 text-[10px] bg-[var(--bg-tertiary)] border border-[var(--border)]">/</kbd>
+          <kbd className="hidden md:inline px-1.5 py-0.5 text-[10px] bg-[var(--bg-tertiary)] border border-[var(--border)]">/</kbd>
         </button>
 
         {/* Divider */}
-        <div className="w-px h-6 bg-[var(--border)]" />
+        <div className="hidden sm:block w-px h-6 bg-[var(--border)]" />
 
         {/* Stats */}
         <button
@@ -311,6 +396,7 @@ export function Header({
             <LogOut size={14} />
           </button>
         )}
+      </div>
       </div>
       </header>
       <Modal

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -20,6 +20,7 @@ import { useKanban } from '@/hooks/useKanban'
 import { useUndoRedo } from '@/contexts/UndoRedoContext'
 import { useColumnColors } from '@/hooks/useColumnColors'
 import { useTagsContext } from '@/contexts/TagsContext'
+import { cn } from '@/lib/utils'
 import { Column } from './Column'
 import { CardDetailModal } from './CardDetailModal'
 import { ArchivePanel } from './ArchivePanel'
@@ -152,6 +153,9 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
   }, [rawMoveTask, getTaskById, pushAction])
 
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null)
+  const [activeLane, setActiveLane] = useState<ColumnId>('todo')
+  const lanesRef = useRef<HTMLDivElement | null>(null)
+  const scrollRafRef = useRef<number | null>(null)
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null)
   const [showArchive, setShowArchive] = useState(false)
   const [showQuickCapture, setShowQuickCapture] = useState(false)
@@ -192,10 +196,15 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     // Apply filters
     if (filters) {
       // Label filter
-      if (filters.tags.length > 0) {
-        columnTasks = columnTasks.filter(task =>
-          filters.tags.some(tagId => (taskTagMap[task.id] || []).includes(tagId))
-        )
+      if (filters.tags.length > 0 || filters.noTag) {
+        columnTasks = columnTasks.filter(task => {
+          const taskTags = taskTagMap[task.id] || []
+          const matchesSelected = filters.tags.length > 0
+            ? filters.tags.some(tagId => taskTags.includes(tagId))
+            : false
+          const matchesNoTag = filters.noTag && taskTags.length === 0
+          return matchesSelected || matchesNoTag
+        })
       }
 
       // Priority filter
@@ -441,8 +450,75 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     return () => clearTimeout(syncTimeout)
   }, [tasks, selectedTask, getTaskById])
 
+  const updateActiveLaneFromScroll = useCallback(() => {
+    const container = lanesRef.current
+    if (!container) return
+    const containerLeft = container.getBoundingClientRect().left
+    let closestLane: ColumnId | null = null
+    let closestDistance = Number.POSITIVE_INFINITY
+
+    COLUMNS.forEach((column) => {
+      const lane = document.getElementById(`lane-${column.id}`)
+      if (!lane) return
+      const laneLeft = lane.getBoundingClientRect().left
+      const distance = Math.abs(laneLeft - containerLeft)
+      if (distance < closestDistance) {
+        closestDistance = distance
+        closestLane = column.id
+      }
+    })
+
+    if (closestLane && closestLane !== activeLane) {
+      setActiveLane(closestLane)
+    }
+  }, [activeLane])
+
+  useEffect(() => {
+    updateActiveLaneFromScroll()
+    const handleScroll = () => {
+      if (scrollRafRef.current !== null) return
+      scrollRafRef.current = window.requestAnimationFrame(() => {
+        scrollRafRef.current = null
+        updateActiveLaneFromScroll()
+      })
+    }
+    const container = lanesRef.current
+    if (!container) return
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      if (scrollRafRef.current !== null) {
+        window.cancelAnimationFrame(scrollRafRef.current)
+        scrollRafRef.current = null
+      }
+    }
+  }, [updateActiveLaneFromScroll])
+
   return (
     <>
+      <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-8 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] lg:hidden overflow-x-auto">
+        {COLUMNS.map((column) => (
+          <button
+            key={column.id}
+            onClick={() => {
+              const lane = document.getElementById(`lane-${column.id}`)
+              if (lane) {
+                lane.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+                setActiveLane(column.id)
+              }
+            }}
+            className={cn(
+              'px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] border transition-colors whitespace-nowrap',
+              activeLane === column.id
+                ? 'text-[var(--accent)] border-[var(--accent)] bg-[var(--accent-glow)]'
+                : 'text-[var(--text-tertiary)] border-[var(--border)] hover:text-[var(--text-secondary)]'
+            )}
+          >
+            {column.title}
+          </button>
+        ))}
+      </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={rectIntersection}
@@ -451,7 +527,10 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-8 p-8 h-full overflow-x-auto">
+        <div
+          ref={lanesRef}
+          className="flex gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 h-full overflow-x-auto snap-x snap-mandatory sm:snap-none scroll-px-4 sm:scroll-px-0"
+        >
           {COLUMNS.map((column, index) => (
             <Column
               key={column.id}
@@ -484,7 +563,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
       {/* Archive button */}
       <button
         onClick={() => setShowArchive(true)}
-        className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors shadow-lg shadow-black/20"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center gap-2 px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors shadow-lg shadow-black/20"
         title="View archive (A)"
       >
         <Archive size={14} />
@@ -497,7 +576,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
       </button>
 
       {/* Keyboard hint */}
-      <div className="fixed bottom-6 left-6 text-[10px] text-[var(--text-tertiary)]">
+      <div className="hidden sm:block fixed bottom-6 left-6 text-[10px] text-[var(--text-tertiary)]">
         Press <kbd className="px-1.5 py-0.5 bg-[var(--bg-secondary)] border border-[var(--border)] mx-1">?</kbd> for shortcuts
       </div>
 

@@ -28,6 +28,11 @@ export function JournalPage() {
   const [mood, setMood] = useState<number | undefined>()
   const [showPrompt, setShowPrompt] = useState(false)
   const [currentPrompt, setCurrentPrompt] = useState('')
+  const [hoveredMood, setHoveredMood] = useState<{
+    date: string
+    label: string
+    value: number | null
+  } | null>(null)
 
   const dateKey = formatDateKey(selectedDate)
   const isToday = dateKey === formatDateKey(new Date())
@@ -263,11 +268,21 @@ export function JournalPage() {
                     const option = point.mood ? getMoodOption(point.mood) : null
                     const color = option ? option.color : 'var(--border)'
                     const label = option ? option.label : 'No mood'
+                    const isToday = index === moodTrend.length - 1
                     return (
                       <div
                         key={`${point.date}-${index}`}
-                        className="flex-1 rounded-sm transition-all hover:opacity-90"
+                        className={cn(
+                          'flex-1 rounded-sm transition-all hover:opacity-90',
+                          isToday && 'outline outline-1 outline-[var(--accent)]/60'
+                        )}
                         title={`${point.date} · ${label}`}
+                        onMouseEnter={() => setHoveredMood({
+                          date: point.date,
+                          label,
+                          value: point.mood ?? null,
+                        })}
+                        onMouseLeave={() => setHoveredMood(null)}
                         style={{
                           height,
                           backgroundColor: color,
@@ -276,6 +291,15 @@ export function JournalPage() {
                       />
                     )
                   })}
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
+                  <span>14d ago</span>
+                  <span>Today</span>
+                </div>
+                <div className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+                  {hoveredMood
+                    ? `${hoveredMood.date} · ${hoveredMood.label}${hoveredMood.value ? ` (${hoveredMood.value})` : ''}`
+                    : 'Hover a bar for details'}
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-2">

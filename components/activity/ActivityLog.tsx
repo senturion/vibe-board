@@ -239,6 +239,16 @@ export function ActivityLog() {
     return groups
   }, [activities])
 
+  const typeOrder: ActivityType[] = ['tasks', 'habits', 'goals', 'journal', 'routines']
+  const typeLabels: Record<ActivityType, string> = {
+    all: 'All',
+    tasks: 'Tasks',
+    habits: 'Habits',
+    goals: 'Goals',
+    journal: 'Journal',
+    routines: 'Routines',
+  }
+
   const filterOptions: { id: ActivityType; label: string }[] = [
     { id: 'all', label: 'All' },
     { id: 'habits', label: 'Habits' },
@@ -324,44 +334,99 @@ export function ActivityLog() {
           </div>
         ) : (
           <div className="space-y-6">
-            {groupedActivities.map(group => (
-              <div key={group.date}>
-                <h2 className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mb-3 sticky top-0 bg-[var(--bg-primary)] py-1">
-                  {formatDate(parseDateKey(group.date).getTime())}
-                </h2>
-                <div className="space-y-2">
-                  {group.items.map(activity => {
-                    const Icon = activity.icon
-                    return (
-                      <div
-                        key={activity.id}
-                        className="flex items-start gap-3 p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-subtle)] hover:border-[var(--border)] transition-colors"
-                      >
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: activity.color + '20' }}
-                        >
-                          <Icon size={16} style={{ color: activity.color }} />
+            <div className="flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#93c5fd]" />
+                Task updated
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#60a5fa]" />
+                Task completed
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#7f9cf5]" />
+                Habits
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#81b29a]" />
+                Journal
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#e07a5f]" />
+                Goals
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#a78bfa]" />
+                Routines
+              </span>
+            </div>
+            {groupedActivities.map(group => {
+              const groupedByType = typeOrder.map(type => ({
+                type,
+                items: group.items.filter(item => item.type === type),
+              })).filter(grouped => grouped.items.length > 0)
+
+              return (
+                <div key={group.date}>
+                  <h2 className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mb-3 sticky top-0 bg-[var(--bg-primary)] py-1">
+                    {formatDate(parseDateKey(group.date).getTime())}
+                  </h2>
+                  <div className="space-y-5">
+                    {groupedByType.map(typeGroup => (
+                      <div key={typeGroup.type} className="space-y-2">
+                        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                          <span>{typeLabels[typeGroup.type]}</span>
+                          <span>{typeGroup.items.length}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-[var(--text-primary)] font-medium">
-                            {activity.title}
-                          </p>
-                          {activity.description && (
-                            <p className="text-xs text-[var(--text-tertiary)] mt-0.5 line-clamp-2">
-                              {activity.description}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-[var(--text-tertiary)] shrink-0">
-                          {formatTimestamp(activity.timestamp)}
-                        </span>
+                        {typeGroup.items.map(activity => {
+                          const Icon = activity.icon
+                          const taskBadge = activity.type === 'tasks'
+                            ? activity.description === 'Task updated'
+                              ? 'Updated'
+                              : activity.description === 'Task completed'
+                                ? 'Completed'
+                                : null
+                            : null
+                          return (
+                            <div
+                              key={activity.id}
+                              className="flex items-start gap-3 p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-subtle)] hover:border-[var(--border)] transition-colors"
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                                style={{ backgroundColor: activity.color + '20' }}
+                              >
+                                <Icon size={16} style={{ color: activity.color }} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-[var(--text-primary)] font-medium">
+                                    {activity.title}
+                                  </p>
+                                  {taskBadge && (
+                                    <span className="px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] border border-[var(--border)]">
+                                      {taskBadge}
+                                    </span>
+                                  )}
+                                </div>
+                                {activity.description && (
+                                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5 line-clamp-2">
+                                    {activity.description}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-[var(--text-tertiary)] shrink-0">
+                                {formatTimestamp(activity.timestamp)}
+                              </span>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
