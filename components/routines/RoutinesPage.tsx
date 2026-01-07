@@ -243,7 +243,7 @@ export function RoutinesPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -340,7 +340,7 @@ export function RoutinesPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
+      <div className="flex-1 overflow-auto min-h-0 p-4 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Today's Stats (only show in today view) */}
           {viewMode === 'today' && (

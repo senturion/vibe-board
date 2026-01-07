@@ -27,7 +27,7 @@ interface HabitsContextType {
   toggleHabit: (habitId: string, date?: Date) => Promise<void>
   getCompletionStatus: (habitId: string, date?: Date) => { count: number; target: number; isComplete: boolean }
   getStreak: (habitId: string) => HabitStreak | undefined
-  updateStreak: (habitId: string) => Promise<void>
+  updateStreak: (habitId: string, todayCompleteOverride?: boolean) => Promise<void>
   getTodaysHabits: () => Habit[]
   getActiveHabitsForToday: () => Habit[]
   addCategory: (name: string, color: string) => Promise<string>
@@ -362,9 +362,12 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
 
       setCompletions(prev => [...prev, newCompletion])
 
-      // Update streak if completing for today
+      // Update streak if completing for today and target reached
       if (dateKey === formatDateKey(new Date())) {
-        await updateStreak(habitId)
+        const nextCount = currentCount + 1
+        if (nextCount >= habit.targetCount) {
+          await updateStreak(habitId, true)
+        }
       }
     }
   }, [user, supabase, habits, completions])
@@ -387,13 +390,90 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     }
   }, [habits, completions])
 
+  const computeStreakFromCompletions = useCallback((habitId: string) => {
+    const habit = habits.find(h => h.id === habitId)
+    if (!habit) return undefined
+
+    const dailyCounts = new Map<string, number>()
+    completions.forEach((completion) => {
+      if (completion.habitId !== habitId) return
+      const current = dailyCounts.get(completion.completionDate) || 0
+      dailyCounts.set(completion.completionDate, current + completion.count)
+    })
+
+    const completedDays = Array.from(dailyCounts.entries())
+      .filter(([, count]) => count >= habit.targetCount)
+      .map(([dateKey]) => dateKey)
+      .sort()
+
+    if (completedDays.length === 0) {
+      return {
+        currentStreak: 0,
+        bestStreak: 0,
+        lastCompletionDate: undefined,
+      }
+    }
+
+    const toDayNumber = (dateKey: string) => {
+      const date = new Date(`${dateKey}T00:00:00`)
+      return Math.floor(date.getTime() / 86400000)
+    }
+
+    let bestStreak = 1
+    let currentRun = 1
+    for (let i = 1; i < completedDays.length; i++) {
+      const prev = toDayNumber(completedDays[i - 1])
+      const curr = toDayNumber(completedDays[i])
+      if (curr - prev === 1) {
+        currentRun += 1
+      } else {
+        currentRun = 1
+      }
+      if (currentRun > bestStreak) bestStreak = currentRun
+    }
+
+    const todayKey = formatDateKey(new Date())
+    let currentStreak = 0
+    if (dailyCounts.has(todayKey) && (dailyCounts.get(todayKey) || 0) >= habit.targetCount) {
+      currentStreak = 1
+      let dayCursor = toDayNumber(todayKey) - 1
+      while (true) {
+        const prevKey = formatDateKey(new Date(dayCursor * 86400000))
+        if ((dailyCounts.get(prevKey) || 0) >= habit.targetCount) {
+          currentStreak += 1
+          dayCursor -= 1
+        } else {
+          break
+        }
+      }
+    }
+
+    const lastCompletionDate = completedDays[completedDays.length - 1]
+    return { currentStreak, bestStreak, lastCompletionDate }
+  }, [completions, habits])
+
   // Get streak for a habit
   const getStreak = useCallback((habitId: string) => {
-    return streaks.get(habitId)
-  }, [streaks])
+    const streak = streaks.get(habitId)
+    if (streak && (streak.currentStreak > 0 || streak.bestStreak > 0)) {
+      return streak
+    }
+
+    const computed = computeStreakFromCompletions(habitId)
+    if (!computed) return streak
+
+    return {
+      id: streak?.id || habitId,
+      habitId,
+      currentStreak: computed.currentStreak,
+      bestStreak: computed.bestStreak,
+      lastCompletionDate: computed.lastCompletionDate,
+      updatedAt: Date.now(),
+    }
+  }, [streaks, computeStreakFromCompletions])
 
   // Update streak for a habit
-  const updateStreak = useCallback(async (habitId: string) => {
+  const updateStreak = useCallback(async (habitId: string, todayCompleteOverride?: boolean) => {
     if (!user) return
 
     const today = formatDateKey(new Date())
@@ -406,7 +486,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     if (!habit) return
 
     // Check if completed today
-    const todayComplete = getCompletionStatus(habitId, new Date()).isComplete
+    const todayComplete = todayCompleteOverride ?? getCompletionStatus(habitId, new Date()).isComplete
 
     if (!todayComplete) return
 
@@ -432,6 +512,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         best_streak: newBestStreak,
         last_completion_date: today,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,habit_id',
       })
 
     if (error) {

@@ -110,35 +110,8 @@ export default function Home() {
               onSortChange={setSort}
               activeFilterCount={activeFilterCount}
             />
-            {/* Editorial Subheader */}
-            <div className="hidden sm:block relative px-4 sm:px-6 lg:px-8 py-4 border-b border-[var(--border-subtle)] theme-transition">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
-                <div className="animate-fade-up">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-1">
-                    Current Board
-                  </p>
-                  <h2 className="font-display text-xl sm:text-2xl text-[var(--text-primary)] tracking-tight leading-none italic">
-                    {activeBoard.name}
-                  </h2>
-                </div>
-                <div className="animate-fade-up flex items-center gap-4 sm:gap-6 sm:pb-1" style={{ animationDelay: '0.1s', opacity: 0 }}>
-                  <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">Today</p>
-                    <p className="text-sm text-[var(--text-secondary)] font-light">
-                      {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                    </p>
-                  </div>
-                  <div className="w-px h-8 bg-[var(--border)]" />
-                  <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" title="Synced locally" />
-                </div>
-              </div>
-
-              {/* Decorative line */}
-              <div className="absolute bottom-0 left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 h-px bg-gradient-to-r from-[var(--accent)] via-[var(--border)] to-transparent" />
-            </div>
-
             {/* Board Area */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-hidden sm:overflow-auto">
               <Board
                 boardId={activeBoardId}
                 searchOpen={searchOpen}
@@ -156,7 +129,7 @@ export default function Home() {
   return (
     <div className="flex h-screen flex-col lg:flex-row overflow-hidden bg-[var(--bg-primary)] theme-transition">
       {/* Main Area */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Header with Navigation */}
         <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-[var(--border-subtle)] theme-transition">
           {/* Left: Logo & Navigation */}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings, LogOut, SlidersHorizontal } from 'lucide-react'
+import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings, LogOut, SlidersHorizontal, Columns3 } from 'lucide-react'
 import { Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { FilterSort, FilterState, SortState } from './FilterSort'
@@ -91,13 +91,12 @@ export function Header({
   return (
     <>
       <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-4 border-b border-[var(--border-subtle)] theme-transition">
-      {/* Left: Logo & Board Selector */}
-      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-        {/* Logo */}
-        <h1 className="hidden sm:block font-display text-lg sm:text-xl tracking-tight text-[var(--text-primary)]">
-          <span className="italic">Vibe</span>
-          <span className="text-[var(--accent)]">Board</span>
-        </h1>
+      {/* Left: Section Title & Board Selector */}
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <div className="flex items-center gap-2">
+          <Columns3 size={18} className="text-[var(--accent)]" />
+          <h1 className="text-lg font-medium text-[var(--text-primary)]">Board</h1>
+        </div>
 
         {/* Board Selector */}
         <div className="relative">

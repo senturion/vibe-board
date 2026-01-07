@@ -529,7 +529,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
       >
         <div
           ref={lanesRef}
-          className="flex gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 h-full overflow-x-auto overscroll-x-contain snap-x snap-mandatory sm:snap-none scroll-px-4 sm:scroll-px-0"
+          className="flex gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 min-h-full overflow-x-auto overscroll-x-contain snap-x snap-mandatory sm:snap-none scroll-px-4 sm:scroll-px-0 touch-pan-x sm:touch-auto"
         >
           {COLUMNS.map((column, index) => (
             <Column

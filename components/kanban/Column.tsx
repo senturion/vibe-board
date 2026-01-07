@@ -42,7 +42,7 @@ export function Column({
   return (
     <div
       id={`lane-${id}`}
-      className="flex flex-col min-w-[88vw] max-w-[88vw] sm:min-w-[300px] sm:max-w-[300px] animate-fade-up snap-start sm:snap-none"
+      className="flex flex-col h-full sm:h-auto min-w-[88vw] max-w-[88vw] sm:min-w-[300px] sm:max-w-[300px] animate-fade-up snap-start sm:snap-none"
       style={{ animationDelay: `${index * 0.1}s`, opacity: 0 }}
     >
       {/* Editorial Column Header */}
@@ -104,7 +104,7 @@ export function Column({
       <div
         ref={setNodeRef}
         className={cn(
-          'flex-1 flex flex-col gap-3 p-4 rounded-lg transition-all duration-200 min-h-[300px]',
+          'flex-1 flex flex-col gap-3 p-4 rounded-lg transition-all duration-200 min-h-[300px] overflow-y-auto sm:overflow-visible',
           'border-2 border-dashed border-transparent',
           isOver && 'bg-[var(--bg-tertiary)] border-[var(--border)]',
           compact && 'gap-1'
