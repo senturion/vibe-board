@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, BarChart3, Calendar, Target, Flame, CalendarDays } from 'lucide-react'
+import { Plus, BarChart3, Calendar, Target, Flame, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 import { useHabitAnalytics, useAllHabitsAnalytics } from '@/hooks/useHabitAnalytics'
 import { useTemporalView } from '@/hooks/useTemporalView'
-import { Habit, isHabitActiveToday, formatDateKey, HabitCompletion } from '@/lib/types'
+import { Habit, formatDateKey, parseDateKey, HabitCompletion, DayOfWeek } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { ProgressRing } from '@/components/ui/Progress'
@@ -31,19 +31,60 @@ export function HabitsPage() {
     toggleHabit,
     getCompletionStatus,
     getStreak,
-    getActiveHabitsForToday,
   } = useHabits()
 
   const [viewMode, setViewMode] = useState<ViewMode>('today')
   const [showMobileViewMenu, setShowMobileViewMenu] = useState(false)
+  const [logDateKey, setLogDateKey] = useState(formatDateKey())
   const [showEditor, setShowEditor] = useState(false)
   const [editingHabit, setEditingHabit] = useState<Habit | undefined>()
   const [selectedHabitForStats, setSelectedHabitForStats] = useState<Habit | undefined>()
 
-  const { todayStats, weeklyStats } = useAllHabitsAnalytics(habits, completions)
+  const { weeklyStats } = useAllHabitsAnalytics(habits, completions)
   const temporal = useTemporalView('habits')
 
-  const todayHabits = useMemo(() => getActiveHabitsForToday(), [getActiveHabitsForToday])
+  const logDate = useMemo(() => parseDateKey(logDateKey), [logDateKey])
+  const isLogDateToday = logDateKey === formatDateKey(new Date())
+
+  const activeHabitsForDate = useMemo(() => {
+    const day = logDate.getDay()
+    const dayOfWeek = (day === 0 ? 7 : day) as DayOfWeek
+
+    return habits.filter(habit => {
+      if (!habit.isActive) return false
+      switch (habit.frequencyType) {
+        case 'daily':
+          return true
+        case 'specific_days':
+          return habit.specificDays?.includes(dayOfWeek) ?? false
+        case 'weekly':
+          return true
+        default:
+          return false
+      }
+    })
+  }, [habits, logDate])
+
+  const dayStats = useMemo(() => {
+    let completed = 0
+    const total = activeHabitsForDate.length
+
+    activeHabitsForDate.forEach(habit => {
+      const habitCompletions = completions.filter(
+        c => c.habitId === habit.id && c.completionDate === logDateKey
+      )
+      const count = habitCompletions.reduce((sum, c) => sum + c.count, 0)
+      if (count >= habit.targetCount) {
+        completed++
+      }
+    })
+
+    return {
+      completed,
+      total,
+      percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+    }
+  }, [activeHabitsForDate, completions, logDateKey])
 
   // Helper to get completion date from a completion record
   const getCompletionDate = (completion: HabitCompletion) => completion.completionDate
@@ -170,6 +211,39 @@ export function HabitsPage() {
           </div>
         </div>
 
+        {(viewMode === 'today' || viewMode === 'all') && (
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Day</span>
+            <div className="flex items-center border border-[var(--border)] bg-[var(--bg-secondary)]">
+              <button
+                onClick={() => {
+                  const prev = new Date(logDate)
+                  prev.setDate(prev.getDate() - 1)
+                  setLogDateKey(formatDateKey(prev))
+                }}
+                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                aria-label="Previous day"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="px-2 text-[11px] text-[var(--text-secondary)]">
+                {logDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+              <button
+                onClick={() => {
+                  const next = new Date(logDate)
+                  next.setDate(next.getDate() + 1)
+                  setLogDateKey(formatDateKey(next))
+                }}
+                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                aria-label="Next day"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={() => {
             setEditingHabit(undefined)
@@ -181,6 +255,40 @@ export function HabitsPage() {
           <span className="hidden sm:inline">New Habit</span>
         </button>
       </div>
+      {(viewMode === 'today' || viewMode === 'all') && (
+        <div className="px-4 pb-3 sm:hidden">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Day</span>
+            <div className="flex items-center border border-[var(--border)] bg-[var(--bg-secondary)]">
+              <button
+                onClick={() => {
+                  const prev = new Date(logDate)
+                  prev.setDate(prev.getDate() - 1)
+                  setLogDateKey(formatDateKey(prev))
+                }}
+                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                aria-label="Previous day"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="px-2 text-[11px] text-[var(--text-secondary)]">
+                {logDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+              <button
+                onClick={() => {
+                  const next = new Date(logDate)
+                  next.setDate(next.getDate() + 1)
+                  setLogDateKey(formatDateKey(next))
+                }}
+                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                aria-label="Next day"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto min-h-0 p-4 sm:p-6">
@@ -191,17 +299,17 @@ export function HabitsPage() {
               <Card variant="bordered" padding="md">
                 <div className="flex items-center gap-4">
                   <ProgressRing
-                    value={todayStats.percentage}
+                    value={dayStats.percentage}
                     size={60}
                     strokeWidth={5}
                     color="var(--success)"
                   />
                   <div>
                     <p className="text-2xl font-medium text-[var(--text-primary)]">
-                      {todayStats.completed}/{todayStats.total}
+                      {dayStats.completed}/{dayStats.total}
                     </p>
                     <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-                      Today
+                      {isLogDateToday ? 'Today' : 'Day'}
                     </p>
                   </div>
                 </div>
@@ -246,13 +354,17 @@ export function HabitsPage() {
             {/* Today's Habits */}
             <Card variant="bordered" padding="none">
               <CardHeader className="px-4 pt-4">
-                <CardTitle>Today&apos;s Habits</CardTitle>
+                <CardTitle>
+                  {isLogDateToday
+                    ? "Today's Habits"
+                    : `Habits for ${logDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {todayHabits.length === 0 ? (
+                {activeHabitsForDate.length === 0 ? (
                   <EmptyState
                     icon="habits"
-                    title="No habits for today"
+                    title={isLogDateToday ? 'No habits for today' : 'No habits for this day'}
                     description="Create your first habit to start tracking"
                     action={{
                       label: 'Create Habit',
@@ -262,8 +374,8 @@ export function HabitsPage() {
                   />
                 ) : (
                   <div className="space-y-2 p-4 pt-0">
-                    {todayHabits.map((habit) => {
-                      const status = getCompletionStatus(habit.id)
+                    {activeHabitsForDate.map((habit) => {
+                      const status = getCompletionStatus(habit.id, logDate)
                       const streak = getStreak(habit.id)
                       return (
                         <HabitCard
@@ -271,7 +383,7 @@ export function HabitsPage() {
                           habit={habit}
                           completionStatus={{ completed: status.isComplete, count: status.count, target: status.target }}
                           streak={{ current: streak?.currentStreak || 0, best: streak?.bestStreak || 0 }}
-                          onToggle={() => toggleHabit(habit.id)}
+                          onToggle={() => toggleHabit(habit.id, logDate)}
                           onEdit={() => handleEdit(habit)}
                           onDelete={() => deleteHabit(habit.id)}
                           onArchive={() => archiveHabit(habit.id)}
@@ -301,7 +413,7 @@ export function HabitsPage() {
             ) : (
               <div className="space-y-3">
                 {habits.map((habit) => {
-                  const status = getCompletionStatus(habit.id)
+                  const status = getCompletionStatus(habit.id, logDate)
                   const streak = getStreak(habit.id)
                   return (
                     <HabitCard
@@ -309,7 +421,7 @@ export function HabitsPage() {
                       habit={habit}
                       completionStatus={{ completed: status.isComplete, count: status.count, target: status.target }}
                       streak={{ current: streak?.currentStreak || 0, best: streak?.bestStreak || 0 }}
-                      onToggle={() => toggleHabit(habit.id)}
+                      onToggle={() => toggleHabit(habit.id, logDate)}
                       onEdit={() => handleEdit(habit)}
                       onDelete={() => deleteHabit(habit.id)}
                       onArchive={() => archiveHabit(habit.id)}
