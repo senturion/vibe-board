@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSettings } from '@/hooks/useSettings'
 import { KanbanTask, ColumnId, Priority, LabelId, Subtask } from '@/lib/types'
-import { Database } from '@/lib/supabase/types'
+import { Database, Json } from '@/lib/supabase/types'
 
 type TaskRow = Database['public']['Tables']['tasks']['Row']
 
@@ -325,7 +325,7 @@ export function useKanban(boardId: string = '') {
     const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ subtasks: newSubtasks, updated_at: new Date(now).toISOString() })
+      .update({ subtasks: newSubtasks as unknown as Json, updated_at: new Date(now).toISOString() })
       .eq('id', taskId)
 
     if (error) {
@@ -351,7 +351,7 @@ export function useKanban(boardId: string = '') {
     const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ subtasks: newSubtasks, updated_at: new Date(now).toISOString() })
+      .update({ subtasks: newSubtasks as unknown as Json, updated_at: new Date(now).toISOString() })
       .eq('id', taskId)
 
     if (error) {
@@ -375,7 +375,7 @@ export function useKanban(boardId: string = '') {
     const now = Date.now()
     const { error } = await supabase
       .from('tasks')
-      .update({ subtasks: newSubtasks, updated_at: new Date(now).toISOString() })
+      .update({ subtasks: newSubtasks as unknown as Json, updated_at: new Date(now).toISOString() })
       .eq('id', taskId)
 
     if (error) {

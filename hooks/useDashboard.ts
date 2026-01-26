@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { DashboardWidget, WidgetType, WIDGET_TYPES } from '@/lib/types'
+import type { Json } from '@/lib/supabase/types'
 
 const DEFAULT_WIDGETS: Omit<DashboardWidget, 'id' | 'createdAt'>[] = [
   { widgetType: 'focus', positionX: 0, positionY: 0, width: 1, height: 1, config: {}, isVisible: true },
@@ -34,7 +35,7 @@ export function useDashboard() {
       position_y: w.positionY,
       width: w.width,
       height: w.height,
-      config: w.config,
+      config: w.config as Json,
       is_visible: w.isVisible,
     }))
 
@@ -163,7 +164,7 @@ export function useDashboard() {
           position_y: newWidget.positionY,
           width: newWidget.width,
           height: newWidget.height,
-          config: newWidget.config,
+          config: newWidget.config as Json,
           is_visible: newWidget.isVisible,
         })
 
@@ -235,7 +236,7 @@ export function useDashboard() {
         position_y: w.positionY,
         width: w.width,
         height: w.height,
-        config: w.config,
+        config: w.config as Json,
         is_visible: w.isVisible,
       }))
 

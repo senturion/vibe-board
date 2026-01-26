@@ -11,6 +11,7 @@ import {
   TemporalSectionId,
   formatDateKey,
 } from '@/lib/types'
+import type { TablesInsert } from '@/lib/supabase/types'
 
 const STORAGE_KEY = 'vibe-ui-state'
 const SYNC_DEBOUNCE_MS = 1000
@@ -116,7 +117,7 @@ export function useUIState() {
       if (!updateData) return
       pendingUpdateRef.current = null
 
-      const dbData: Record<string, unknown> = {
+      const dbData: TablesInsert<'user_ui_state'> = {
         user_id: user.id,
         updated_at: new Date().toISOString(),
       }

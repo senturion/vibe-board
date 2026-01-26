@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { ViewId, WorkLocation, DayOfWeek } from '@/lib/types'
+import type { Json } from '@/lib/supabase/types'
 
 export interface AppSettings {
   // General
@@ -140,7 +141,7 @@ export function useSettings() {
           .single()
 
         if (!error && data?.app_settings && isActive) {
-          const cloudSettings = { ...DEFAULT_SETTINGS, ...data.app_settings }
+          const cloudSettings = { ...DEFAULT_SETTINGS, ...(data.app_settings as Record<string, unknown>) } as AppSettings
           setSettings(cloudSettings)
           localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings))
         }
@@ -220,7 +221,7 @@ export function useSettings() {
         .from('user_settings')
         .upsert({
           user_id: user.id,
-          app_settings: DEFAULT_SETTINGS,
+          app_settings: DEFAULT_SETTINGS as unknown as Json,
         }, { onConflict: 'user_id' })
         .then(({ error }) => {
           if (error) console.error('Error resetting settings:', error)

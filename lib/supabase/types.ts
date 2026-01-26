@@ -6,942 +6,1109 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
       boards: {
         Row: {
-          id: string
-          user_id: string
-          name: string
           created_at: string
+          id: string
+          name: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          name: string
           created_at?: string
+          id?: string
+          name: string
+          user_id: string
         }
         Update: {
+          created_at?: string
           id?: string
-          user_id?: string
           name?: string
-          created_at?: string
-        }
-      }
-      tasks: {
-        Row: {
-          id: string
-          user_id: string
-          board_id: string
-          title: string
-          description: string | null
-          status: string
-          priority: string
-          labels: string[]
-          subtasks: Json
-          due_date: string | null
-          order: number
-          created_at: string
-          updated_at: string
-          completed_at: string | null
-          archived_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          board_id: string
-          title: string
-          description?: string | null
-          status?: string
-          priority?: string
-          labels?: string[]
-          subtasks?: Json
-          due_date?: string | null
-          order?: number
-          created_at?: string
-          updated_at?: string
-          completed_at?: string | null
-          archived_at?: string | null
-        }
-        Update: {
-          id?: string
           user_id?: string
-          board_id?: string
-          title?: string
-          description?: string | null
-          status?: string
-          priority?: string
-          labels?: string[]
-          subtasks?: Json
-          due_date?: string | null
-          order?: number
-          created_at?: string
-          updated_at?: string
-          completed_at?: string | null
-          archived_at?: string | null
         }
-      }
-      todos: {
-        Row: {
-          id: string
-          user_id: string
-          text: string
-          completed: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          text: string
-          completed?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          text?: string
-          completed?: boolean
-          created_at?: string
-        }
-      }
-      notes: {
-        Row: {
-          id: string
-          user_id: string
-          content: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          content?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          content?: string
-          updated_at?: string
-        }
-      }
-      user_settings: {
-        Row: {
-          user_id: string
-          active_board_id: string | null
-          theme: string
-          compact_mode: boolean
-          column_colors: Json
-          default_view: string | null
-          sidebar_widgets: string[] | null
-          app_settings: Json | null
-        }
-        Insert: {
-          user_id: string
-          active_board_id?: string | null
-          theme?: string
-          compact_mode?: boolean
-          column_colors?: Json
-          default_view?: string | null
-          sidebar_widgets?: string[] | null
-          app_settings?: Json | null
-        }
-        Update: {
-          user_id?: string
-          active_board_id?: string | null
-          theme?: string
-          compact_mode?: boolean
-          column_colors?: Json
-          default_view?: string | null
-          sidebar_widgets?: string[] | null
-          app_settings?: Json | null
-        }
-      }
-      notification_settings: {
-        Row: {
-          user_id: string
-          enabled: boolean
-          daily_time: string
-          timezone: string
-          last_sent_at: string | null
-          reminder_message: string
-          quiet_start: string
-          quiet_end: string
-          channel_journal: boolean
-          channel_habits: boolean
-          channel_routines: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          user_id: string
-          enabled?: boolean
-          daily_time?: string
-          timezone?: string
-          last_sent_at?: string | null
-          reminder_message?: string
-          quiet_start?: string
-          quiet_end?: string
-          channel_journal?: boolean
-          channel_habits?: boolean
-          channel_routines?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          user_id?: string
-          enabled?: boolean
-          daily_time?: string
-          timezone?: string
-          last_sent_at?: string | null
-          reminder_message?: string
-          quiet_start?: string
-          quiet_end?: string
-          channel_journal?: boolean
-          channel_habits?: boolean
-          channel_routines?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      push_subscriptions: {
-        Row: {
-          id: string
-          user_id: string
-          endpoint: string
-          p256dh: string
-          auth: string
-          user_agent: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          endpoint: string
-          p256dh: string
-          auth: string
-          user_agent?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          endpoint?: string
-          p256dh?: string
-          auth?: string
-          user_agent?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      routines: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          description: string | null
-          days_of_week: number[]
-          location: string | null
-          is_active: boolean
-          order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          description?: string | null
-          days_of_week?: number[]
-          location?: string | null
-          is_active?: boolean
-          order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          description?: string | null
-          days_of_week?: number[]
-          location?: string | null
-          is_active?: boolean
-          order?: number
-          created_at?: string
-        }
-      }
-      routine_items: {
-        Row: {
-          id: string
-          user_id: string
-          routine_id: string
-          title: string
-          target_time: string | null
-          order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          routine_id: string
-          title: string
-          target_time?: string | null
-          order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          routine_id?: string
-          title?: string
-          target_time?: string | null
-          order?: number
-          created_at?: string
-        }
-      }
-      routine_completions: {
-        Row: {
-          id: string
-          user_id: string
-          routine_id: string
-          completion_date: string
-          completed_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          routine_id: string
-          completion_date?: string
-          completed_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          routine_id?: string
-          completion_date?: string
-          completed_at?: string
-        }
-      }
-      routine_item_completions: {
-        Row: {
-          id: string
-          user_id: string
-          routine_item_id: string
-          completion_date: string
-          completed_at: string
-          duration: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          routine_item_id: string
-          completion_date?: string
-          completed_at?: string
-          duration?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          routine_item_id?: string
-          completion_date?: string
-          completed_at?: string
-          duration?: string | null
-        }
-      }
-      habit_categories: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          color: string
-          icon: string | null
-          order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          color?: string
-          icon?: string | null
-          order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          color?: string
-          icon?: string | null
-          order?: number
-          created_at?: string
-        }
-      }
-      habits: {
-        Row: {
-          id: string
-          user_id: string
-          category_id: string | null
-          name: string
-          description: string | null
-          frequency_type: string
-          frequency_value: number | null
-          specific_days: number[] | null
-          target_count: number
-          is_active: boolean
-          color: string
-          icon: string | null
-          order: number
-          created_at: string
-          archived_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          category_id?: string | null
-          name: string
-          description?: string | null
-          frequency_type?: string
-          frequency_value?: number | null
-          specific_days?: number[] | null
-          target_count?: number
-          is_active?: boolean
-          color?: string
-          icon?: string | null
-          order?: number
-          created_at?: string
-          archived_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          category_id?: string | null
-          name?: string
-          description?: string | null
-          frequency_type?: string
-          frequency_value?: number | null
-          specific_days?: number[] | null
-          target_count?: number
-          is_active?: boolean
-          color?: string
-          icon?: string | null
-          order?: number
-          created_at?: string
-          archived_at?: string | null
-        }
-      }
-      habit_completions: {
-        Row: {
-          id: string
-          user_id: string
-          habit_id: string
-          completion_date: string
-          count: number
-          note: string | null
-          completed_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          habit_id: string
-          completion_date?: string
-          count?: number
-          note?: string | null
-          completed_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          habit_id?: string
-          completion_date?: string
-          count?: number
-          note?: string | null
-          completed_at?: string
-        }
-      }
-      habit_streaks: {
-        Row: {
-          id: string
-          user_id: string
-          habit_id: string
-          current_streak: number
-          best_streak: number
-          last_completion_date: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          habit_id: string
-          current_streak?: number
-          best_streak?: number
-          last_completion_date?: string | null
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          habit_id?: string
-          current_streak?: number
-          best_streak?: number
-          last_completion_date?: string | null
-          updated_at?: string
-        }
-      }
-      goal_categories: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          color: string
-          icon: string | null
-          order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          color?: string
-          icon?: string | null
-          order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          color?: string
-          icon?: string | null
-          order?: number
-          created_at?: string
-        }
-      }
-      goals: {
-        Row: {
-          id: string
-          user_id: string
-          category_id: string | null
-          title: string
-          description: string | null
-          target_date: string | null
-          start_date: string
-          status: string
-          progress: number
-          priority: string
-          order: number
-          created_at: string
-          completed_at: string | null
-          archived_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          category_id?: string | null
-          title: string
-          description?: string | null
-          target_date?: string | null
-          start_date?: string
-          status?: string
-          progress?: number
-          priority?: string
-          order?: number
-          created_at?: string
-          completed_at?: string | null
-          archived_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          category_id?: string | null
-          title?: string
-          description?: string | null
-          target_date?: string | null
-          start_date?: string
-          status?: string
-          progress?: number
-          priority?: string
-          order?: number
-          created_at?: string
-          completed_at?: string | null
-          archived_at?: string | null
-        }
-      }
-      milestones: {
-        Row: {
-          id: string
-          user_id: string
-          goal_id: string
-          title: string
-          description: string | null
-          target_date: string | null
-          is_completed: boolean
-          completed_at: string | null
-          order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          goal_id: string
-          title: string
-          description?: string | null
-          target_date?: string | null
-          is_completed?: boolean
-          completed_at?: string | null
-          order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          goal_id?: string
-          title?: string
-          description?: string | null
-          target_date?: string | null
-          is_completed?: boolean
-          completed_at?: string | null
-          order?: number
-          created_at?: string
-        }
-      }
-      goal_task_links: {
-        Row: {
-          id: string
-          user_id: string
-          goal_id: string
-          task_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          goal_id: string
-          task_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          goal_id?: string
-          task_id?: string
-          created_at?: string
-        }
-      }
-      journal_prompts: {
-        Row: {
-          id: string
-          user_id: string
-          prompt_text: string
-          is_active: boolean
-          order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          prompt_text: string
-          is_active?: boolean
-          order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          prompt_text?: string
-          is_active?: boolean
-          order?: number
-          created_at?: string
-        }
-      }
-      journal_entries: {
-        Row: {
-          id: string
-          user_id: string
-          entry_date: string
-          content: string
-          mood: number | null
-          mood_emoji: string | null
-          tags: string[]
-          is_favorite: boolean
-          word_count: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          entry_date?: string
-          content?: string
-          mood?: number | null
-          mood_emoji?: string | null
-          tags?: string[]
-          is_favorite?: boolean
-          word_count?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          entry_date?: string
-          content?: string
-          mood?: number | null
-          mood_emoji?: string | null
-          tags?: string[]
-          is_favorite?: boolean
-          word_count?: number
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      focus_settings: {
-        Row: {
-          user_id: string
-          work_duration: number
-          short_break_duration: number
-          long_break_duration: number
-          sessions_until_long_break: number
-          auto_start_breaks: boolean
-          auto_start_work: boolean
-          sound_enabled: boolean
-          sound_volume: number
-          created_at: string
-        }
-        Insert: {
-          user_id: string
-          work_duration?: number
-          short_break_duration?: number
-          long_break_duration?: number
-          sessions_until_long_break?: number
-          auto_start_breaks?: boolean
-          auto_start_work?: boolean
-          sound_enabled?: boolean
-          sound_volume?: number
-          created_at?: string
-        }
-        Update: {
-          user_id?: string
-          work_duration?: number
-          short_break_duration?: number
-          long_break_duration?: number
-          sessions_until_long_break?: number
-          auto_start_breaks?: boolean
-          auto_start_work?: boolean
-          sound_enabled?: boolean
-          sound_volume?: number
-          created_at?: string
-        }
-      }
-      focus_sessions: {
-        Row: {
-          id: string
-          user_id: string
-          session_type: string
-          planned_duration: number
-          actual_duration: number | null
-          is_completed: boolean
-          task_id: string | null
-          goal_id: string | null
-          note: string | null
-          started_at: string
-          ended_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          session_type?: string
-          planned_duration: number
-          actual_duration?: number | null
-          is_completed?: boolean
-          task_id?: string | null
-          goal_id?: string | null
-          note?: string | null
-          started_at?: string
-          ended_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          session_type?: string
-          planned_duration?: number
-          actual_duration?: number | null
-          is_completed?: boolean
-          task_id?: string | null
-          goal_id?: string | null
-          note?: string | null
-          started_at?: string
-          ended_at?: string | null
-        }
+        Relationships: []
       }
       dashboard_widgets: {
         Row: {
+          config: Json
+          created_at: string
+          height: number
           id: string
-          user_id: string
-          widget_type: string
-          title: string | null
+          is_collapsed: boolean
+          is_visible: boolean
           position_x: number
           position_y: number
-          width: number
-          height: number
-          config: Json
-          is_visible: boolean
-          is_collapsed: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
+          title: string | null
           user_id: string
           widget_type: string
-          title?: string | null
-          position_x?: number
-          position_y?: number
-          width?: number
-          height?: number
-          config?: Json
-          is_visible?: boolean
-          is_collapsed?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          widget_type?: string
-          title?: string | null
-          position_x?: number
-          position_y?: number
-          width?: number
-          height?: number
-          config?: Json
-          is_visible?: boolean
-          is_collapsed?: boolean
-          created_at?: string
-        }
-      }
-      work_locations: {
-        Row: {
-          id: string
-          user_id: string
-          date: string
-          location: string
-          created_at: string
+          width: number
         }
         Insert: {
-          id?: string
-          user_id: string
-          date: string
-          location: string
+          config?: Json
           created_at?: string
+          height?: number
+          id?: string
+          is_collapsed?: boolean
+          is_visible?: boolean
+          position_x?: number
+          position_y?: number
+          title?: string | null
+          user_id: string
+          widget_type: string
+          width?: number
         }
         Update: {
-          id?: string
-          user_id?: string
-          date?: string
-          location?: string
+          config?: Json
           created_at?: string
+          height?: number
+          id?: string
+          is_collapsed?: boolean
+          is_visible?: boolean
+          position_x?: number
+          position_y?: number
+          title?: string | null
+          user_id?: string
+          widget_type?: string
+          width?: number
         }
+        Relationships: []
+      }
+      focus_sessions: {
+        Row: {
+          actual_duration: number | null
+          ended_at: string | null
+          goal_id: string | null
+          id: string
+          is_completed: boolean
+          note: string | null
+          planned_duration: number
+          session_type: string
+          started_at: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_duration?: number | null
+          ended_at?: string | null
+          goal_id?: string | null
+          id?: string
+          is_completed?: boolean
+          note?: string | null
+          planned_duration: number
+          session_type?: string
+          started_at?: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_duration?: number | null
+          ended_at?: string | null
+          goal_id?: string | null
+          id?: string
+          is_completed?: boolean
+          note?: string | null
+          planned_duration?: number
+          session_type?: string
+          started_at?: string
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "focus_sessions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "focus_sessions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      focus_settings: {
+        Row: {
+          auto_start_breaks: boolean
+          auto_start_work: boolean
+          created_at: string
+          long_break_duration: number
+          sessions_until_long_break: number
+          short_break_duration: number
+          sound_enabled: boolean
+          sound_volume: number
+          user_id: string
+          work_duration: number
+        }
+        Insert: {
+          auto_start_breaks?: boolean
+          auto_start_work?: boolean
+          created_at?: string
+          long_break_duration?: number
+          sessions_until_long_break?: number
+          short_break_duration?: number
+          sound_enabled?: boolean
+          sound_volume?: number
+          user_id: string
+          work_duration?: number
+        }
+        Update: {
+          auto_start_breaks?: boolean
+          auto_start_work?: boolean
+          created_at?: string
+          long_break_duration?: number
+          sessions_until_long_break?: number
+          short_break_duration?: number
+          sound_enabled?: boolean
+          sound_volume?: number
+          user_id?: string
+          work_duration?: number
+        }
+        Relationships: []
+      }
+      goal_categories: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          order: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          order?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goal_task_links: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_task_links_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_task_links_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          archived_at: string | null
+          category_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          order: number
+          priority: string
+          progress: number
+          start_date: string | null
+          status: string
+          target_date: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          order?: number
+          priority?: string
+          progress?: number
+          start_date?: string | null
+          status?: string
+          target_date?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          category_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          order?: number
+          priority?: string
+          progress?: number
+          start_date?: string | null
+          status?: string
+          target_date?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "goal_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_categories: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          order: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          order?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      habit_completions: {
+        Row: {
+          completed_at: string
+          completion_date: string
+          count: number
+          habit_id: string
+          id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          completion_date?: string
+          count?: number
+          habit_id: string
+          id?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          completion_date?: string
+          count?: number
+          habit_id?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_streaks: {
+        Row: {
+          best_streak: number
+          current_streak: number
+          habit_id: string
+          id: string
+          last_completion_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_streak?: number
+          current_streak?: number
+          habit_id: string
+          id?: string
+          last_completion_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_streak?: number
+          current_streak?: number
+          habit_id?: string
+          id?: string
+          last_completion_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_streaks_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          archived_at: string | null
+          category_id: string | null
+          color: string
+          created_at: string
+          description: string | null
+          frequency_type: string
+          frequency_value: number | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          order: number
+          specific_days: number[] | null
+          target_count: number
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category_id?: string | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          frequency_type?: string
+          frequency_value?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          order?: number
+          specific_days?: number[] | null
+          target_count?: number
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          category_id?: string | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          frequency_type?: string
+          frequency_value?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          order?: number
+          specific_days?: number[] | null
+          target_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habits_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "habit_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entries: {
+        Row: {
+          content: string
+          created_at: string
+          entry_date: string
+          id: string
+          is_favorite: boolean
+          mood: number | null
+          mood_emoji: string | null
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+          word_count: number
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          is_favorite?: boolean
+          mood?: number | null
+          mood_emoji?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+          word_count?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          is_favorite?: boolean
+          mood?: number | null
+          mood_emoji?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+          word_count?: number
+        }
+        Relationships: []
+      }
+      journal_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          order: number
+          prompt_text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order?: number
+          prompt_text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order?: number
+          prompt_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          goal_id: string
+          id: string
+          is_completed: boolean
+          order: number
+          target_date: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          goal_id: string
+          id?: string
+          is_completed?: boolean
+          order?: number
+          target_date?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          goal_id?: string
+          id?: string
+          is_completed?: boolean
+          order?: number
+          target_date?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          content: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_settings: {
+        Row: {
+          channel_habits: boolean
+          channel_journal: boolean
+          channel_routines: boolean
+          created_at: string
+          daily_time: string
+          enabled: boolean
+          last_sent_at: string | null
+          quiet_end: string
+          quiet_start: string
+          reminder_message: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_habits?: boolean
+          channel_journal?: boolean
+          channel_routines?: boolean
+          created_at?: string
+          daily_time?: string
+          enabled?: boolean
+          last_sent_at?: string | null
+          quiet_end?: string
+          quiet_start?: string
+          reminder_message?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_habits?: boolean
+          channel_journal?: boolean
+          channel_routines?: boolean
+          created_at?: string
+          daily_time?: string
+          enabled?: boolean
+          last_sent_at?: string | null
+          quiet_end?: string
+          quiet_start?: string
+          reminder_message?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      routine_completions: {
+        Row: {
+          completed_at: string
+          completion_date: string
+          id: string
+          routine_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          completion_date?: string
+          id?: string
+          routine_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          completion_date?: string
+          id?: string
+          routine_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_completions_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_item_completions: {
+        Row: {
+          completed_at: string
+          completion_date: string
+          duration: string | null
+          id: string
+          routine_item_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          completion_date?: string
+          duration?: string | null
+          id?: string
+          routine_item_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          completion_date?: string
+          duration?: string | null
+          id?: string
+          routine_item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_item_completions_routine_item_id_fkey"
+            columns: ["routine_item_id"]
+            isOneToOne: false
+            referencedRelation: "routine_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_items: {
+        Row: {
+          created_at: string
+          id: string
+          order: number
+          routine_id: string
+          target_time: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order?: number
+          routine_id: string
+          target_time?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order?: number
+          routine_id?: string
+          target_time?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_items_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routines: {
+        Row: {
+          created_at: string
+          days_of_week: number[]
+          description: string | null
+          id: string
+          is_active: boolean
+          location: string | null
+          name: string
+          order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[]
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name: string
+          order?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[]
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name?: string
+          order?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       tag_categories: {
         Row: {
+          created_at: string
           id: string
-          user_id: string
           name: string
           order: number
-          created_at: string
+          user_id: string
         }
         Insert: {
+          created_at?: string
           id?: string
-          user_id: string
           name: string
           order?: number
-          created_at?: string
+          user_id: string
         }
         Update: {
+          created_at?: string
           id?: string
-          user_id?: string
           name?: string
           order?: number
-          created_at?: string
+          user_id?: string
         }
+        Relationships: []
       }
       tags: {
         Row: {
-          id: string
-          user_id: string
-          category_id: string | null
-          name: string
-          color: string
           bg_color: string
-          order: number
+          category_id: string | null
+          color: string
           created_at: string
+          id: string
+          name: string
+          order: number
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          category_id?: string | null
-          name: string
-          color?: string
           bg_color?: string
-          order?: number
+          category_id?: string | null
+          color?: string
           created_at?: string
+          id?: string
+          name: string
+          order?: number
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          category_id?: string | null
-          name?: string
-          color?: string
           bg_color?: string
-          order?: number
+          category_id?: string | null
+          color?: string
           created_at?: string
+          id?: string
+          name?: string
+          order?: number
+          user_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "tags_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "tag_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_tags: {
         Row: {
-          task_id: string
-          tag_id: string
           created_at: string
+          tag_id: string
+          task_id: string
         }
         Insert: {
-          task_id: string
-          tag_id: string
           created_at?: string
+          tag_id: string
+          task_id: string
         }
         Update: {
-          task_id?: string
-          tag_id?: string
           created_at?: string
+          tag_id?: string
+          task_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "task_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_tags_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          archived_at: string | null
+          board_id: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          labels: string[] | null
+          order: number
+          priority: string
+          status: string
+          subtasks: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          board_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          labels?: string[] | null
+          order?: number
+          priority?: string
+          status?: string
+          subtasks?: Json | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          board_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          labels?: string[] | null
+          order?: number
+          priority?: string
+          status?: string
+          subtasks?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      todos: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          active_board_id: string | null
+          app_settings: Json | null
+          column_colors: Json
+          compact_mode: boolean
+          default_view: string | null
+          sidebar_widgets: string[] | null
+          theme: string
+          user_id: string
+        }
+        Insert: {
+          active_board_id?: string | null
+          app_settings?: Json | null
+          column_colors?: Json
+          compact_mode?: boolean
+          default_view?: string | null
+          sidebar_widgets?: string[] | null
+          theme?: string
+          user_id: string
+        }
+        Update: {
+          active_board_id?: string | null
+          app_settings?: Json | null
+          column_colors?: Json
+          compact_mode?: boolean
+          default_view?: string | null
+          sidebar_widgets?: string[] | null
+          theme?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_active_board_id_fkey"
+            columns: ["active_board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_ui_state: {
         Row: {
-          user_id: string
           active_view: string
-          widget_states: Json
-          section_view_modes: Json
           section_selected_dates: Json
+          section_view_modes: Json
           sidebar_collapsed: boolean
           updated_at: string
+          user_id: string
+          widget_states: Json
         }
         Insert: {
-          user_id: string
           active_view?: string
-          widget_states?: Json
-          section_view_modes?: Json
           section_selected_dates?: Json
+          section_view_modes?: Json
           sidebar_collapsed?: boolean
           updated_at?: string
+          user_id: string
+          widget_states?: Json
         }
         Update: {
-          user_id?: string
           active_view?: string
-          widget_states?: Json
-          section_view_modes?: Json
           section_selected_dates?: Json
+          section_view_modes?: Json
           sidebar_collapsed?: boolean
           updated_at?: string
+          user_id?: string
+          widget_states?: Json
         }
+        Relationships: []
+      }
+      work_locations: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          location: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          location: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          location?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -953,5 +1120,131 @@ export interface Database {
     Enums: {
       [_ in never]: never
     }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
