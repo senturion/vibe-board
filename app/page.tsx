@@ -21,6 +21,7 @@ import { RoutinesPage } from '@/components/routines/RoutinesPage'
 import { JournalPage } from '@/components/journal/JournalPage'
 import { FocusPage } from '@/components/focus'
 import { ActivityLog } from '@/components/activity/ActivityLog'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Menu, X } from 'lucide-react'
 
 export default function Home() {
@@ -76,17 +77,41 @@ export default function Home() {
   const renderContent = () => {
     switch (activeView) {
       case 'habits':
-        return <HabitsPage />
+        return (
+          <ErrorBoundary section="Habits">
+            <HabitsPage />
+          </ErrorBoundary>
+        )
       case 'goals':
-        return <GoalsPage />
+        return (
+          <ErrorBoundary section="Goals">
+            <GoalsPage />
+          </ErrorBoundary>
+        )
       case 'journal':
-        return <JournalPage />
+        return (
+          <ErrorBoundary section="Journal">
+            <JournalPage />
+          </ErrorBoundary>
+        )
       case 'routines':
-        return <RoutinesPage />
+        return (
+          <ErrorBoundary section="Routines">
+            <RoutinesPage />
+          </ErrorBoundary>
+        )
       case 'focus':
-        return <FocusPage />
+        return (
+          <ErrorBoundary section="Focus">
+            <FocusPage />
+          </ErrorBoundary>
+        )
       case 'activity':
-        return <ActivityLog />
+        return (
+          <ErrorBoundary section="Activity">
+            <ActivityLog />
+          </ErrorBoundary>
+        )
       case 'dashboard':
       case 'board':
       default:
@@ -112,14 +137,16 @@ export default function Home() {
             />
             {/* Board Area */}
             <div className="flex-1 overflow-hidden sm:overflow-auto">
-              <Board
-                boardId={activeBoardId}
-                searchOpen={searchOpen}
-                onSearchClose={() => setSearchOpen(false)}
-                filters={filters}
-                sort={sort}
-                compact={compact}
-              />
+              <ErrorBoundary section="Board">
+                <Board
+                  boardId={activeBoardId}
+                  searchOpen={searchOpen}
+                  onSearchClose={() => setSearchOpen(false)}
+                  filters={filters}
+                  sort={sort}
+                  compact={compact}
+                />
+              </ErrorBoundary>
             </div>
           </>
         )
@@ -162,7 +189,9 @@ export default function Home() {
       </main>
 
       {/* Sidebar */}
-      <Sidebar />
+      <ErrorBoundary section="Sidebar">
+        <Sidebar />
+      </ErrorBoundary>
 
       {/* Stats Dashboard */}
       <StatsDashboard
