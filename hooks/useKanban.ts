@@ -86,18 +86,13 @@ export function useKanban(boardId: string = '') {
     if (missingCompletedAt.length === 0) return
 
     const now = Date.now()
-    const rows = missingCompletedAt.map(task => ({
-      id: task.id,
-      user_id: user.id,
-      completed_at: new Date((task.updatedAt || task.createdAt || now)).toISOString(),
-      updated_at: new Date(now).toISOString(),
-    }))
+    const ids = missingCompletedAt.map(task => task.id)
 
     const run = async () => {
       const { error } = await supabase
         .from('tasks')
         .update({ completed_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() })
-        .in('id', missingCompletedAt.map(task => task.id))
+        .in('id', ids)
         .eq('user_id', user.id)
 
       if (error) {
