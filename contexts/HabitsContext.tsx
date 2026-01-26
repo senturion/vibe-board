@@ -3,6 +3,7 @@
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { Database } from '@/lib/supabase/types'
 import {
   Habit,
   HabitCategory,
@@ -14,6 +15,11 @@ import {
   parseDateKey,
   isHabitActiveToday,
 } from '@/lib/types'
+
+type HabitRow = Database['public']['Tables']['habits']['Row']
+type HabitCategoryRow = Database['public']['Tables']['habit_categories']['Row']
+type HabitCompletionRow = Database['public']['Tables']['habit_completions']['Row']
+type HabitStreakRow = Database['public']['Tables']['habit_streaks']['Row']
 
 interface HabitsContextType {
   habits: Habit[]
@@ -66,6 +72,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         .eq('user_id', user.id)
         .is('archived_at', null)
         .order('order', { ascending: true })
+        .returns<HabitRow[]>()
 
       if (habitsError) {
         console.error('Error fetching habits:', habitsError)
@@ -77,6 +84,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('user_id', user.id)
         .order('order', { ascending: true })
+        .returns<HabitCategoryRow[]>()
 
       if (categoriesError) {
         console.error('Error fetching categories:', categoriesError)
@@ -91,6 +99,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('user_id', user.id)
         .gte('completion_date', formatDateKey(ninetyDaysAgo))
+        .returns<HabitCompletionRow[]>()
 
       if (completionsError) {
         console.error('Error fetching completions:', completionsError)
@@ -101,6 +110,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         .from('habit_streaks')
         .select('*')
         .eq('user_id', user.id)
+        .returns<HabitStreakRow[]>()
 
       if (streaksError) {
         console.error('Error fetching streaks:', streaksError)
