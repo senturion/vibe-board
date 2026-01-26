@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSettings } from '@/hooks/useSettings'
 import { KanbanTask, ColumnId, Priority, LabelId, Subtask } from '@/lib/types'
 import { Database } from '@/lib/supabase/types'
 
@@ -13,6 +14,7 @@ export function useKanban(boardId: string = '') {
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const supabase = createClient()
+  const { settings, loading: settingsLoading } = useSettings()
 
   // Fetch tasks from Supabase
   useEffect(() => {
@@ -73,6 +75,84 @@ export function useKanban(boardId: string = '') {
       isActive = false
     }
   }, [user, boardId, supabase])
+
+  useEffect(() => {
+    if (!user || settingsLoading) return
+    const missingCompletedAt = tasks.filter(task =>
+      task.column === 'complete' &&
+      !task.completedAt
+    )
+
+    if (missingCompletedAt.length === 0) return
+
+    const now = Date.now()
+    const rows = missingCompletedAt.map(task => ({
+      id: task.id,
+      user_id: user.id,
+      completed_at: new Date((task.updatedAt || task.createdAt || now)).toISOString(),
+      updated_at: new Date(now).toISOString(),
+    }))
+
+    const run = async () => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() })
+        .in('id', missingCompletedAt.map(task => task.id))
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Error backfilling completed_at:', error.message, error.details, error.code)
+        return
+      }
+
+      setTasks(prev => prev.map(task =>
+        task.column === 'complete' && !task.completedAt
+          ? { ...task, completedAt: now, updatedAt: now }
+          : task
+      ))
+    }
+
+    run()
+  }, [tasks, user, supabase, settingsLoading])
+
+  useEffect(() => {
+    if (!user || settingsLoading) return
+    if (!settings.autoArchiveCompleted) return
+
+    const now = Date.now()
+    const thresholdMs = settings.archiveAfterDays * 86400000
+    const cutoff = now - thresholdMs
+
+    const eligible = tasks.filter(task => {
+      if (task.column !== 'complete' || task.archivedAt) return false
+      const completionTime = task.completedAt ?? task.updatedAt ?? task.createdAt
+      return completionTime <= cutoff
+    })
+
+    if (eligible.length === 0) return
+
+    const ids = eligible.map(task => task.id)
+    const run = async () => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ archived_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() })
+        .in('id', ids)
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Error auto-archiving tasks:', error.message, error.details, error.code)
+        return
+      }
+
+      setTasks(prev => prev.map(task =>
+        ids.includes(task.id)
+          ? { ...task, archivedAt: now, updatedAt: now }
+          : task
+      ))
+    }
+
+    run()
+  }, [tasks, settings, settingsLoading, supabase, user])
 
   const addTask = useCallback(async (title: string, column: ColumnId = 'todo', priority: Priority = 'medium') => {
     if (!user || !boardId) return ''
@@ -196,8 +276,9 @@ export function useKanban(boardId: string = '') {
   }, [supabase])
 
   const moveTask = useCallback(async (taskId: string, toColumn: ColumnId, newOrder?: number) => {
+    if (!user) return
     const now = Date.now()
-    const order = newOrder ?? now
+    const order = Math.floor(newOrder ?? now)
     const task = tasks.find(t => t.id === taskId)
 
     // Set completedAt when moving to complete, clear it when moving away
@@ -214,9 +295,10 @@ export function useKanban(boardId: string = '') {
         updated_at: new Date(now).toISOString(),
       })
       .eq('id', taskId)
+      .eq('user_id', user.id)
 
     if (error) {
-      console.error('Error moving task:', error)
+      console.error('Error moving task:', error.message, error.details, error.code)
       return
     }
 
@@ -231,7 +313,7 @@ export function useKanban(boardId: string = '') {
           }
         : t
     ))
-  }, [supabase, tasks])
+  }, [supabase, tasks, user])
 
   // Subtask operations
   const addSubtask = useCallback(async (taskId: string, text: string) => {

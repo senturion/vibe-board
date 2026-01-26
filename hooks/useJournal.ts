@@ -140,7 +140,9 @@ export function useJournal() {
 
     // Debounced save to database
     saveTimeoutRef.current = setTimeout(async () => {
-      if (existingEntry) {
+      const needsUpsert = !existingEntry || existingEntry.id.startsWith('temp-')
+
+      if (!needsUpsert) {
         const { error } = await supabase
           .from('journal_entries')
           .update({
@@ -151,36 +153,38 @@ export function useJournal() {
             updated_at: new Date().toISOString(),
           })
           .eq('id', existingEntry.id)
+          .eq('user_id', user.id)
 
         if (error) {
           console.error('Error updating entry:', error)
         }
-      } else {
-        const { data, error } = await supabase
-          .from('journal_entries')
-          .upsert({
-            user_id: user.id,
-            entry_date: dateKey,
-            content,
-            mood: mood || null,
-            mood_emoji: moodIcon || null,
-            word_count: wordCount,
-          }, {
-            onConflict: 'user_id,entry_date',
-          })
-          .select()
-          .single()
+        return
+      }
 
-        if (error) {
-          console.error('Error creating entry:', error)
-        } else if (data) {
-          // Update with real ID
-          setEntries(prev => prev.map(e =>
-            e.entryDate === dateKey
-              ? { ...e, id: data.id }
-              : e
-          ))
-        }
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .upsert({
+          user_id: user.id,
+          entry_date: dateKey,
+          content,
+          mood: mood || null,
+          mood_emoji: moodIcon || null,
+          word_count: wordCount,
+        }, {
+          onConflict: 'user_id,entry_date',
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error creating entry:', error)
+      } else if (data) {
+        // Update with real ID
+        setEntries(prev => prev.map(e =>
+          e.entryDate === dateKey
+            ? { ...e, id: data.id }
+            : e
+        ))
       }
     }, 500)
   }, [user, supabase, entries])

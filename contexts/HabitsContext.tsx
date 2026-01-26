@@ -11,6 +11,7 @@ import {
   FrequencyType,
   DayOfWeek,
   formatDateKey,
+  parseDateKey,
   isHabitActiveToday,
 } from '@/lib/types'
 
@@ -414,17 +415,16 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const toDayNumber = (dateKey: string) => {
-      const date = new Date(`${dateKey}T00:00:00`)
-      return Math.floor(date.getTime() / 86400000)
-    }
+    const dayMs = 86400000
+    const toDayTime = (dateKey: string) => parseDateKey(dateKey).getTime()
+    const completedSet = new Set(completedDays)
 
     let bestStreak = 1
     let currentRun = 1
     for (let i = 1; i < completedDays.length; i++) {
-      const prev = toDayNumber(completedDays[i - 1])
-      const curr = toDayNumber(completedDays[i])
-      if (curr - prev === 1) {
+      const prev = toDayTime(completedDays[i - 1])
+      const curr = toDayTime(completedDays[i])
+      if ((curr - prev) === dayMs) {
         currentRun += 1
       } else {
         currentRun = 1
@@ -433,15 +433,29 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     }
 
     const todayKey = formatDateKey(new Date())
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayKey = formatDateKey(yesterday)
+
+    const isTodayComplete = (dailyCounts.get(todayKey) || 0) >= habit.targetCount
+    const isYesterdayComplete = (dailyCounts.get(yesterdayKey) || 0) >= habit.targetCount
+
     let currentStreak = 0
-    if (dailyCounts.has(todayKey) && (dailyCounts.get(todayKey) || 0) >= habit.targetCount) {
+    let streakEndKey: string | null = null
+    if (isTodayComplete) {
+      streakEndKey = todayKey
+    } else if (isYesterdayComplete) {
+      streakEndKey = yesterdayKey
+    }
+
+    if (streakEndKey) {
       currentStreak = 1
-      let dayCursor = toDayNumber(todayKey) - 1
+      let cursorDate = parseDateKey(streakEndKey)
       while (true) {
-        const prevKey = formatDateKey(new Date(dayCursor * 86400000))
-        if ((dailyCounts.get(prevKey) || 0) >= habit.targetCount) {
+        cursorDate.setDate(cursorDate.getDate() - 1)
+        const prevKey = formatDateKey(cursorDate)
+        if (completedSet.has(prevKey)) {
           currentStreak += 1
-          dayCursor -= 1
         } else {
           break
         }
@@ -455,19 +469,35 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
   // Get streak for a habit
   const getStreak = useCallback((habitId: string) => {
     const streak = streaks.get(habitId)
-    if (streak && (streak.currentStreak > 0 || streak.bestStreak > 0)) {
+    const computed = computeStreakFromCompletions(habitId)
+
+    if (!computed) return streak
+
+    if (!streak) {
+      return {
+        id: habitId,
+        habitId,
+        currentStreak: computed.currentStreak,
+        bestStreak: computed.bestStreak,
+        lastCompletionDate: computed.lastCompletionDate,
+        updatedAt: Date.now(),
+      }
+    }
+
+    const useComputed =
+      computed.currentStreak > streak.currentStreak ||
+      computed.bestStreak > streak.bestStreak
+
+    if (!useComputed) {
       return streak
     }
 
-    const computed = computeStreakFromCompletions(habitId)
-    if (!computed) return streak
-
     return {
-      id: streak?.id || habitId,
+      id: streak.id,
       habitId,
       currentStreak: computed.currentStreak,
       bestStreak: computed.bestStreak,
-      lastCompletionDate: computed.lastCompletionDate,
+      lastCompletionDate: computed.lastCompletionDate ?? streak.lastCompletionDate,
       updatedAt: Date.now(),
     }
   }, [streaks, computeStreakFromCompletions])

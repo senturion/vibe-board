@@ -13,6 +13,8 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return
     if (typeof window === 'undefined') return
+    const shouldReset = new URLSearchParams(window.location.search).has('reset-sw')
+    if (!shouldReset) return
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((registration) => {

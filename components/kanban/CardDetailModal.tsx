@@ -226,6 +226,13 @@ export function CardDetailModal({
               )}
             </div>
 
+            {task.column === 'complete' && (task.completedAt || task.updatedAt) && (
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                <Check size={12} className="text-[var(--success)]" />
+                Completed {new Date(task.completedAt || task.updatedAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            )}
+
             {/* Column/Status */}
             <div className="relative">
               <button
@@ -233,7 +240,6 @@ export function CardDetailModal({
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
               >
                 {currentColumn?.title}
-                <span className="text-[9px] text-[var(--text-tertiary)]">1/2/3</span>
               </button>
               {showColumnMenu && (
                 <>

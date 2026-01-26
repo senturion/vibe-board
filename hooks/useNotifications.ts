@@ -22,6 +22,50 @@ export function useNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [pushEnabled, setPushEnabled] = useState(false)
 
+  const ensureServiceWorker = useCallback(async () => {
+    if (!('serviceWorker' in navigator)) {
+      throw new Error('Service workers are not supported in this browser.')
+    }
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      throw new Error('Service workers require a secure context (HTTPS or localhost).')
+    }
+
+    const registrations = await navigator.serviceWorker.getRegistrations()
+    const existing = registrations.find((reg) => reg.scope === `${location.origin}/`) ?? registrations[0]
+    if (existing?.active) return existing
+
+    const swPath = process.env.NODE_ENV === 'development' ? '/push-sw.js' : '/sw.js'
+    const newRegistration = existing || await navigator.serviceWorker.register(swPath, {
+      scope: '/',
+      updateViaCache: 'none',
+    })
+
+    newRegistration.update().catch(() => {})
+
+    const worker = newRegistration.installing || newRegistration.waiting
+    if (worker) {
+      await new Promise<void>((resolve) => {
+        const handleState = () => {
+          if (worker.state === 'activated') {
+            worker.removeEventListener('statechange', handleState)
+            resolve()
+          }
+        }
+        worker.addEventListener('statechange', handleState)
+        handleState()
+      })
+    }
+
+    const readyRegistration = await navigator.serviceWorker.ready
+    if (readyRegistration.active) return readyRegistration
+
+    const refreshed = await navigator.serviceWorker.getRegistrations()
+    const refreshedActive = refreshed.find((reg) => reg.active)
+    if (refreshedActive) return refreshedActive
+
+    throw new Error('Service worker did not activate. Reload and try again.')
+  }, [])
+
   const timezone = useMemo(() => {
     if (typeof Intl !== 'undefined') {
       return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -31,9 +75,18 @@ export function useNotifications() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    setPushSupported('serviceWorker' in navigator && 'PushManager' in window)
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window
+    setPushSupported(supported)
     setPermission(Notification.permission || 'default')
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator)) return
+    ensureServiceWorker().catch((error) => {
+      console.error('Error registering service worker:', error)
+    })
+  }, [ensureServiceWorker])
 
   useEffect(() => {
     let isActive = true
@@ -89,7 +142,7 @@ export function useNotifications() {
   useEffect(() => {
     const syncPushStatus = async () => {
       if (!pushSupported) return
-      const registration = await navigator.serviceWorker.getRegistration()
+      const registration = await ensureServiceWorker()
       if (!registration) {
         setPushEnabled(false)
         return
@@ -101,7 +154,7 @@ export function useNotifications() {
     if (typeof window !== 'undefined') {
       syncPushStatus()
     }
-  }, [pushSupported])
+  }, [pushSupported, ensureServiceWorker])
 
   const saveSettings = useCallback(async (updates: Partial<NotificationSettingsRow>) => {
     if (!user) return
@@ -142,12 +195,6 @@ export function useNotifications() {
     setPermission(result)
     return result
   }, [pushSupported])
-
-  const ensureServiceWorker = useCallback(async () => {
-    const registration = await navigator.serviceWorker.getRegistration()
-    if (registration) return registration
-    return navigator.serviceWorker.register('/sw.js')
-  }, [])
 
   const subscribeToPush = useCallback(async () => {
     if (!pushSupported || !user) return false
@@ -192,7 +239,7 @@ export function useNotifications() {
 
   const unsubscribeFromPush = useCallback(async () => {
     if (!pushSupported || !user) return
-    const registration = await navigator.serviceWorker.getRegistration()
+    const registration = await ensureServiceWorker()
     if (!registration) return
     const subscription = await registration.pushManager.getSubscription()
     if (!subscription) return
