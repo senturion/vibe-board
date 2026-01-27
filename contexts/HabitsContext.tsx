@@ -4,6 +4,7 @@ import { createContext, useContext, useCallback, useEffect, useState, ReactNode 
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Database } from '@/lib/supabase/types'
+import { haptics } from '@/lib/haptics'
 import {
   Habit,
   HabitCategory,
@@ -372,6 +373,14 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
       }
 
       setCompletions(prev => [...prev, newCompletion])
+
+      // Haptic feedback on habit completion
+      const newCount = currentCount + 1
+      if (newCount >= habit.targetCount) {
+        haptics.success()
+      } else {
+        haptics.light()
+      }
 
       // Update streak if completing for today and target reached
       if (dateKey === formatDateKey(new Date())) {

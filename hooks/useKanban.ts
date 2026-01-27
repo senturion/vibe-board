@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSettings } from '@/hooks/useSettings'
 import { KanbanTask, ColumnId, Priority, LabelId, Subtask } from '@/lib/types'
 import { Database, Json } from '@/lib/supabase/types'
+import { haptics } from '@/lib/haptics'
 
 type TaskRow = Database['public']['Tables']['tasks']['Row']
 
@@ -280,6 +281,11 @@ export function useKanban(boardId: string = '') {
     const completedAt = toColumn === 'complete'
       ? (task?.completedAt || now) // Keep existing completedAt if already set
       : null
+
+    // Haptic feedback when completing a task
+    if (toColumn === 'complete' && task?.column !== 'complete') {
+      haptics.success()
+    }
 
     const { error } = await supabase
       .from('tasks')

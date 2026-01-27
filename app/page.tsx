@@ -22,6 +22,7 @@ import { JournalPage } from '@/components/journal/JournalPage'
 import { FocusPage } from '@/components/focus'
 import { ActivityLog } from '@/components/activity/ActivityLog'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { AuthGuard } from '@/components/AuthGuard'
 import { Menu, X } from 'lucide-react'
 
 export default function Home() {
@@ -154,6 +155,7 @@ export default function Home() {
   }
 
   return (
+    <AuthGuard>
     <div className="flex h-screen flex-col lg:flex-row overflow-hidden bg-[var(--bg-primary)] theme-transition">
       {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden min-h-0">
@@ -220,5 +222,6 @@ export default function Home() {
         onResetColors={resetColors}
       />
     </div>
+    </AuthGuard>
   )
 }
