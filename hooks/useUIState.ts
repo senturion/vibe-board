@@ -76,7 +76,7 @@ export function useUIState() {
           sectionViewModes: (data.section_view_modes as Record<TemporalSectionId, SectionViewMode>) || DEFAULT_UI_STATE.sectionViewModes,
           sectionSelectedDates: (data.section_selected_dates as Record<TemporalSectionId, string>) || DEFAULT_UI_STATE.sectionSelectedDates,
           sidebarCollapsed: data.sidebar_collapsed || false,
-          focusedTaskId: ((data as Record<string, unknown>).focused_task_id as string) || null,
+          focusedTaskId: (data.focused_task_id as string) || null,
         }
         setState(cloudState)
 
@@ -139,7 +139,7 @@ export function useUIState() {
         dbData.sidebar_collapsed = updateData.sidebarCollapsed
       }
       if (updateData.focusedTaskId !== undefined) {
-        (dbData as Record<string, unknown>).focused_task_id = updateData.focusedTaskId
+        dbData.focused_task_id = updateData.focusedTaskId
       }
 
       const { error } = await supabase

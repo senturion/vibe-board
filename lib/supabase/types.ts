@@ -726,7 +726,7 @@ export type Database = {
         Row: {
           completed_at: string
           completion_date: string
-          duration: string | null
+          duration: string
           id: string
           routine_item_id: string
           user_id: string
@@ -734,7 +734,7 @@ export type Database = {
         Insert: {
           completed_at?: string
           completion_date?: string
-          duration?: string | null
+          duration?: unknown
           id?: string
           routine_item_id: string
           user_id: string
@@ -742,7 +742,7 @@ export type Database = {
         Update: {
           completed_at?: string
           completion_date?: string
-          duration?: string | null
+          duration?: unknown
           id?: string
           routine_item_id?: string
           user_id?: string
@@ -763,7 +763,7 @@ export type Database = {
           id: string
           order: number
           routine_id: string
-          target_time: string | null
+          target_time: string
           title: string
           user_id: string
         }
@@ -772,7 +772,7 @@ export type Database = {
           id?: string
           order?: number
           routine_id: string
-          target_time?: string | null
+          target_time?: unknown
           title: string
           user_id: string
         }
@@ -781,7 +781,7 @@ export type Database = {
           id?: string
           order?: number
           routine_id?: string
-          target_time?: string | null
+          target_time?: unknown
           title?: string
           user_id?: string
         }
@@ -1059,6 +1059,7 @@ export type Database = {
       user_ui_state: {
         Row: {
           active_view: string
+          focused_task_id: string | null
           section_selected_dates: Json
           section_view_modes: Json
           sidebar_collapsed: boolean
@@ -1068,6 +1069,7 @@ export type Database = {
         }
         Insert: {
           active_view?: string
+          focused_task_id?: string | null
           section_selected_dates?: Json
           section_view_modes?: Json
           sidebar_collapsed?: boolean
@@ -1077,6 +1079,7 @@ export type Database = {
         }
         Update: {
           active_view?: string
+          focused_task_id?: string | null
           section_selected_dates?: Json
           section_view_modes?: Json
           sidebar_collapsed?: boolean
@@ -1084,7 +1087,15 @@ export type Database = {
           user_id?: string
           widget_states?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_ui_state_focused_task_id_fkey"
+            columns: ["focused_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       work_locations: {
         Row: {
