@@ -699,6 +699,7 @@ create table public.user_ui_state (
   section_view_modes jsonb default '{}' not null, -- {habits: 'list'|'day'|'week'|'month', ...}
   section_selected_dates jsonb default '{}' not null, -- {habits: '2026-01-04', ...}
   sidebar_collapsed boolean default false not null,
+  focused_task_id uuid references public.tasks(id) on delete set null,
   updated_at timestamptz default now() not null
 );
 

@@ -1,2 +1,5 @@
 export { FocusPage } from './FocusPage'
 export { FocusSettings } from './FocusSettings'
+export { FocusTaskPanel } from './FocusTaskPanel'
+export { FocusBar } from './FocusBar'
+export { StopFocusPrompt } from './StopFocusPrompt'

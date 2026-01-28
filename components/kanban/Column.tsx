@@ -21,6 +21,8 @@ interface ColumnProps {
   accentColor: string
   onColorChange: (color: string) => void
   compact?: boolean
+  onFocusTask?: (taskId: string) => void
+  focusedTaskId?: string | null
 }
 
 export function Column({
@@ -35,6 +37,8 @@ export function Column({
   accentColor,
   onColorChange,
   compact = false,
+  onFocusTask,
+  focusedTaskId,
 }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id })
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -126,6 +130,8 @@ export function Column({
               index={taskIndex}
               compact={compact}
               accentColor={accentColor}
+              onFocusTask={onFocusTask}
+              focusedTaskId={focusedTaskId}
             />
           ))}
         </SortableContext>

@@ -505,6 +505,7 @@ export interface UserUIState {
   sectionViewModes: Record<TemporalSectionId, SectionViewMode>
   sectionSelectedDates: Record<TemporalSectionId, string> // YYYY-MM-DD
   sidebarCollapsed: boolean
+  focusedTaskId: string | null
 }
 
 export const DEFAULT_UI_STATE: UserUIState = {
@@ -523,6 +524,7 @@ export const DEFAULT_UI_STATE: UserUIState = {
     board: formatDateKey(),
   },
   sidebarCollapsed: false,
+  focusedTaskId: null,
 }
 
 // =====================================================

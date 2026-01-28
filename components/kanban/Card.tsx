@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Flag, ListChecks, Clock } from 'lucide-react'
+import { Trash2, Flag, ListChecks, Clock, Crosshair } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES, LABELS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +15,8 @@ interface CardProps {
   index?: number
   compact?: boolean
   accentColor?: string
+  onFocusTask?: (taskId: string) => void
+  focusedTaskId?: string | null
 }
 
 const PRIORITY_COLORS: Record<Priority, string> = {
@@ -24,7 +26,7 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compact = false, accentColor }: CardProps) {
+export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compact = false, accentColor, onFocusTask, focusedTaskId }: CardProps) {
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
 
   const {
@@ -94,6 +96,23 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compac
             )}
             {overdue && <div className="w-1.5 h-1.5 rounded-full bg-red-400" />}
             {dueSoon && !overdue && <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+            {!task.archivedAt && onFocusTask && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onFocusTask(task.id)
+                }}
+                className={cn(
+                  'opacity-0 group-hover:opacity-100 p-1 -m-1 transition-all duration-150',
+                  focusedTaskId === task.id
+                    ? 'text-[var(--accent)] opacity-100'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--accent)]'
+                )}
+                title={focusedTaskId === task.id ? 'Currently focusing' : 'Focus on this task'}
+              >
+                <Crosshair size={11} />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -225,6 +244,24 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compac
 
           {/* Right side: Subtasks count and date */}
           <div className="flex items-center gap-3">
+            {!task.archivedAt && onFocusTask && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onFocusTask(task.id)
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className={cn(
+                  'p-1 transition-colors',
+                  focusedTaskId === task.id
+                    ? 'text-[var(--accent)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--accent)]'
+                )}
+                title={focusedTaskId === task.id ? 'Currently focusing' : 'Focus on this task'}
+              >
+                <Crosshair size={12} />
+              </button>
+            )}
             {hasSubtasks && (
               <span className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
                 <ListChecks size={11} />

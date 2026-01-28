@@ -15,6 +15,7 @@ interface UIStateContextType {
   sectionViewModes: Record<TemporalSectionId, SectionViewMode>
   sectionSelectedDates: Record<TemporalSectionId, string>
   sidebarCollapsed: boolean
+  focusedTaskId: string | null
   loading: boolean
   isHydrated: boolean
 
@@ -29,6 +30,7 @@ interface UIStateContextType {
   getSectionSelectedDate: (section: TemporalSectionId) => string
   setSidebarCollapsed: (collapsed: boolean) => void
   toggleSidebarCollapsed: () => void
+  setFocusedTaskId: (taskId: string | null) => void
 }
 
 const UIStateContext = createContext<UIStateContextType | null>(null)

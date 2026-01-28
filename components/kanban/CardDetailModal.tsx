@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock } from 'lucide-react'
+import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES, COLUMNS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useTagsContext } from '@/contexts/TagsContext'
@@ -18,6 +18,8 @@ interface CardDetailModalProps {
   onToggleSubtask: (taskId: string, subtaskId: string) => void
   onDeleteSubtask: (taskId: string, subtaskId: string) => void
   onMoveTask: (taskId: string, column: KanbanTask['column']) => void
+  onFocusTask?: (taskId: string) => void
+  focusedTaskId?: string | null
 }
 
 const PRIORITY_COLORS: Record<Priority, string> = {
@@ -38,6 +40,8 @@ export function CardDetailModal({
   onToggleSubtask,
   onDeleteSubtask,
   onMoveTask,
+  onFocusTask,
+  focusedTaskId,
 }: CardDetailModalProps) {
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description || '')
@@ -265,6 +269,25 @@ export function CardDetailModal({
                 </>
               )}
             </div>
+
+            {/* Focus */}
+            {!task.archivedAt && onFocusTask && (
+              <button
+                onClick={() => {
+                  onFocusTask(task.id)
+                  onClose()
+                }}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border transition-colors',
+                  focusedTaskId === task.id
+                    ? 'text-[var(--accent)] border-[var(--accent)] bg-[var(--accent-glow)]'
+                    : 'text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--text-tertiary)]'
+                )}
+              >
+                <Crosshair size={12} />
+                {focusedTaskId === task.id ? 'Focusing' : 'Focus'}
+              </button>
+            )}
 
             {/* Tags */}
             <div className="relative">

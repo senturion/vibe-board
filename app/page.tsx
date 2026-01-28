@@ -19,14 +19,16 @@ import { HabitsPage } from '@/components/habits/HabitsPage'
 import { GoalsPage } from '@/components/goals/GoalsPage'
 import { RoutinesPage } from '@/components/routines/RoutinesPage'
 import { JournalPage } from '@/components/journal/JournalPage'
-import { FocusPage } from '@/components/focus'
+import { FocusPage, FocusBar, StopFocusPrompt } from '@/components/focus'
 import { ActivityLog } from '@/components/activity/ActivityLog'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthGuard } from '@/components/AuthGuard'
+import { useFocusTimer } from '@/hooks/useFocusTimer'
+import { useFocusTask } from '@/hooks/useFocusTask'
 import { Menu, X } from 'lucide-react'
 
 export default function Home() {
-  const { activeView } = useNavigation()
+  const { activeView, setActiveView } = useNavigation()
   const {
     boards,
     activeBoard,
@@ -37,9 +39,38 @@ export default function Home() {
     switchBoard,
   } = useBoards()
 
-  const { tasks } = useKanban(activeBoardId)
+  const {
+    tasks,
+    moveTask,
+    updateTask,
+    addSubtask,
+    toggleSubtask,
+    deleteSubtask,
+  } = useKanban(activeBoardId)
+
   const { isDark, toggleTheme, mounted: themeMounted } = useTheme()
   const { colors: columnColors, setColumnColor, resetColors } = useColumnColors()
+
+  // Focus timer (lifted from FocusPage so FocusBar can access it)
+  const focusTimer = useFocusTimer()
+
+  // Focus task state
+  const {
+    focusedTaskId,
+    focusedTask,
+    focusOnTask,
+    requestStopFocus,
+    confirmStopFocus,
+    cancelStopFocus,
+    showStopPrompt,
+  } = useFocusTask({
+    tasks,
+    moveTask,
+    linkToTask: focusTimer.linkToTask,
+    clearLinks: focusTimer.clearLinks,
+    stop: focusTimer.stop,
+    isRunning: focusTimer.isRunning,
+  })
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)
@@ -104,7 +135,31 @@ export default function Home() {
       case 'focus':
         return (
           <ErrorBoundary section="Focus">
-            <FocusPage />
+            <FocusPage
+              isRunning={focusTimer.isRunning}
+              isPaused={focusTimer.isPaused}
+              timeRemaining={focusTimer.timeRemaining}
+              currentSessionType={focusTimer.currentSessionType}
+              sessionsCompleted={focusTimer.sessionsCompleted}
+              start={focusTimer.start}
+              pause={focusTimer.pause}
+              resume={focusTimer.resume}
+              stop={focusTimer.stop}
+              skip={focusTimer.skip}
+              reset={focusTimer.reset}
+              settings={focusTimer.settings}
+              updateSettings={focusTimer.updateSettings}
+              loading={focusTimer.loading}
+              getTodaysFocusTime={focusTimer.getTodaysFocusTime}
+              getWeeklyFocusTime={focusTimer.getWeeklyFocusTime}
+              sessions={focusTimer.sessions}
+              focusedTask={focusedTask}
+              onUpdateTask={updateTask}
+              onAddSubtask={addSubtask}
+              onToggleSubtask={toggleSubtask}
+              onDeleteSubtask={deleteSubtask}
+              onStopFocus={requestStopFocus}
+            />
           </ErrorBoundary>
         )
       case 'activity':
@@ -146,6 +201,8 @@ export default function Home() {
                   filters={filters}
                   sort={sort}
                   compact={compact}
+                  onFocusTask={focusOnTask}
+                  focusedTaskId={focusedTaskId}
                 />
               </ErrorBoundary>
             </div>
@@ -186,6 +243,20 @@ export default function Home() {
           </div>
         )}
 
+        {/* Focus Bar — visible on all views except focus when a task is focused */}
+        {focusedTask && activeView !== 'focus' && (
+          <FocusBar
+            task={focusedTask}
+            timeRemaining={focusTimer.timeRemaining}
+            isRunning={focusTimer.isRunning}
+            isPaused={focusTimer.isPaused}
+            onPause={focusTimer.pause}
+            onResume={focusTimer.resume}
+            onNavigateToFocus={() => setActiveView('focus')}
+            onStopFocus={requestStopFocus}
+          />
+        )}
+
         {/* View Content */}
         {renderContent()}
       </main>
@@ -220,6 +291,13 @@ export default function Home() {
         columnColors={columnColors}
         onColumnColorChange={setColumnColor}
         onResetColors={resetColors}
+      />
+
+      {/* Stop Focus Prompt */}
+      <StopFocusPrompt
+        isOpen={showStopPrompt}
+        onConfirm={confirmStopFocus}
+        onCancel={cancelStopFocus}
       />
     </div>
     </AuthGuard>

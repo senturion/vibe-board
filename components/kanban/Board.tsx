@@ -35,9 +35,11 @@ interface BoardProps {
   filters?: FilterState
   sort?: SortState
   compact?: boolean
+  onFocusTask?: (taskId: string) => void
+  focusedTaskId?: string | null
 }
 
-export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false }: BoardProps) {
+export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false, onFocusTask, focusedTaskId }: BoardProps) {
   const { getColumnColor, setColumnColor } = useColumnColors()
   const { getTaskTagIdsByTaskIds, taskTagsVersion } = useTagsContext()
 
@@ -262,6 +264,8 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
               accentColor={getColumnColor(column.id)}
               onColorChange={(color) => setColumnColor(column.id, color)}
               compact={compact}
+              onFocusTask={onFocusTask}
+              focusedTaskId={focusedTaskId}
             />
           ))}
         </div>
@@ -310,6 +314,8 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
           onToggleSubtask={toggleSubtask}
           onDeleteSubtask={deleteSubtask}
           onMoveTask={handleMoveTask}
+          onFocusTask={onFocusTask}
+          focusedTaskId={focusedTaskId}
         />
       )}
 
