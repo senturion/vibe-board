@@ -17,6 +17,7 @@ export interface AppSettings {
   showArchivedTasks: boolean
   autoArchiveCompleted: boolean
   archiveAfterDays: number
+  expandSubtasksByDefault: boolean
 
   // Work Location
   defaultWorkSchedule: Record<DayOfWeek, WorkLocation | null>
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showArchivedTasks: false,
   autoArchiveCompleted: false,
   archiveAfterDays: 7,
+  expandSubtasksByDefault: false,
 
   // Work Location
   defaultWorkSchedule: {

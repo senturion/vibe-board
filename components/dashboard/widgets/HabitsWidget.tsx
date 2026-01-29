@@ -4,28 +4,16 @@ import { useMemo } from 'react'
 import { Target, Check, ChevronRight } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 import { useNavigation } from '@/contexts/NavigationContext'
-import { isHabitActiveToday, formatDateKey } from '@/lib/types'
+import { isHabitActiveToday } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export function HabitsWidget() {
-  const { habits, completions, toggleHabit, loading } = useHabits()
+  const { habits, toggleHabit, loading, getCompletionStatus } = useHabits()
   const { setActiveView } = useNavigation()
-
-  const todayKey = formatDateKey(new Date())
 
   const todaysHabits = useMemo(() => {
     return habits.filter(h => isHabitActiveToday(h))
   }, [habits])
-
-  const getCompletionStatus = (habitId: string) => {
-    const todayCompletions = completions.filter(
-      c => c.habitId === habitId && c.completionDate === todayKey
-    )
-    const totalCount = todayCompletions.reduce((sum, c) => sum + c.count, 0)
-    const habit = habits.find(h => h.id === habitId)
-    const target = habit?.targetCount || 1
-    return { count: totalCount, target, isComplete: totalCount >= target }
-  }
 
   if (loading) {
     return (
@@ -87,7 +75,12 @@ export function HabitsWidget() {
                   {status.isComplete && <Check size={10} className="text-white" />}
                 </div>
                 <span className="text-[11px] truncate flex-1">{habit.name}</span>
-                {habit.targetCount > 1 && (
+                {habit.frequencyType === 'weekly' && (
+                  <span className="text-[10px] text-[var(--text-tertiary)]">
+                    {status.count}/{status.target}
+                  </span>
+                )}
+                {habit.frequencyType !== 'weekly' && habit.targetCount > 1 && (
                   <span className="text-[10px] text-[var(--text-tertiary)]">
                     {status.count}/{habit.targetCount}
                   </span>

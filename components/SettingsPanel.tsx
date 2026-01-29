@@ -327,6 +327,12 @@ export function SettingsPanel({
                     label="Auto-archive completed tasks"
                   />
 
+                  <Toggle
+                    checked={settings.expandSubtasksByDefault}
+                    onChange={(val) => updateSetting('expandSubtasksByDefault', val)}
+                    label="Expand subtasks on cards by default"
+                  />
+
                   {settings.autoArchiveCompleted && (
                     <NumberInput
                       value={settings.archiveAfterDays}

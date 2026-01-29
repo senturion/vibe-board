@@ -572,6 +572,32 @@ export function parseDateKey(dateKey: string): Date {
   return new Date(dateKey + 'T00:00:00')
 }
 
+export function getWeekStart(date: Date = new Date(), weekStartsOn: 'monday' | 'sunday' = 'sunday'): Date {
+  const start = new Date(date)
+  start.setHours(0, 0, 0, 0)
+  const day = start.getDay()
+  const offset = weekStartsOn === 'monday'
+    ? (day === 0 ? 6 : day - 1)
+    : day
+  start.setDate(start.getDate() - offset)
+  return start
+}
+
+export function getWeekKey(date: Date = new Date(), weekStartsOn: 'monday' | 'sunday' = 'sunday'): string {
+  return formatDateKey(getWeekStart(date, weekStartsOn))
+}
+
+export function getWeekDateKeys(date: Date = new Date(), weekStartsOn: 'monday' | 'sunday' = 'sunday'): string[] {
+  const start = getWeekStart(date, weekStartsOn)
+  const keys: string[] = []
+  for (let i = 0; i < 7; i++) {
+    const cursor = new Date(start)
+    cursor.setDate(cursor.getDate() + i)
+    keys.push(formatDateKey(cursor))
+  }
+  return keys
+}
+
 // Calculate days between two dates
 export function daysBetween(date1: Date, date2: Date): number {
   const oneDay = 24 * 60 * 60 * 1000

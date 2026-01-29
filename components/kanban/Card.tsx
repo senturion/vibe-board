@@ -1,17 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Flag, ListChecks, Clock, Crosshair } from 'lucide-react'
+import { Trash2, Flag, ListChecks, Clock, Crosshair, ChevronDown } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES, LABELS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { useSettings } from '@/hooks/useSettings'
 
 interface CardProps {
   task: KanbanTask
   onDelete: (id: string) => void
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void
   onOpenDetail: (task: KanbanTask) => void
+  onToggleSubtask?: (taskId: string, subtaskId: string) => void
   index?: number
   compact?: boolean
   accentColor?: string
@@ -26,8 +28,11 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compact = false, accentColor, onFocusTask, focusedTaskId }: CardProps) {
+export function Card({ task, onDelete, onUpdate, onOpenDetail, onToggleSubtask, index = 0, compact = false, accentColor, onFocusTask, focusedTaskId }: CardProps) {
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
+  const { settings } = useSettings()
+  const [showSubtasks, setShowSubtasks] = useState(false)
+  const userToggledSubtasks = useRef(false)
 
   const {
     attributes,
@@ -47,6 +52,8 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compac
   const subtasks = task.subtasks || []
   const completedSubtasks = subtasks.filter(s => s.completed).length
   const hasSubtasks = subtasks.length > 0
+  const subtaskProgress = hasSubtasks ? Math.round((completedSubtasks / subtasks.length) * 100) : 0
+  const maxSubtasksInCard = 4
   const labels = task.labels || []
   const taskLabels = LABELS.filter(l => labels.includes(l.id))
   const hasLabels = taskLabels.length > 0
@@ -60,6 +67,12 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compac
       onOpenDetail(task)
     }
   }
+
+  useEffect(() => {
+    if (!userToggledSubtasks.current) {
+      setShowSubtasks(!!settings.expandSubtasksByDefault && hasSubtasks)
+    }
+  }, [settings.expandSubtasksByDefault, hasSubtasks])
 
   // Compact mode: just title with subtle indicators
   if (compact) {
@@ -174,6 +187,20 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compac
                 ))}
               </div>
             )}
+            {hasSubtasks && (
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                  <span>Subtask Progress</span>
+                  <span>{completedSubtasks}/{subtasks.length}</span>
+                </div>
+                <div className="mt-1 h-1 w-full bg-[var(--border-subtle)] overflow-hidden">
+                  <div
+                    className="h-full bg-[var(--accent)] transition-all duration-300"
+                    style={{ width: `${subtaskProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <button
             onClick={(e) => {
@@ -185,6 +212,61 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compac
             <Trash2 size={13} />
           </button>
         </div>
+
+        {hasSubtasks && (
+          <div className="mt-3">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                userToggledSubtasks.current = true
+                setShowSubtasks((prev) => !prev)
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+            >
+              <ChevronDown size={12} className={cn('transition-transform duration-200', showSubtasks && 'rotate-180')} />
+              Subtasks
+            </button>
+            {showSubtasks && (
+              <div className="mt-2 space-y-1.5">
+                {subtasks.slice(0, maxSubtasksInCard).map((subtask) => (
+                  <button
+                    key={subtask.id}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleSubtask?.(task.id, subtask.id)
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="flex items-start gap-2 text-[11px] text-[var(--text-secondary)] text-left"
+                  >
+                    <span
+                      className={cn(
+                        'mt-1 h-1.5 w-1.5 rounded-full border',
+                        subtask.completed
+                          ? 'bg-[var(--accent)] border-[var(--accent)]'
+                          : 'border-[var(--text-tertiary)]'
+                      )}
+                    />
+                    <span className={cn(subtask.completed && 'line-through text-[var(--text-tertiary)]')}>
+                      {subtask.text}
+                    </span>
+                  </button>
+                ))}
+                {subtasks.length > maxSubtasksInCard && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenDetail(task)
+                    }}
+                    className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                  >
+                    +{subtasks.length - maxSubtasksInCard} more
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer with priority, subtasks, and date */}
         <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
@@ -265,7 +347,7 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, index = 0, compac
             {hasSubtasks && (
               <span className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
                 <ListChecks size={11} />
-                {completedSubtasks}/{subtasks.length}
+                {completedSubtasks}/{subtasks.length} subtasks
               </span>
             )}
             {hasDueDate && (

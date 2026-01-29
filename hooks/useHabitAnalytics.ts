@@ -1,14 +1,17 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useSettings } from '@/hooks/useSettings'
 import {
   HabitCompletion,
-  HabitStreak,
   HeatmapEntry,
   HabitStats,
   Habit,
   formatDateKey,
   daysBetween,
+  parseDateKey,
+  getWeekKey,
+  getWeekStart,
 } from '@/lib/types'
 
 interface UseHabitAnalyticsProps {
@@ -24,6 +27,7 @@ export function useHabitAnalytics({
   streak,
   dateRange,
 }: UseHabitAnalyticsProps) {
+  const { settings } = useSettings()
   // Filter completions to the specific habit and date range
   const filteredCompletions = useMemo(() => {
     let filtered = completions
@@ -118,9 +122,8 @@ export function useHabitAnalytics({
     const today = new Date()
 
     for (let w = 11; w >= 0; w--) {
-      const weekStart = new Date(today)
-      weekStart.setDate(weekStart.getDate() - (w * 7) - today.getDay())
-      weekStart.setHours(0, 0, 0, 0)
+      const weekStart = getWeekStart(today, settings.weekStartsOn)
+      weekStart.setDate(weekStart.getDate() - (w * 7))
 
       const weekEnd = new Date(weekStart)
       weekEnd.setDate(weekEnd.getDate() + 6)
@@ -128,7 +131,30 @@ export function useHabitAnalytics({
       let completed = 0
       let total = 0
 
-      // Count completions in this week
+      const weekLabel = `${weekStart.getMonth() + 1}/${weekStart.getDate()}`
+
+      if (habit?.frequencyType === 'weekly') {
+        const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+        for (let d = new Date(weekStart); d <= weekEnd && d <= today; d.setDate(d.getDate() + 1)) {
+          const dateKey = formatDateKey(new Date(d))
+          const dayCompletions = filteredCompletions.filter(c => c.completionDate === dateKey)
+          const totalCount = dayCompletions.reduce((sum, c) => sum + c.count, 0)
+          if (totalCount >= (habit.targetCount || 1)) {
+            completed++
+          }
+        }
+        total = weeklyTarget
+        const rate = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0
+        weeks.push({
+          week: weekLabel,
+          rate,
+          completed,
+          total,
+        })
+        continue
+      }
+
+      // Count completions in this week for daily/specific day habits
       for (let d = new Date(weekStart); d <= weekEnd && d <= today; d.setDate(d.getDate() + 1)) {
         const dateKey = formatDateKey(new Date(d))
         total++
@@ -142,7 +168,6 @@ export function useHabitAnalytics({
         }
       }
 
-      const weekLabel = `${weekStart.getMonth() + 1}/${weekStart.getDate()}`
       weeks.push({
         week: weekLabel,
         rate: total > 0 ? Math.round((completed / total) * 100) : 0,
@@ -152,7 +177,7 @@ export function useHabitAnalytics({
     }
 
     return weeks
-  }, [filteredCompletions, habit])
+  }, [filteredCompletions, habit, settings.weekStartsOn])
 
   // Calculate overall stats
   const stats = useMemo((): HabitStats => {
@@ -164,7 +189,31 @@ export function useHabitAnalytics({
     const recentCompletions = filteredCompletions.filter(
       c => c.completionDate >= formatDateKey(twelveWeeksAgo)
     )
-    const averagePerWeek = recentCompletions.reduce((sum, c) => sum + c.count, 0) / 12
+
+    let averagePerWeek = recentCompletions.reduce((sum, c) => sum + c.count, 0) / 12
+
+    if (habit?.frequencyType === 'weekly') {
+      const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+      const dailyCounts = new Map<string, number>()
+      recentCompletions.forEach(c => {
+        const current = dailyCounts.get(c.completionDate) || 0
+        dailyCounts.set(c.completionDate, current + c.count)
+      })
+
+      const weekCounts = new Map<string, number>()
+      dailyCounts.forEach((count, dateKey) => {
+        if (count < (habit.targetCount || 1)) return
+        const weekKey = getWeekKey(parseDateKey(dateKey), settings.weekStartsOn)
+        weekCounts.set(weekKey, (weekCounts.get(weekKey) || 0) + 1)
+      })
+
+      const totalWeeklyCompletions = Array.from(weekCounts.values())
+        .reduce((sum, value) => sum + value, 0)
+      averagePerWeek = totalWeeklyCompletions / 12
+      if (weeklyTarget > 0) {
+        averagePerWeek = Math.round(averagePerWeek * 10) / 10
+      }
+    }
 
     // Calculate completion rate (days completed / days tracked)
     const today = new Date()
@@ -175,13 +224,38 @@ export function useHabitAnalytics({
         )
       : formatDateKey(today)
 
-    const daysTracked = daysBetween(new Date(firstCompletionDate), today) + 1
-    const uniqueDaysCompleted = new Set(
-      filteredCompletions
-        .filter(c => c.count >= (habit?.targetCount || 1))
-        .map(c => c.completionDate)
-    ).size
-    const completionRate = daysTracked > 0 ? (uniqueDaysCompleted / daysTracked) * 100 : 0
+    let completionRate = 0
+    if (habit?.frequencyType === 'weekly') {
+      const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+      const weekStart = getWeekStart(parseDateKey(firstCompletionDate), settings.weekStartsOn)
+      const currentWeekStart = getWeekStart(today, settings.weekStartsOn)
+      const weeksTracked = Math.floor(daysBetween(weekStart, currentWeekStart) / 7) + 1
+
+      const dailyCounts = new Map<string, number>()
+      filteredCompletions.forEach(c => {
+        const current = dailyCounts.get(c.completionDate) || 0
+        dailyCounts.set(c.completionDate, current + c.count)
+      })
+
+      const weekCounts = new Map<string, number>()
+      dailyCounts.forEach((count, dateKey) => {
+        if (count < (habit.targetCount || 1)) return
+        const weekKey = getWeekKey(parseDateKey(dateKey), settings.weekStartsOn)
+        weekCounts.set(weekKey, (weekCounts.get(weekKey) || 0) + 1)
+      })
+
+      const completedWeeks = Array.from(weekCounts.values())
+        .filter(count => count >= weeklyTarget).length
+      completionRate = weeksTracked > 0 ? (completedWeeks / weeksTracked) * 100 : 0
+    } else {
+      const daysTracked = daysBetween(new Date(firstCompletionDate), today) + 1
+      const uniqueDaysCompleted = new Set(
+        filteredCompletions
+          .filter(c => c.count >= (habit?.targetCount || 1))
+          .map(c => c.completionDate)
+      ).size
+      completionRate = daysTracked > 0 ? (uniqueDaysCompleted / daysTracked) * 100 : 0
+    }
 
     return {
       totalCompletions,
@@ -190,7 +264,7 @@ export function useHabitAnalytics({
       bestStreak: streak?.best || 0,
       completionRate: Math.round(completionRate),
     }
-  }, [filteredCompletions, streak, habit])
+  }, [filteredCompletions, streak, habit, settings.weekStartsOn])
 
   // Get completion count for a specific date
   const getCompletionCountForDate = useMemo(() => {
@@ -238,7 +312,20 @@ export function useHabitAnalytics({
 
 // Helper hook for all habits analytics (dashboard overview)
 export function useAllHabitsAnalytics(habits: Habit[], completions: HabitCompletion[]) {
+  const { settings } = useSettings()
   const todayKey = formatDateKey(new Date())
+
+  const completionsByDate = useMemo(() => {
+    const map = new Map<string, Map<string, number>>()
+    completions.forEach(c => {
+      if (!map.has(c.completionDate)) {
+        map.set(c.completionDate, new Map())
+      }
+      const dayMap = map.get(c.completionDate)!
+      dayMap.set(c.habitId, (dayMap.get(c.habitId) || 0) + c.count)
+    })
+    return map
+  }, [completions])
 
   const todayStats = useMemo(() => {
     const activeHabits = habits.filter(h => h.isActive)
@@ -264,38 +351,118 @@ export function useAllHabitsAnalytics(habits: Habit[], completions: HabitComplet
 
   const weeklyStats = useMemo(() => {
     const today = new Date()
-    const weekStart = new Date(today)
-    weekStart.setDate(weekStart.getDate() - today.getDay())
-    weekStart.setHours(0, 0, 0, 0)
+    const weekStart = getWeekStart(today, settings.weekStartsOn)
 
     let completed = 0
     let total = 0
 
+    const activeHabits = habits.filter(h => h.isActive)
+
     for (let d = new Date(weekStart); d <= today; d.setDate(d.getDate() + 1)) {
       const dateKey = formatDateKey(new Date(d))
-      const activeHabits = habits.filter(h => h.isActive)
 
       activeHabits.forEach(habit => {
+        if (habit.frequencyType === 'weekly') {
+          return
+        }
         total++
-        const habitCompletions = completions.filter(
-          c => c.habitId === habit.id && c.completionDate === dateKey
-        )
-        const count = habitCompletions.reduce((sum, c) => sum + c.count, 0)
+        const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
         if (count >= habit.targetCount) {
           completed++
         }
       })
     }
 
+    activeHabits.forEach(habit => {
+      if (habit.frequencyType !== 'weekly') return
+      const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+      let weeklyCompletedDays = 0
+      for (let d = new Date(weekStart); d <= today; d.setDate(d.getDate() + 1)) {
+        const dateKey = formatDateKey(new Date(d))
+        const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
+        if (count >= habit.targetCount) {
+          weeklyCompletedDays++
+        }
+      }
+      total += weeklyTarget
+      completed += Math.min(weeklyCompletedDays, weeklyTarget)
+    })
+
     return {
       completed,
       total,
       percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
     }
-  }, [habits, completions])
+  }, [habits, completionsByDate, settings.weekStartsOn])
+
+  const weeklyTrend = useMemo(() => {
+    const weeks: { week: string; rate: number; completed: number; total: number }[] = []
+    const today = new Date()
+    const activeHabits = habits.filter(h => h.isActive)
+
+    for (let w = 11; w >= 0; w--) {
+      const weekStart = getWeekStart(today, settings.weekStartsOn)
+      weekStart.setDate(weekStart.getDate() - (w * 7))
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 6)
+
+      let completed = 0
+      let total = 0
+
+      activeHabits.forEach(habit => {
+        if (habit.frequencyType === 'weekly') {
+          const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+          let weeklyCompletedDays = 0
+          for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+            const dateKey = formatDateKey(new Date(d))
+            const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
+            if (count >= habit.targetCount) {
+              weeklyCompletedDays++
+            }
+          }
+          total += weeklyTarget
+          completed += Math.min(weeklyCompletedDays, weeklyTarget)
+          return
+        }
+
+        for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+          const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay()
+          if (habit.frequencyType === 'specific_days' && !habit.specificDays?.includes(dayOfWeek as 1|2|3|4|5|6|7)) {
+            continue
+          }
+
+          total++
+          const dateKey = formatDateKey(new Date(d))
+          const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
+          if (count >= habit.targetCount) {
+            completed++
+          }
+        }
+      })
+
+      const weekLabel = `${weekStart.getMonth() + 1}/${weekStart.getDate()}`
+      const rate = total > 0 ? Math.round((completed / total) * 100) : 0
+      weeks.push({ week: weekLabel, rate, completed, total })
+    }
+
+    return weeks
+  }, [habits, completionsByDate, settings.weekStartsOn])
+
+  const trend = useMemo(() => {
+    if (weeklyTrend.length < 8) return 'neutral' as const
+    const recent = weeklyTrend.slice(-4)
+    const older = weeklyTrend.slice(-8, -4)
+    const recentAvg = recent.reduce((sum, w) => sum + w.rate, 0) / recent.length
+    const olderAvg = older.reduce((sum, w) => sum + w.rate, 0) / older.length
+    if (recentAvg > olderAvg + 5) return 'up' as const
+    if (recentAvg < olderAvg - 5) return 'down' as const
+    return 'neutral' as const
+  }, [weeklyTrend])
 
   return {
     todayStats,
     weeklyStats,
+    weeklyTrend,
+    trend,
   }
 }

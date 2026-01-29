@@ -10,6 +10,7 @@ interface CalendarGridProps {
   monthData: CalendarDay[]
   selectedDate: string | null
   onSelectDate: (date: string) => void
+  mode?: 'all' | 'habits'
 }
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -20,6 +21,7 @@ export function CalendarGrid({
   monthData,
   selectedDate,
   onSelectDate,
+  mode = 'all',
 }: CalendarGridProps) {
   const today = formatDateKey()
 
@@ -117,15 +119,22 @@ export function CalendarGrid({
           <div className="w-2 h-2 rounded-full bg-green-500" />
           <span className="text-[10px] text-[var(--text-tertiary)]">Habits</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <span className="text-[10px] text-[var(--text-tertiary)]">Journal</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-orange-500" />
-          <span className="text-[10px] text-[var(--text-tertiary)]">Routines</span>
-        </div>
+        {mode === 'all' && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-[10px] text-[var(--text-tertiary)]">Journal</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-orange-500" />
+              <span className="text-[10px] text-[var(--text-tertiary)]">Routines</span>
+            </div>
+          </>
+        )}
       </div>
+      <p className="text-[10px] text-[var(--text-tertiary)] mt-2">
+        Weekly habits only count on days you log them.
+      </p>
     </div>
   )
 }

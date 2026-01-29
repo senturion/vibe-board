@@ -98,9 +98,22 @@ export function useCalendarData(): UseCalendarDataReturn {
     const activeHabits = getActiveHabitsForDate(date)
     const dateCompletions = completionsByDate.get(dateKey)
     let habitsCompleted = 0
+    let habitsTotal = 0
 
     activeHabits.forEach(habit => {
       const completionCount = dateCompletions?.get(habit.id) || 0
+
+      if (habit.frequencyType === 'weekly') {
+        if (completionCount > 0) {
+          habitsTotal++
+          if (completionCount >= habit.targetCount) {
+            habitsCompleted++
+          }
+        }
+        return
+      }
+
+      habitsTotal++
       if (completionCount >= habit.targetCount) {
         habitsCompleted++
       }
@@ -128,7 +141,7 @@ export function useCalendarData(): UseCalendarDataReturn {
     return {
       date: dateKey,
       habits: {
-        total: activeHabits.length,
+        total: habitsTotal,
         completed: habitsCompleted,
       },
       hasJournal: !!journalEntry,

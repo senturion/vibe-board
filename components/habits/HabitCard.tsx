@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { Check, MoreHorizontal, Edit2, Trash2, Archive, TrendingUp } from 'lucide-react'
-import { Habit, formatDateKey, DAYS_OF_WEEK } from '@/lib/types'
+import { useMemo, useState } from 'react'
+import { Check, MoreHorizontal, Edit2, Trash2, Archive, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Habit, DAYS_OF_WEEK, getWeekStart, isHabitActiveToday } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { StreakBadge } from '@/components/ui/Badge'
+import { ProgressRing } from '@/components/ui/Progress'
+import { useSettings } from '@/hooks/useSettings'
 
 interface HabitCardProps {
   habit: Habit
@@ -16,6 +18,7 @@ interface HabitCardProps {
   onArchive: () => void
   onViewStats: () => void
   compact?: boolean
+  showRisk?: boolean
 }
 
 export function HabitCard({
@@ -28,8 +31,33 @@ export function HabitCard({
   onArchive,
   onViewStats,
   compact = false,
+  showRisk = false,
 }: HabitCardProps) {
   const [showMenu, setShowMenu] = useState(false)
+  const { settings } = useSettings()
+  const showWeeklyProgress = habit.frequencyType === 'weekly'
+  const showTargetProgress = habit.targetCount > 1 && !showWeeklyProgress
+  const weeklyProgress = showWeeklyProgress && completionStatus.target > 0
+    ? Math.min(100, (completionStatus.count / completionStatus.target) * 100)
+    : 0
+
+  const isAtRisk = useMemo(() => {
+    if (!showRisk || streak.current <= 0) return false
+
+    if (showWeeklyProgress) {
+      if (completionStatus.completed) return false
+      const today = new Date()
+      const weekStart = getWeekStart(today, settings.weekStartsOn)
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 6)
+      weekEnd.setHours(0, 0, 0, 0)
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const daysLeft = Math.max(0, Math.ceil((weekEnd.getTime() - todayStart.getTime()) / 86400000))
+      return daysLeft <= 2
+    }
+
+    return isHabitActiveToday(habit) && !completionStatus.completed
+  }, [showRisk, streak.current, showWeeklyProgress, completionStatus.completed, habit, settings.weekStartsOn])
 
   const frequencyLabel = () => {
     switch (habit.frequencyType) {
@@ -91,6 +119,27 @@ export function HabitCard({
           {habit.name}
         </span>
 
+        {showWeeklyProgress && (
+          <ProgressRing
+            value={weeklyProgress}
+            size={18}
+            strokeWidth={2}
+            color={habit.color}
+            backgroundColor="var(--bg-tertiary)"
+            showValue={false}
+          />
+        )}
+
+        {showTargetProgress && (
+          <span className="text-[9px] text-[var(--text-tertiary)]">
+            {completionStatus.count}/{completionStatus.target}
+          </span>
+        )}
+
+        {isAtRisk && (
+          <AlertTriangle size={12} className="text-amber-400" title="Streak at risk" />
+        )}
+
         {/* Streak */}
         {streak.current > 0 && (
           <StreakBadge count={streak.current} size="sm" />
@@ -147,9 +196,14 @@ export function HabitCard({
             >
               {habit.name}
             </h3>
-            {habit.targetCount > 1 && (
+            {showWeeklyProgress && (
               <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-1.5 py-0.5">
-                {completionStatus.count}/{habit.targetCount}
+                {completionStatus.count}/{completionStatus.target} this week
+              </span>
+            )}
+            {showTargetProgress && (
+              <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-1.5 py-0.5">
+                {completionStatus.count}/{completionStatus.target}
               </span>
             )}
           </div>
@@ -158,6 +212,23 @@ export function HabitCard({
             <span className="text-[11px] text-[var(--text-tertiary)]">
               {frequencyLabel()}
             </span>
+            {showWeeklyProgress && (
+              <ProgressRing
+                value={weeklyProgress}
+                size={20}
+                strokeWidth={2}
+                color={habit.color}
+                backgroundColor="var(--bg-tertiary)"
+                showValue={false}
+                className="shrink-0"
+              />
+            )}
+            {isAtRisk && (
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.1em] text-amber-400">
+                <AlertTriangle size={12} />
+                At risk
+              </span>
+            )}
             {streak.current > 0 && (
               <StreakBadge count={streak.current} size="sm" />
             )}

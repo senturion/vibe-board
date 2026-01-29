@@ -3,6 +3,7 @@
 import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSettings } from '@/hooks/useSettings'
 import { Database } from '@/lib/supabase/types'
 import { haptics } from '@/lib/haptics'
 import {
@@ -10,11 +11,12 @@ import {
   HabitCategory,
   HabitCompletion,
   HabitStreak,
-  FrequencyType,
-  DayOfWeek,
   formatDateKey,
   parseDateKey,
   isHabitActiveToday,
+  getWeekDateKeys,
+  getWeekKey,
+  getWeekStart,
 } from '@/lib/types'
 
 type HabitRow = Database['public']['Tables']['habits']['Row']
@@ -35,7 +37,7 @@ interface HabitsContextType {
   toggleHabit: (habitId: string, date?: Date) => Promise<void>
   getCompletionStatus: (habitId: string, date?: Date) => { count: number; target: number; isComplete: boolean }
   getStreak: (habitId: string) => HabitStreak | undefined
-  updateStreak: (habitId: string, todayCompleteOverride?: boolean) => Promise<void>
+  updateStreak: (habitId: string, options?: { completionsOverride?: HabitCompletion[] }) => Promise<void>
   getTodaysHabits: () => Habit[]
   getActiveHabitsForToday: () => Habit[]
   addCategory: (name: string, color: string) => Promise<string>
@@ -52,6 +54,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
   const [streaks, setStreaks] = useState<Map<string, HabitStreak>>(new Map())
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
+  const { settings } = useSettings()
   const supabase = createClient()
 
   // Fetch habits, categories, completions, and streaks
@@ -317,105 +320,52 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     setHabits(prev => prev.filter(h => h.id !== id))
   }, [user, supabase])
 
-  // Toggle habit completion
-  const toggleHabit = useCallback(async (habitId: string, date: Date = new Date()) => {
-    if (!user) return
-
-    const dateKey = formatDateKey(date)
-    const habit = habits.find(h => h.id === habitId)
-    if (!habit) return
-
-    // Check current completion status
-    const todayCompletions = completions.filter(
-      c => c.habitId === habitId && c.completionDate === dateKey
-    )
-    const currentCount = todayCompletions.reduce((sum, c) => sum + c.count, 0)
-
-    if (currentCount >= habit.targetCount) {
-      // Already complete, remove today's completions
-      const todayCompletionIds = todayCompletions.map(c => c.id)
-
-      const { error } = await supabase
-        .from('habit_completions')
-        .delete()
-        .in('id', todayCompletionIds)
-
-      if (error) {
-        console.error('Error removing completion:', error)
-        return
-      }
-
-      setCompletions(prev => prev.filter(c => !todayCompletionIds.includes(c.id)))
-    } else {
-      // Add completion
-      const { data, error } = await supabase
-        .from('habit_completions')
-        .insert({
-          user_id: user.id,
-          habit_id: habitId,
-          completion_date: dateKey,
-          count: 1,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error adding completion:', error)
-        return
-      }
-
-      const newCompletion: HabitCompletion = {
-        id: data.id,
-        habitId: data.habit_id,
-        completionDate: data.completion_date,
-        count: data.count,
-        completedAt: new Date(data.completed_at).getTime(),
-      }
-
-      setCompletions(prev => [...prev, newCompletion])
-
-      // Haptic feedback on habit completion
-      const newCount = currentCount + 1
-      if (newCount >= habit.targetCount) {
-        haptics.success()
-      } else {
-        haptics.light()
-      }
-
-      // Update streak if completing for today and target reached
-      if (dateKey === formatDateKey(new Date())) {
-        const nextCount = currentCount + 1
-        if (nextCount >= habit.targetCount) {
-          await updateStreak(habitId, true)
-        }
-      }
-    }
-  }, [user, supabase, habits, completions])
-
   // Get completion status for a habit on a date
   const getCompletionStatus = useCallback((habitId: string, date: Date = new Date()) => {
     const dateKey = formatDateKey(date)
     const habit = habits.find(h => h.id === habitId)
-    const target = habit?.targetCount || 1
+    if (!habit) {
+      return { count: 0, target: 0, isComplete: false }
+    }
 
-    const dayCompletions = completions.filter(
-      c => c.habitId === habitId && c.completionDate === dateKey
-    )
-    const count = dayCompletions.reduce((sum, c) => sum + c.count, 0)
+    if (habit.frequencyType === 'weekly') {
+      const weekKeys = getWeekDateKeys(date, settings.weekStartsOn)
+      let completedDays = 0
+      weekKeys.forEach((key) => {
+        const dayCount = completions
+          .filter(c => c.habitId === habitId && c.completionDate === key)
+          .reduce((sum, c) => sum + c.count, 0)
+        if (dayCount >= habit.targetCount) {
+          completedDays += 1
+        }
+      })
+      const target = Math.max(habit.frequencyValue || 1, 1)
+      return {
+        count: completedDays,
+        target,
+        isComplete: completedDays >= target,
+      }
+    }
+
+    const target = habit.targetCount || 1
+    const count = completions
+      .filter(c => c.habitId === habitId && c.completionDate === dateKey)
+      .reduce((sum, c) => sum + c.count, 0)
 
     return {
       count,
       target,
       isComplete: count >= target,
     }
-  }, [habits, completions])
+  }, [habits, completions, settings.weekStartsOn])
 
-  const computeStreakFromCompletions = useCallback((habitId: string) => {
+  const computeStreakFromCompletions = useCallback((habitId: string, completionsOverride?: HabitCompletion[]) => {
     const habit = habits.find(h => h.id === habitId)
     if (!habit) return undefined
 
+    const sourceCompletions = completionsOverride || completions
     const dailyCounts = new Map<string, number>()
-    completions.forEach((completion) => {
+    sourceCompletions.forEach((completion) => {
       if (completion.habitId !== habitId) return
       const current = dailyCounts.get(completion.completionDate) || 0
       dailyCounts.set(completion.completionDate, current + completion.count)
@@ -432,6 +382,82 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         bestStreak: 0,
         lastCompletionDate: undefined,
       }
+    }
+
+    if (habit.frequencyType === 'weekly') {
+      const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+      const weekCounts = new Map<string, { count: number; lastDateKey: string }>()
+      completedDays.forEach((dateKey) => {
+        const weekKey = getWeekKey(parseDateKey(dateKey), settings.weekStartsOn)
+        const existing = weekCounts.get(weekKey)
+        const nextCount = (existing?.count || 0) + 1
+        const lastDateKey = !existing?.lastDateKey || existing.lastDateKey < dateKey
+          ? dateKey
+          : existing.lastDateKey
+        weekCounts.set(weekKey, { count: nextCount, lastDateKey })
+      })
+
+      const completedWeeks = Array.from(weekCounts.entries())
+        .filter(([, data]) => data.count >= weeklyTarget)
+        .map(([weekKey]) => weekKey)
+        .sort()
+
+      if (completedWeeks.length === 0) {
+        return {
+          currentStreak: 0,
+          bestStreak: 0,
+          lastCompletionDate: undefined,
+        }
+      }
+
+      const weekMs = 7 * 86400000
+      const toWeekTime = (weekKey: string) => parseDateKey(weekKey).getTime()
+      const completedWeekSet = new Set(completedWeeks)
+
+      let bestStreak = 1
+      let currentRun = 1
+      for (let i = 1; i < completedWeeks.length; i++) {
+        const prev = toWeekTime(completedWeeks[i - 1])
+        const curr = toWeekTime(completedWeeks[i])
+        if ((curr - prev) === weekMs) {
+          currentRun += 1
+        } else {
+          currentRun = 1
+        }
+        if (currentRun > bestStreak) bestStreak = currentRun
+      }
+
+      const thisWeekKey = getWeekKey(new Date(), settings.weekStartsOn)
+      const lastWeekStart = getWeekStart(new Date(), settings.weekStartsOn)
+      lastWeekStart.setDate(lastWeekStart.getDate() - 7)
+      const lastWeekKey = formatDateKey(lastWeekStart)
+
+      let currentStreak = 0
+      let streakEndKey: string | null = null
+      if (completedWeekSet.has(thisWeekKey)) {
+        streakEndKey = thisWeekKey
+      } else if (completedWeekSet.has(lastWeekKey)) {
+        streakEndKey = lastWeekKey
+      }
+
+      if (streakEndKey) {
+        currentStreak = 1
+        let cursorDate = parseDateKey(streakEndKey)
+        while (true) {
+          cursorDate.setDate(cursorDate.getDate() - 7)
+          const prevKey = formatDateKey(cursorDate)
+          if (completedWeekSet.has(prevKey)) {
+            currentStreak += 1
+          } else {
+            break
+          }
+        }
+      }
+
+      const lastCompletedWeekKey = completedWeeks[completedWeeks.length - 1]
+      const lastCompletionDate = weekCounts.get(lastCompletedWeekKey)?.lastDateKey
+
+      return { currentStreak, bestStreak, lastCompletionDate }
     }
 
     const dayMs = 86400000
@@ -483,7 +509,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
 
     const lastCompletionDate = completedDays[completedDays.length - 1]
     return { currentStreak, bestStreak, lastCompletionDate }
-  }, [completions, habits])
+  }, [completions, habits, settings.weekStartsOn])
 
   // Get streak for a habit
   const getStreak = useCallback((habitId: string) => {
@@ -492,65 +518,27 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
 
     if (!computed) return streak
 
-    if (!streak) {
-      return {
-        id: habitId,
-        habitId,
-        currentStreak: computed.currentStreak,
-        bestStreak: computed.bestStreak,
-        lastCompletionDate: computed.lastCompletionDate,
-        updatedAt: Date.now(),
-      }
-    }
-
-    const useComputed =
-      computed.currentStreak > streak.currentStreak ||
-      computed.bestStreak > streak.bestStreak
-
-    if (!useComputed) {
-      return streak
-    }
-
     return {
-      id: streak.id,
+      id: streak?.id || habitId,
       habitId,
       currentStreak: computed.currentStreak,
       bestStreak: computed.bestStreak,
-      lastCompletionDate: computed.lastCompletionDate ?? streak.lastCompletionDate,
+      lastCompletionDate: computed.lastCompletionDate ?? streak?.lastCompletionDate,
       updatedAt: Date.now(),
     }
   }, [streaks, computeStreakFromCompletions])
 
   // Update streak for a habit
-  const updateStreak = useCallback(async (habitId: string, todayCompleteOverride?: boolean) => {
+  const updateStreak = useCallback(async (habitId: string, options?: { completionsOverride?: HabitCompletion[] }) => {
     if (!user) return
 
-    const today = formatDateKey(new Date())
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayKey = formatDateKey(yesterday)
-
     const currentStreak = streaks.get(habitId)
-    const habit = habits.find(h => h.id === habitId)
-    if (!habit) return
+    const computed = computeStreakFromCompletions(habitId, options?.completionsOverride)
+    if (!computed) return
 
-    // Check if completed today
-    const todayComplete = todayCompleteOverride ?? getCompletionStatus(habitId, new Date()).isComplete
-
-    if (!todayComplete) return
-
-    // Check if completed yesterday
-    const yesterdayComplete = getCompletionStatus(habitId, yesterday).isComplete
-
-    let newCurrentStreak = 1
-    if (currentStreak?.lastCompletionDate === yesterdayKey && yesterdayComplete) {
-      newCurrentStreak = currentStreak.currentStreak + 1
-    } else if (currentStreak?.lastCompletionDate === today) {
-      // Already updated today
-      return
-    }
-
-    const newBestStreak = Math.max(newCurrentStreak, currentStreak?.bestStreak || 0)
+    const newCurrentStreak = computed.currentStreak
+    const newBestStreak = computed.bestStreak
+    const newLastCompletionDate = computed.lastCompletionDate
 
     const { error } = await supabase
       .from('habit_streaks')
@@ -559,7 +547,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         habit_id: habitId,
         current_streak: newCurrentStreak,
         best_streak: newBestStreak,
-        last_completion_date: today,
+        last_completion_date: newLastCompletionDate || null,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'user_id,habit_id',
@@ -577,12 +565,84 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         habitId,
         currentStreak: newCurrentStreak,
         bestStreak: newBestStreak,
-        lastCompletionDate: today,
+        lastCompletionDate: newLastCompletionDate,
         updatedAt: Date.now(),
       })
       return newMap
     })
-  }, [user, supabase, streaks, habits, getCompletionStatus])
+  }, [user, supabase, streaks, computeStreakFromCompletions])
+
+  // Toggle habit completion
+  const toggleHabit = useCallback(async (habitId: string, date: Date = new Date()) => {
+    if (!user) return
+
+    const dateKey = formatDateKey(date)
+    const habit = habits.find(h => h.id === habitId)
+    if (!habit) return
+
+    // Check current completion status
+    const todayCompletions = completions.filter(
+      c => c.habitId === habitId && c.completionDate === dateKey
+    )
+    const currentCount = todayCompletions.reduce((sum, c) => sum + c.count, 0)
+
+    if (currentCount >= habit.targetCount) {
+      // Already complete, remove today's completions
+      const todayCompletionIds = todayCompletions.map(c => c.id)
+
+      const { error } = await supabase
+        .from('habit_completions')
+        .delete()
+        .in('id', todayCompletionIds)
+
+      if (error) {
+        console.error('Error removing completion:', error)
+        return
+      }
+
+      const nextCompletions = completions.filter(c => !todayCompletionIds.includes(c.id))
+      setCompletions(nextCompletions)
+      await updateStreak(habitId, { completionsOverride: nextCompletions })
+    } else {
+      // Add completion
+      const { data, error } = await supabase
+        .from('habit_completions')
+        .insert({
+          user_id: user.id,
+          habit_id: habitId,
+          completion_date: dateKey,
+          count: 1,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error adding completion:', error)
+        return
+      }
+
+      const newCompletion: HabitCompletion = {
+        id: data.id,
+        habitId: data.habit_id,
+        completionDate: data.completion_date,
+        count: data.count,
+        completedAt: new Date(data.completed_at).getTime(),
+      }
+
+      const nextCompletions = [...completions, newCompletion]
+      setCompletions(nextCompletions)
+
+      // Haptic feedback on habit completion
+      const newCount = currentCount + 1
+      if (newCount >= habit.targetCount) {
+        haptics.success()
+      } else {
+        haptics.light()
+      }
+
+      await updateStreak(habitId, { completionsOverride: nextCompletions })
+    }
+  }, [user, supabase, habits, completions, updateStreak])
 
   // Get today's habits
   const getTodaysHabits = useCallback(() => {

@@ -16,6 +16,7 @@ interface ColumnProps {
   onAddTask: (title: string, columnId: ColumnId, priority?: 'low' | 'medium' | 'high' | 'urgent') => void
   onDeleteTask: (id: string) => void
   onUpdateTask: (id: string, updates: Partial<KanbanTask>) => void
+  onToggleSubtask: (taskId: string, subtaskId: string) => void
   onOpenDetail: (task: KanbanTask) => void
   index: number
   accentColor: string
@@ -32,6 +33,7 @@ export function Column({
   onAddTask,
   onDeleteTask,
   onUpdateTask,
+  onToggleSubtask,
   onOpenDetail,
   index,
   accentColor,
@@ -126,6 +128,7 @@ export function Column({
               task={task}
               onDelete={onDeleteTask}
               onUpdate={onUpdateTask}
+              onToggleSubtask={onToggleSubtask}
               onOpenDetail={onOpenDetail}
               index={taskIndex}
               compact={compact}

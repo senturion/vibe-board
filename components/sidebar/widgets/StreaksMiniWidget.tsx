@@ -4,14 +4,14 @@ import { Flame } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 
 export function StreaksMiniWidget() {
-  const { habits, streaks } = useHabits()
+  const { habits, getStreak } = useHabits()
 
   // Get active habits with their streaks, sorted by current streak
   // Note: streaks is a Map<string, HabitStreak>
   const habitsWithStreaks = habits
     .filter(h => h.isActive && !h.archivedAt)
     .map(habit => {
-      const streak = streaks.get(habit.id)
+      const streak = getStreak(habit.id)
       return {
         habit,
         currentStreak: streak?.currentStreak || 0,

@@ -15,16 +15,34 @@ export function CalendarView() {
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [calendarMode, setCalendarMode] = useState<'all' | 'habits'>('all')
 
-  const monthData = useMemo(
-    () => getMonthData(currentYear, currentMonth),
-    [getMonthData, currentYear, currentMonth]
-  )
+  const monthData = useMemo(() => {
+    const base = getMonthData(currentYear, currentMonth)
+    if (calendarMode === 'habits') {
+      return base.map(day => ({
+        ...day,
+        hasJournal: false,
+        journalMood: undefined,
+        routines: { total: 0, completed: 0 },
+      }))
+    }
+    return base
+  }, [getMonthData, currentYear, currentMonth, calendarMode])
 
-  const selectedDayData = useMemo(
-    () => selectedDate ? getDayData(selectedDate) : null,
-    [getDayData, selectedDate]
-  )
+  const selectedDayData = useMemo(() => {
+    if (!selectedDate) return null
+    const data = getDayData(selectedDate)
+    if (calendarMode === 'habits') {
+      return {
+        ...data,
+        hasJournal: false,
+        journalMood: undefined,
+        routines: { total: 0, completed: 0 },
+      }
+    }
+    return data
+  }, [getDayData, selectedDate, calendarMode])
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -68,6 +86,24 @@ export function CalendarView() {
           <CalendarDays size={20} className="text-[var(--accent)]" />
           <h1 className="text-lg font-medium text-[var(--text-primary)]">Calendar</h1>
         </div>
+        <div className="flex items-center gap-1 bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
+          <button
+            onClick={() => setCalendarMode('all')}
+            className={`px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors ${calendarMode === 'all'
+              ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+              : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setCalendarMode('habits')}
+            className={`px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors ${calendarMode === 'habits'
+              ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
+              : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}
+          >
+            Habits
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -91,6 +127,7 @@ export function CalendarView() {
             monthData={monthData}
             selectedDate={selectedDate}
             onSelectDate={handleSelectDate}
+            mode={calendarMode}
           />
 
           {/* Summary Stats */}

@@ -259,6 +259,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
               onAddTask={addTask}
               onDeleteTask={deleteTask}
               onUpdateTask={updateTask}
+              onToggleSubtask={toggleSubtask}
               onOpenDetail={handleOpenDetail}
               index={index}
               accentColor={getColumnColor(column.id)}

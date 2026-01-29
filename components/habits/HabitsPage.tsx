@@ -4,8 +4,9 @@ import { useState, useMemo } from 'react'
 import { Plus, BarChart3, Calendar, Target, Flame, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 import { useHabitAnalytics, useAllHabitsAnalytics } from '@/hooks/useHabitAnalytics'
+import { useSettings } from '@/hooks/useSettings'
 import { useTemporalView } from '@/hooks/useTemporalView'
-import { Habit, formatDateKey, parseDateKey, HabitCompletion, DayOfWeek } from '@/lib/types'
+import { Habit, formatDateKey, parseDateKey, HabitCompletion, DayOfWeek, getWeekStart } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { ProgressRing } from '@/components/ui/Progress'
@@ -40,7 +41,8 @@ export function HabitsPage() {
   const [editingHabit, setEditingHabit] = useState<Habit | undefined>()
   const [selectedHabitForStats, setSelectedHabitForStats] = useState<Habit | undefined>()
 
-  const { weeklyStats } = useAllHabitsAnalytics(habits, completions)
+  const { weeklyStats, weeklyTrend, trend } = useAllHabitsAnalytics(habits, completions)
+  const { settings } = useSettings()
   const temporal = useTemporalView('habits')
 
   const logDate = useMemo(() => parseDateKey(logDateKey), [logDateKey])
@@ -70,11 +72,7 @@ export function HabitsPage() {
     const total = activeHabitsForDate.length
 
     activeHabitsForDate.forEach(habit => {
-      const habitCompletions = completions.filter(
-        c => c.habitId === habit.id && c.completionDate === logDateKey
-      )
-      const count = habitCompletions.reduce((sum, c) => sum + c.count, 0)
-      if (count >= habit.targetCount) {
+      if (getCompletionStatus(habit.id, logDate).isComplete) {
         completed++
       }
     })
@@ -84,7 +82,7 @@ export function HabitsPage() {
       total,
       percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
     }
-  }, [activeHabitsForDate, completions, logDateKey])
+  }, [activeHabitsForDate, getCompletionStatus, logDate])
 
   // Helper to get completion date from a completion record
   const getCompletionDate = (completion: HabitCompletion) => completion.completionDate
@@ -95,6 +93,79 @@ export function HabitsPage() {
     completions,
     streak: selectedHabitStreak ? { current: selectedHabitStreak.currentStreak, best: selectedHabitStreak.bestStreak } : undefined,
   })
+
+  const completionsByDate = useMemo(() => {
+    const map = new Map<string, Map<string, number>>()
+    completions.forEach(c => {
+      if (!map.has(c.completionDate)) {
+        map.set(c.completionDate, new Map())
+      }
+      const dayMap = map.get(c.completionDate)!
+      dayMap.set(c.habitId, (dayMap.get(c.habitId) || 0) + c.count)
+    })
+    return map
+  }, [completions])
+
+  const mostImprovedHabits = useMemo(() => {
+    const activeHabits = habits.filter(h => h.isActive)
+    if (activeHabits.length === 0) return []
+
+    const today = new Date()
+    const start = getWeekStart(today, settings.weekStartsOn)
+    const weekStarts = Array.from({ length: 8 }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(d.getDate() - (7 * (7 - i)))
+      return d
+    })
+
+    const getWeeklyRate = (habit: Habit, weekStart: Date) => {
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 6)
+      let completed = 0
+      let total = 0
+
+      if (habit.frequencyType === 'weekly') {
+        const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+        for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+          const dateKey = formatDateKey(new Date(d))
+          const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
+          if (count >= habit.targetCount) {
+            completed++
+          }
+        }
+        total = weeklyTarget
+        return total > 0 ? Math.round((Math.min(completed, total) / total) * 100) : 0
+      }
+
+      for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+        const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay()
+        if (habit.frequencyType === 'specific_days' && !habit.specificDays?.includes(dayOfWeek as 1|2|3|4|5|6|7)) {
+          continue
+        }
+        total++
+        const dateKey = formatDateKey(new Date(d))
+        const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
+        if (count >= habit.targetCount) {
+          completed++
+        }
+      }
+
+      return total > 0 ? Math.round((completed / total) * 100) : 0
+    }
+
+    return activeHabits.map(habit => {
+      const rates = weekStarts.map(ws => getWeeklyRate(habit, ws))
+      const prev = rates.slice(0, 4)
+      const recent = rates.slice(4)
+      const prevAvg = prev.reduce((sum, r) => sum + r, 0) / Math.max(prev.length, 1)
+      const recentAvg = recent.reduce((sum, r) => sum + r, 0) / Math.max(recent.length, 1)
+      const improvement = Math.round(recentAvg - prevAvg)
+      return { habit, improvement, recentAvg: Math.round(recentAvg), prevAvg: Math.round(prevAvg) }
+    })
+      .filter(item => item.improvement > 0)
+      .sort((a, b) => b.improvement - a.improvement)
+      .slice(0, 4)
+  }, [habits, completionsByDate, settings.weekStartsOn])
 
   const handleSaveHabit = async (habitData: Omit<Habit, 'id' | 'createdAt' | 'order'>) => {
     if (editingHabit) {
@@ -388,6 +459,7 @@ export function HabitsPage() {
                           onDelete={() => deleteHabit(habit.id)}
                           onArchive={() => archiveHabit(habit.id)}
                           onViewStats={() => handleViewStats(habit)}
+                          showRisk={isLogDateToday}
                         />
                       )
                     })}
@@ -426,6 +498,7 @@ export function HabitsPage() {
                       onDelete={() => deleteHabit(habit.id)}
                       onArchive={() => archiveHabit(habit.id)}
                       onViewStats={() => handleViewStats(habit)}
+                      showRisk={isLogDateToday}
                     />
                   )
                 })}
@@ -653,12 +726,104 @@ export function HabitsPage() {
                 </Card>
               </>
             ) : (
-              <EmptyState
-                icon="habits"
-                title="Select a habit"
-                description="Choose a habit above to view detailed analytics"
-                size="lg"
-              />
+              <>
+                {/* Overview stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <StatBadge
+                    value={habits.filter(h => h.isActive).length}
+                    label="Active Habits"
+                    icon="target"
+                  />
+                  <StatBadge
+                    value={`${weeklyStats.percentage}%`}
+                    label="This Week"
+                    icon="zap"
+                    variant="accent"
+                  />
+                  <StatBadge
+                    value={`${Math.round(
+                      weeklyTrend.slice(-4).reduce((sum, w) => sum + w.rate, 0) /
+                      Math.max(weeklyTrend.slice(-4).length, 1)
+                    )}%`}
+                    label="4-Week Avg"
+                    icon="star"
+                  />
+                  <StatBadge
+                    value={trend === 'up' ? 'Up' : trend === 'down' ? 'Down' : 'Flat'}
+                    label="Trend"
+                    icon="trophy"
+                  />
+                </div>
+
+                {/* Overall weekly trend */}
+                <Card variant="bordered" padding="md">
+                  <CardHeader>
+                    <CardTitle>
+                      <BarChart3 size={14} className="mr-2 inline" />
+                      Weekly Completion Trend
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {weeklyTrend.map((week, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="w-12 text-[11px] text-[var(--text-tertiary)]">
+                            {week.week}
+                          </span>
+                          <div className="flex-1 h-4 bg-[var(--bg-tertiary)] overflow-hidden">
+                            <div
+                              className="h-full bg-[var(--success)] animate-bar-grow"
+                              style={{
+                                width: `${week.rate}%`,
+                                animationDelay: `${i * 50}ms`,
+                              }}
+                            />
+                          </div>
+                          <span className="w-10 text-right text-[12px] text-[var(--text-secondary)]">
+                            {week.rate}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card variant="bordered" padding="md">
+                  <CardHeader>
+                    <CardTitle>
+                      <BarChart3 size={14} className="mr-2 inline" />
+                      Most Improved Habits
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {mostImprovedHabits.length === 0 ? (
+                      <p className="text-[12px] text-[var(--text-tertiary)]">
+                        No improvement trend yet. Keep logging to see momentum.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {mostImprovedHabits.map(({ habit, improvement, recentAvg, prevAvg }) => (
+                          <div
+                            key={habit.id}
+                            className="flex items-center justify-between p-2 border border-[var(--border-subtle)]"
+                            style={{ borderLeft: `3px solid ${habit.color}` }}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-[12px] text-[var(--text-primary)] truncate">{habit.name}</p>
+                              <p className="text-[10px] text-[var(--text-tertiary)]">
+                                {prevAvg}% → {recentAvg}%
+                              </p>
+                            </div>
+                            <span className="text-[12px] text-[var(--success)] font-medium">
+                              +{improvement}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         )}
