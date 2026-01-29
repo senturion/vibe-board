@@ -137,7 +137,9 @@ export function HabitCard({
         )}
 
         {isAtRisk && (
-          <AlertTriangle size={12} className="text-amber-400" title="Streak at risk" />
+          <span title="Streak at risk">
+            <AlertTriangle size={12} className="text-amber-400" />
+          </span>
         )}
 
         {/* Streak */}

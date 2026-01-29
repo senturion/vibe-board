@@ -11,6 +11,8 @@ import {
   HabitCategory,
   HabitCompletion,
   HabitStreak,
+  FrequencyType,
+  DayOfWeek,
   formatDateKey,
   parseDateKey,
   isHabitActiveToday,
