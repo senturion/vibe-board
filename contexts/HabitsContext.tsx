@@ -342,11 +342,19 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         }
       })
       const target = Math.max(habit.frequencyValue || 1, 1)
-      return {
+
+      // For checkbox display, check if TODAY is complete (not the weekly goal)
+      const todayCount = completions
+        .filter(c => c.habitId === habitId && c.completionDate === dateKey)
+        .reduce((sum, c) => sum + c.count, 0)
+      const isTodayComplete = todayCount >= habit.targetCount
+
+      const result = {
         count: completedDays,
         target,
-        isComplete: completedDays >= target,
+        isComplete: isTodayComplete,  // Checkbox shows TODAY's status
       }
+      return result
     }
 
     const target = habit.targetCount || 1
@@ -354,11 +362,12 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
       .filter(c => c.habitId === habitId && c.completionDate === dateKey)
       .reduce((sum, c) => sum + c.count, 0)
 
-    return {
+    const result = {
       count,
       target,
       isComplete: count >= target,
     }
+    return result
   }, [habits, completions, settings.weekStartsOn])
 
   const computeStreakFromCompletions = useCallback((habitId: string, completionsOverride?: HabitCompletion[]) => {
@@ -582,7 +591,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     const habit = habits.find(h => h.id === habitId)
     if (!habit) return
 
-    // Check current completion status
+
+    // Check current completion status using latest state
     const todayCompletions = completions.filter(
       c => c.habitId === habitId && c.completionDate === dateKey
     )
@@ -602,8 +612,14 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const nextCompletions = completions.filter(c => !todayCompletionIds.includes(c.id))
-      setCompletions(nextCompletions)
+      // Use functional update to ensure we work with latest state
+      let nextCompletions: HabitCompletion[] = []
+      setCompletions(prev => {
+        nextCompletions = prev.filter(c => !todayCompletionIds.includes(c.id))
+        return nextCompletions
+      })
+
+      // Update streak after state is set
       await updateStreak(habitId, { completionsOverride: nextCompletions })
     } else {
       // Add completion
@@ -631,8 +647,12 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         completedAt: new Date(data.completed_at).getTime(),
       }
 
-      const nextCompletions = [...completions, newCompletion]
-      setCompletions(nextCompletions)
+      // Use functional update to ensure we work with latest state
+      let nextCompletions: HabitCompletion[] = []
+      setCompletions(prev => {
+        nextCompletions = [...prev, newCompletion]
+        return nextCompletions
+      })
 
       // Haptic feedback on habit completion
       const newCount = currentCount + 1
@@ -642,6 +662,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         haptics.light()
       }
 
+      // Update streak after state is set
       await updateStreak(habitId, { completionsOverride: nextCompletions })
     }
   }, [user, supabase, habits, completions, updateStreak])
