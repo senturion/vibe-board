@@ -74,10 +74,11 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
   // Compact mode: just title with subtle indicators
   if (compact) {
     return (
-      <div
+      <article
         ref={setNodeRef}
         style={style}
         onClick={handleClick}
+        aria-label={task.title}
         className={cn(
           'group relative bg-[var(--bg-secondary)] cursor-pointer',
           'hover:bg-[var(--bg-tertiary)]',
@@ -91,6 +92,7 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
         <div
           className="absolute left-0 top-0 bottom-0 w-0.5"
           style={{ backgroundColor: accentColor || priorityColor }}
+          aria-hidden="true"
         />
 
         <div className="px-3 py-2 pl-2 flex items-center justify-between gap-2">
@@ -100,12 +102,12 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
           <div className="flex items-center gap-2 shrink-0">
             {/* Compact indicators */}
             {hasSubtasks && (
-              <span className="text-[9px] text-[var(--text-tertiary)]">
+              <span className="text-[9px] text-[var(--text-tertiary)]" aria-label={`${completedSubtasks} of ${subtasks.length} subtasks complete`}>
                 {completedSubtasks}/{subtasks.length}
               </span>
             )}
-            {overdue && <div className="w-1.5 h-1.5 rounded-full bg-red-400" />}
-            {dueSoon && !overdue && <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+            {overdue && <div className="w-1.5 h-1.5 rounded-full bg-red-400" role="status" aria-label="Overdue" />}
+            {dueSoon && !overdue && <div className="w-1.5 h-1.5 rounded-full bg-amber-400" role="status" aria-label="Due soon" />}
             {!task.archivedAt && onFocusTask && (
               <button
                 onClick={(e) => {
@@ -118,7 +120,7 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
                     ? 'text-[var(--accent)] opacity-100'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--accent)]'
                 )}
-                title={focusedTaskId === task.id ? 'Currently focusing' : 'Focus on this task'}
+                aria-label={focusedTaskId === task.id ? 'Currently focusing' : 'Focus on this task'}
               >
                 <Crosshair size={11} />
               </button>
@@ -128,22 +130,24 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
                 e.stopPropagation()
                 onDelete(task.id)
               }}
+              aria-label={`Delete ${task.title}`}
               className="opacity-0 group-hover:opacity-100 p-1 -m-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
             >
               <Trash2 size={11} />
             </button>
           </div>
         </div>
-      </div>
+      </article>
     )
   }
 
   // Full mode: original card layout
   return (
-    <div
+    <article
       ref={setNodeRef}
       style={style}
       onClick={handleClick}
+      aria-label={task.title}
       className={cn(
         'group relative bg-[var(--bg-secondary)] cursor-pointer',
         'hover:bg-[var(--bg-tertiary)]',
@@ -157,6 +161,7 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
       <div
         className="absolute left-0 top-0 bottom-0 w-0.5"
         style={{ backgroundColor: accentColor || priorityColor }}
+        aria-hidden="true"
       />
 
       <div className="p-4 pl-3">
@@ -204,6 +209,7 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
               e.stopPropagation()
               onDelete(task.id)
             }}
+            aria-label={`Delete ${task.title}`}
             className="opacity-0 group-hover:opacity-100 p-1.5 -m-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
           >
             <Trash2 size={13} />
@@ -219,6 +225,8 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
                 setShowSubtasks((prev) => !prev)
               }}
               onPointerDown={(e) => e.stopPropagation()}
+              aria-expanded={showSubtasks}
+              aria-label={`${showSubtasks ? 'Hide' : 'Show'} subtasks`}
               className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
               <ChevronDown size={12} className={cn('transition-transform duration-200', showSubtasks && 'rotate-180')} />
@@ -234,6 +242,9 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
                       onToggleSubtask?.(task.id, subtask.id)
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
+                    role="checkbox"
+                    aria-checked={subtask.completed}
+                    aria-label={`${subtask.completed ? 'Uncheck' : 'Check'} subtask: ${subtask.text}`}
                     className="flex items-start gap-2 text-[11px] text-[var(--text-secondary)] text-left"
                   >
                     <span
@@ -276,6 +287,9 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
                 setShowPriorityMenu(!showPriorityMenu)
               }}
               onPointerDown={(e) => e.stopPropagation()}
+              aria-haspopup="listbox"
+              aria-expanded={showPriorityMenu}
+              aria-label={`Priority: ${task.priority || 'medium'}`}
               className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] hover:opacity-80 transition-opacity"
               style={{ color: priorityColor }}
             >
@@ -295,12 +309,16 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
                   onPointerDown={(e) => e.stopPropagation()}
                 />
                 <div
+                  role="listbox"
+                  aria-label="Select priority"
                   className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[100px]"
                   onPointerDown={(e) => e.stopPropagation()}
                 >
                   {PRIORITIES.map((p) => (
                     <button
                       key={p.id}
+                      role="option"
+                      aria-selected={task.priority === p.id}
                       onClick={(e) => {
                         e.stopPropagation()
                         onUpdate(task.id, { priority: p.id })
@@ -336,7 +354,7 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
                     ? 'text-[var(--accent)]'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--accent)]'
                 )}
-                title={focusedTaskId === task.id ? 'Currently focusing' : 'Focus on this task'}
+                aria-label={focusedTaskId === task.id ? 'Currently focusing' : 'Focus on this task'}
               >
                 <Crosshair size={12} />
               </button>
@@ -374,6 +392,6 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
           </div>
         </div>
       </div>
-    </div>
+    </article>
   )
 })

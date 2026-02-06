@@ -5,7 +5,9 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { KanbanTask, ColumnId } from '@/lib/types'
 import { useKanbanActions } from '@/contexts/KanbanActionsContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Card } from './Card'
+import { CardErrorFallback } from './CardErrorFallback'
 import { AddCard } from './AddCard'
 import { cn } from '@/lib/utils'
 import { COLOR_PALETTE } from '@/hooks/useColumnColors'
@@ -63,7 +65,9 @@ export const Column = memo(function Column({
             onClick={() => setShowColorPicker(!showColorPicker)}
             className="h-0.5 w-12 block hover:h-1 transition-all duration-150 cursor-pointer"
             style={{ backgroundColor: accentColor }}
-            title="Change column color"
+            aria-label={`Change ${title} column color`}
+            aria-haspopup="listbox"
+            aria-expanded={showColorPicker}
           />
 
           {/* Color picker dropdown */}
@@ -73,11 +77,14 @@ export const Column = memo(function Column({
                 className="fixed inset-0 z-10"
                 onClick={() => setShowColorPicker(false)}
               />
-              <div className="absolute left-0 top-full mt-2 p-2 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20">
+              <div role="listbox" aria-label="Column colors" className="absolute left-0 top-full mt-2 p-2 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20">
                 <div className="grid grid-cols-6 gap-1">
                   {COLOR_PALETTE.map(color => (
                     <button
                       key={color}
+                      role="option"
+                      aria-selected={accentColor === color}
+                      aria-label={color}
                       onClick={() => {
                         onColorChange(color)
                         setShowColorPicker(false)
@@ -113,14 +120,15 @@ export const Column = memo(function Column({
 
         <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task, taskIndex) => (
-            <Card
-              key={task.id}
-              task={task}
-              index={taskIndex}
-              compact={compact}
-              accentColor={accentColor}
-              focusedTaskId={focusedTaskId}
-            />
+            <ErrorBoundary key={task.id} section="Card" fallback={<CardErrorFallback taskId={task.id} />}>
+              <Card
+                task={task}
+                index={taskIndex}
+                compact={compact}
+                accentColor={accentColor}
+                focusedTaskId={focusedTaskId}
+              />
+            </ErrorBoundary>
           ))}
         </SortableContext>
 

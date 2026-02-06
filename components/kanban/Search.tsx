@@ -76,10 +76,16 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fade-in"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Search Modal */}
-      <div className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50 animate-fade-up">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search tasks"
+        className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50 animate-fade-up"
+      >
         <div className="bg-[var(--bg-secondary)] border border-[var(--border)] shadow-2xl shadow-black/50 overflow-hidden">
           {/* Search Input */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border-subtle)]">
@@ -87,6 +93,11 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-expanded={results.length > 0}
+              aria-controls="search-results"
+              aria-activedescendant={results.length > 0 ? `search-result-${selectedIndex}` : undefined}
+              aria-autocomplete="list"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -96,6 +107,7 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
             {query && (
               <button
                 onClick={() => setQuery('')}
+                aria-label="Clear search"
                 className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
               >
                 <X size={16} />
@@ -105,7 +117,7 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
 
           {/* Results */}
           {results.length > 0 && (
-            <div className="max-h-[50vh] overflow-y-auto py-2">
+            <div id="search-results" role="listbox" aria-label="Search results" className="max-h-[50vh] overflow-y-auto py-2">
               {results.map((task, index) => {
                 const column = COLUMNS.find(c => c.id === task.column)
                 const taskLabels = LABELS.filter(l => (task.labels || []).includes(l.id))
@@ -117,6 +129,9 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
                 return (
                   <button
                     key={task.id}
+                    id={`search-result-${index}`}
+                    role="option"
+                    aria-selected={index === selectedIndex}
                     onClick={() => {
                       onSelectTask(task)
                       onClose()

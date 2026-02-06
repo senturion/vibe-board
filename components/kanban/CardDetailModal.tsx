@@ -155,10 +155,16 @@ export function CardDetailModal({
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fade-in"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[85vh] bg-[var(--bg-secondary)] border border-[var(--border)] shadow-2xl shadow-black/50 z-50 flex flex-col animate-fade-up overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Task details: ${task.title}`}
+        className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[85vh] bg-[var(--bg-secondary)] border border-[var(--border)] shadow-2xl shadow-black/50 z-50 flex flex-col animate-fade-up overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-[var(--border-subtle)]">
           <div className="flex-1 min-w-0 pr-4">
@@ -184,6 +190,7 @@ export function CardDetailModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close task details"
             className="p-2 -m-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           >
             <X size={20} />
@@ -198,6 +205,9 @@ export function CardDetailModal({
             <div className="relative">
               <button
                 onClick={() => setShowPriorityMenu(!showPriorityMenu)}
+                aria-haspopup="listbox"
+                aria-expanded={showPriorityMenu}
+                aria-label={`Priority: ${task.priority || 'medium'}`}
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
                 style={{ color: priorityColor }}
               >
@@ -241,6 +251,9 @@ export function CardDetailModal({
             <div className="relative">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
+                aria-haspopup="listbox"
+                aria-expanded={showColumnMenu}
+                aria-label={`Status: ${currentColumn?.title}`}
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
               >
                 {currentColumn?.title}
@@ -293,6 +306,9 @@ export function CardDetailModal({
             <div className="relative">
               <button
                 onClick={() => setShowLabelsMenu(!showLabelsMenu)}
+                aria-haspopup="true"
+                aria-expanded={showLabelsMenu}
+                aria-label={`Tags${taskTagIds.length > 0 ? `: ${taskTagIds.length} selected` : ''}`}
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
               >
                 <Tag size={12} />
@@ -324,6 +340,9 @@ export function CardDetailModal({
             <div className="relative">
               <button
                 onClick={() => setShowDueDatePicker(!showDueDatePicker)}
+                aria-haspopup="true"
+                aria-expanded={showDueDatePicker}
+                aria-label={task.dueDate ? `Due date: ${new Date(task.dueDate).toLocaleDateString()}` : 'Set due date'}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors',
                   task.dueDate && isOverdue(task.dueDate) ? 'text-red-400 border-red-400/30' : undefined,
@@ -441,6 +460,9 @@ export function CardDetailModal({
                 >
                   <button
                     onClick={() => onToggleSubtask(task.id, subtask.id)}
+                    role="checkbox"
+                    aria-checked={subtask.completed}
+                    aria-label={`${subtask.completed ? 'Uncheck' : 'Check'} subtask: ${subtask.text}`}
                     className={cn(
                       'w-4 h-4 border flex items-center justify-center shrink-0 transition-all',
                       subtask.completed
@@ -462,6 +484,7 @@ export function CardDetailModal({
                   </span>
                   <button
                     onClick={() => onDeleteSubtask(task.id, subtask.id)}
+                    aria-label={`Delete subtask: ${subtask.text}`}
                     className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all"
                   >
                     <X size={12} />
@@ -488,6 +511,7 @@ export function CardDetailModal({
               <button
                 onClick={handleAddSubtask}
                 disabled={!newSubtask.trim()}
+                aria-label="Add subtask"
                 className="p-2 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
               >
                 <Plus size={16} />

@@ -70,10 +70,16 @@ export function QuickCapture({ isOpen, onClose, onAdd }: QuickCaptureProps) {
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal - centered, spotlight style */}
-      <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl z-50 animate-fade-up">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Quick capture task"
+        className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl z-50 animate-fade-up"
+      >
         <div className="bg-[var(--bg-secondary)] border border-[var(--border)] shadow-2xl shadow-black/50">
           {/* Input area */}
           <div className="p-6">
@@ -107,6 +113,8 @@ export function QuickCapture({ isOpen, onClose, onAdd }: QuickCaptureProps) {
                 <button
                   key={p.id}
                   onClick={() => setPriority(p.id)}
+                  aria-pressed={priority === p.id}
+                  aria-label={`${p.label} priority`}
                   className={cn(
                     'flex items-center gap-1.5 px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-all',
                     priority === p.id

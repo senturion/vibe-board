@@ -21,6 +21,7 @@ import { useColumnColors } from '@/hooks/useColumnColors'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { cn } from '@/lib/utils'
 import { KanbanActionsProvider } from '@/contexts/KanbanActionsContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Column } from './Column'
 import { CardDetailModal } from './CardDetailModal'
 import { ArchivePanel } from './ArchivePanel'
@@ -259,17 +260,18 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
           className="flex gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 min-h-full overflow-x-auto overscroll-x-contain snap-x snap-mandatory sm:snap-none scroll-px-4 sm:scroll-px-0 touch-pan-x sm:touch-auto"
         >
           {COLUMNS.map((column, index) => (
-            <Column
-              key={column.id}
-              id={column.id}
-              title={column.title}
-              tasks={getFilteredTasksByColumn(column.id)}
-              index={index}
-              accentColor={getColumnColor(column.id)}
-              onColorChange={(color) => setColumnColor(column.id, color)}
-              compact={compact}
-              focusedTaskId={focusedTaskId}
-            />
+            <ErrorBoundary key={column.id} section={column.title}>
+              <Column
+                id={column.id}
+                title={column.title}
+                tasks={getFilteredTasksByColumn(column.id)}
+                index={index}
+                accentColor={getColumnColor(column.id)}
+                onColorChange={(color) => setColumnColor(column.id, color)}
+                compact={compact}
+                focusedTaskId={focusedTaskId}
+              />
+            </ErrorBoundary>
           ))}
         </div>
 

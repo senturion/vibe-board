@@ -21,10 +21,16 @@ export function ArchivePanel({ isOpen, onClose, archivedTasks, onRestore, onDele
       <div
         className="fixed inset-0 bg-black/40 z-40"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--bg-secondary)] border-l border-[var(--border)] shadow-2xl shadow-black/30 z-50 flex flex-col animate-slide-in">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Archive: ${archivedTasks.length} tasks`}
+        className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--bg-secondary)] border-l border-[var(--border)] shadow-2xl shadow-black/30 z-50 flex flex-col animate-slide-in"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-3">
@@ -40,6 +46,7 @@ export function ArchivePanel({ isOpen, onClose, archivedTasks, onRestore, onDele
           </div>
           <button
             onClick={onClose}
+            aria-label="Close archive panel"
             className="p-2 -m-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           >
             <X size={20} />
@@ -87,6 +94,7 @@ export function ArchivePanel({ isOpen, onClose, archivedTasks, onRestore, onDele
                       </button>
                       <button
                         onClick={() => onDelete(task.id)}
+                        aria-label={`Delete ${task.title}`}
                         className="flex items-center gap-1.5 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] hover:text-red-400 hover:bg-[var(--bg-secondary)] transition-colors"
                       >
                         <Trash2 size={12} />
