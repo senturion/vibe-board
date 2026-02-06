@@ -20,6 +20,7 @@ import { useBoardKeyboardShortcuts, useCloseOnAnyKey } from '@/hooks/useBoardKey
 import { useColumnColors } from '@/hooks/useColumnColors'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { cn } from '@/lib/utils'
+import { KanbanActionsProvider } from '@/contexts/KanbanActionsContext'
 import { Column } from './Column'
 import { CardDetailModal } from './CardDetailModal'
 import { ArchivePanel } from './ArchivePanel'
@@ -212,7 +213,14 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
   }, [updateActiveLaneFromScroll])
 
   return (
-    <>
+    <KanbanActionsProvider
+      onAddTask={addTask}
+      onDeleteTask={deleteTask}
+      onUpdateTask={updateTask}
+      onToggleSubtask={toggleSubtask}
+      onOpenDetail={handleOpenDetail}
+      onFocusTask={onFocusTask}
+    >
       {/* Mobile lane navigation */}
       <div className="sticky top-0 z-20 flex items-center gap-2 px-4 sm:px-6 lg:px-8 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] lg:hidden overflow-x-auto">
         {COLUMNS.map((column) => (
@@ -256,16 +264,10 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
               id={column.id}
               title={column.title}
               tasks={getFilteredTasksByColumn(column.id)}
-              onAddTask={addTask}
-              onDeleteTask={deleteTask}
-              onUpdateTask={updateTask}
-              onToggleSubtask={toggleSubtask}
-              onOpenDetail={handleOpenDetail}
               index={index}
               accentColor={getColumnColor(column.id)}
               onColorChange={(color) => setColumnColor(column.id, color)}
               compact={compact}
-              onFocusTask={onFocusTask}
               focusedTaskId={focusedTaskId}
             />
           ))}
@@ -345,6 +347,6 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
         onSearch={searchTasks}
         onSelectTask={handleSearchSelect}
       />
-    </>
+    </KanbanActionsProvider>
   )
 }

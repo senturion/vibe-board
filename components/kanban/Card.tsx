@@ -6,18 +6,14 @@ import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Flag, ListChecks, Clock, Crosshair, ChevronDown } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES, LABELS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { useKanbanActions } from '@/contexts/KanbanActionsContext'
 import { useSettings } from '@/hooks/useSettings'
 
 interface CardProps {
   task: KanbanTask
-  onDelete: (id: string) => void
-  onUpdate: (id: string, updates: Partial<KanbanTask>) => void
-  onOpenDetail: (task: KanbanTask) => void
-  onToggleSubtask?: (taskId: string, subtaskId: string) => void
   index?: number
   compact?: boolean
   accentColor?: string
-  onFocusTask?: (taskId: string) => void
   focusedTaskId?: string | null
 }
 
@@ -28,7 +24,8 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export const Card = memo(function Card({ task, onDelete, onUpdate, onOpenDetail, onToggleSubtask, index = 0, compact = false, accentColor, onFocusTask, focusedTaskId }: CardProps) {
+export const Card = memo(function Card({ task, index = 0, compact = false, accentColor, focusedTaskId }: CardProps) {
+  const { onDeleteTask: onDelete, onUpdateTask: onUpdate, onOpenDetail, onToggleSubtask, onFocusTask } = useKanbanActions()
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const { settings } = useSettings()
   const [showSubtasks, setShowSubtasks] = useState(false)

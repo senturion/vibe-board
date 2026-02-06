@@ -4,6 +4,7 @@ import { memo, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { KanbanTask, ColumnId } from '@/lib/types'
+import { useKanbanActions } from '@/contexts/KanbanActionsContext'
 import { Card } from './Card'
 import { AddCard } from './AddCard'
 import { cn } from '@/lib/utils'
@@ -13,16 +14,10 @@ interface ColumnProps {
   id: ColumnId
   title: string
   tasks: KanbanTask[]
-  onAddTask: (title: string, columnId: ColumnId, priority?: 'low' | 'medium' | 'high' | 'urgent') => void
-  onDeleteTask: (id: string) => void
-  onUpdateTask: (id: string, updates: Partial<KanbanTask>) => void
-  onToggleSubtask: (taskId: string, subtaskId: string) => void
-  onOpenDetail: (task: KanbanTask) => void
   index: number
   accentColor: string
   onColorChange: (color: string) => void
   compact?: boolean
-  onFocusTask?: (taskId: string) => void
   focusedTaskId?: string | null
 }
 
@@ -30,18 +25,13 @@ export const Column = memo(function Column({
   id,
   title,
   tasks,
-  onAddTask,
-  onDeleteTask,
-  onUpdateTask,
-  onToggleSubtask,
-  onOpenDetail,
   index,
   accentColor,
   onColorChange,
   compact = false,
-  onFocusTask,
   focusedTaskId,
 }: ColumnProps) {
+  const { onAddTask } = useKanbanActions()
   const { setNodeRef, isOver } = useDroppable({ id })
   const [showColorPicker, setShowColorPicker] = useState(false)
 
@@ -126,14 +116,9 @@ export const Column = memo(function Column({
             <Card
               key={task.id}
               task={task}
-              onDelete={onDeleteTask}
-              onUpdate={onUpdateTask}
-              onToggleSubtask={onToggleSubtask}
-              onOpenDetail={onOpenDetail}
               index={taskIndex}
               compact={compact}
               accentColor={accentColor}
-              onFocusTask={onFocusTask}
               focusedTaskId={focusedTaskId}
             />
           ))}
