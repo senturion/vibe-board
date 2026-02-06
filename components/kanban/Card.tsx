@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Flag, ListChecks, Clock, Crosshair, ChevronDown } from 'lucide-react'
@@ -28,7 +28,7 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export function Card({ task, onDelete, onUpdate, onOpenDetail, onToggleSubtask, index = 0, compact = false, accentColor, onFocusTask, focusedTaskId }: CardProps) {
+export const Card = memo(function Card({ task, onDelete, onUpdate, onOpenDetail, onToggleSubtask, index = 0, compact = false, accentColor, onFocusTask, focusedTaskId }: CardProps) {
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const { settings } = useSettings()
   const [showSubtasks, setShowSubtasks] = useState(false)
@@ -379,4 +379,4 @@ export function Card({ task, onDelete, onUpdate, onOpenDetail, onToggleSubtask, 
       </div>
     </div>
   )
-}
+})

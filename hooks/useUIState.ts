@@ -28,23 +28,18 @@ export function useUIState() {
 
   // Load state from localStorage first (fast), then from Supabase (authoritative)
   useEffect(() => {
-    // Load from localStorage immediately for fast UX
     if (typeof window === 'undefined' || isHydrated) return
 
-    const hydrateTimeout = setTimeout(() => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        if (stored) {
-          const parsed = JSON.parse(stored) as Partial<UserUIState>
-          setState(prev => ({ ...prev, ...parsed }))
-        }
-      } catch (e) {
-        console.error('Error loading UI state from localStorage:', e)
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored) as Partial<UserUIState>
+        setState(prev => ({ ...prev, ...parsed }))
       }
-      setIsHydrated(true)
-    }, 0)
-
-    return () => clearTimeout(hydrateTimeout)
+    } catch (e) {
+      console.error('Error loading UI state from localStorage:', e)
+    }
+    setIsHydrated(true)
   }, [isHydrated])
 
   // Load from Supabase when user is authenticated

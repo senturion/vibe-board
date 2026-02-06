@@ -13,6 +13,7 @@ export function useBoards() {
   const [boards, setBoards] = useState<Board[]>([])
   const [activeBoardId, setActiveBoardIdState] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const supabase = createClient()
 
@@ -37,10 +38,13 @@ export function useBoards() {
       if (error) {
         console.error('Error fetching boards:', error)
         if (isActive) {
+          setError('Failed to load boards. Please try refreshing.')
           setLoading(false)
         }
         return
       }
+
+      if (isActive) setError(null)
 
       const mappedBoards: Board[] = (data as BoardRow[]).map(b => ({
         id: b.id,
@@ -130,9 +134,12 @@ export function useBoards() {
     setActiveBoardIdState(newBoard.id)
 
     // Update active board in settings
-    await supabase
+    const { error: settingsError } = await supabase
       .from('user_settings')
       .upsert({ user_id: user.id, active_board_id: newBoard.id })
+    if (settingsError) {
+      console.error('Error updating active board setting:', settingsError)
+    }
 
     return newBoard.id
   }, [user, supabase])
@@ -184,9 +191,12 @@ export function useBoards() {
   const switchBoard = useCallback(async (id: string) => {
     setActiveBoardIdState(id)
     if (user) {
-      await supabase
+      const { error } = await supabase
         .from('user_settings')
         .upsert({ user_id: user.id, active_board_id: id })
+      if (error) {
+        console.error('Error switching board:', error)
+      }
     }
   }, [user, supabase])
 
@@ -201,5 +211,6 @@ export function useBoards() {
     deleteBoard,
     switchBoard,
     loading,
+    error,
   }
 }

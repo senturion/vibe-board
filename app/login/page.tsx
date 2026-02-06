@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { validateEmail } from '@/lib/validation'
 import { Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -17,6 +18,18 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    const emailCheck = validateEmail(email)
+    if (!emailCheck.valid) {
+      setError(emailCheck.error!)
+      return
+    }
+
+    if (!password) {
+      setError('Password is required')
+      return
+    }
+
     setLoading(true)
 
     const { error } = await supabase.auth.signInWithPassword({

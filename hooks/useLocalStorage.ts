@@ -7,19 +7,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    const hydrateTimeout = setTimeout(() => {
-      try {
-        const item = window.localStorage.getItem(key)
-        if (item) {
-          setStoredValue(JSON.parse(item))
-        }
-      } catch (error) {
-        console.warn(`Error reading localStorage key "${key}":`, error)
+    try {
+      const item = window.localStorage.getItem(key)
+      if (item) {
+        setStoredValue(JSON.parse(item))
       }
-      setIsHydrated(true)
-    }, 0)
-
-    return () => clearTimeout(hydrateTimeout)
+    } catch (error) {
+      console.warn(`Error reading localStorage key "${key}":`, error)
+    }
+    setIsHydrated(true)
   }, [key])
 
   const setValue = useCallback((value: T | ((prev: T) => T)) => {

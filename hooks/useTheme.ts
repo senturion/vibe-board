@@ -13,7 +13,7 @@ export function useTheme() {
   const supabase = createClient()
 
   useEffect(() => {
-    const mountedTimeout = setTimeout(() => setMounted(true), 0)
+    setMounted(true)
 
     const initTheme = async () => {
       // First check localStorage for immediate display
@@ -45,7 +45,6 @@ export function useTheme() {
     }
 
     initTheme()
-    return () => clearTimeout(mountedTimeout)
   }, [user, supabase])
 
   const setTheme = useCallback(async (newTheme: Theme) => {

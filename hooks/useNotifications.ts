@@ -40,7 +40,9 @@ export function useNotifications() {
       updateViaCache: 'none',
     })
 
-    newRegistration.update().catch(() => {})
+    newRegistration.update().catch((err) => {
+      console.warn('Service worker update check failed:', err)
+    })
 
     const worker = newRegistration.installing || newRegistration.waiting
     if (worker) {

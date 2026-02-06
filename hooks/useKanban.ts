@@ -1,18 +1,24 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSettings } from '@/hooks/useSettings'
 import { KanbanTask, ColumnId, Priority, LabelId, Subtask } from '@/lib/types'
+import { validateTaskTitle, validateTaskDescription } from '@/lib/validation'
 import { Database, Json } from '@/lib/supabase/types'
 import { haptics } from '@/lib/haptics'
 
 type TaskRow = Database['public']['Tables']['tasks']['Row']
 
+const DEBOUNCE_FIELDS = new Set(['title', 'description'])
+const DEBOUNCE_MS = 300
+
 export function useKanban(boardId: string = '') {
   const [tasks, setTasks] = useState<KanbanTask[]>([])
+  const pendingDbUpdates = useRef<Record<string, { updates: Record<string, unknown>, timer: ReturnType<typeof setTimeout> }>>({})
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const supabase = createClient()
   const { settings, loading: settingsLoading } = useSettings()
@@ -43,10 +49,13 @@ export function useKanban(boardId: string = '') {
       if (error) {
         console.error('Error fetching tasks:', error)
         if (isActive) {
+          setError('Failed to load tasks. Please try refreshing.')
           setLoading(false)
         }
         return
       }
+
+      if (isActive) setError(null)
 
       const mappedTasks: KanbanTask[] = (data as TaskRow[]).map(t => ({
         id: t.id,
@@ -153,6 +162,9 @@ export function useKanban(boardId: string = '') {
   const addTask = useCallback(async (title: string, column: ColumnId = 'todo', priority: Priority = 'medium') => {
     if (!user || !boardId) return ''
 
+    const titleCheck = validateTaskTitle(title)
+    if (!titleCheck.valid) return ''
+
     const order = Date.now()
     const { data, error } = await supabase
       .from('tasks')
@@ -191,7 +203,21 @@ export function useKanban(boardId: string = '') {
     return newTask.id
   }, [user, boardId, supabase])
 
+  const flushDbUpdate = useCallback(async (id: string, dbUpdates: Record<string, unknown>) => {
+    dbUpdates.updated_at = new Date().toISOString()
+    const { error } = await supabase
+      .from('tasks')
+      .update(dbUpdates)
+      .eq('id', id)
+    if (error) {
+      console.error('Error updating task:', error)
+    }
+  }, [supabase])
+
   const updateTask = useCallback(async (id: string, updates: Partial<KanbanTask>) => {
+    if (updates.title !== undefined && !validateTaskTitle(updates.title).valid) return
+    if (updates.description !== undefined && !validateTaskDescription(updates.description).valid) return
+
     const dbUpdates: Record<string, unknown> = {}
     if (updates.title !== undefined) dbUpdates.title = updates.title
     if (updates.description !== undefined) dbUpdates.description = updates.description
@@ -204,23 +230,44 @@ export function useKanban(boardId: string = '') {
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt ? new Date(updates.completedAt).toISOString() : null
     if (updates.archivedAt !== undefined) dbUpdates.archived_at = updates.archivedAt ? new Date(updates.archivedAt).toISOString() : null
 
+    // Optimistic local update
     const updatedAt = Date.now()
-    dbUpdates.updated_at = new Date(updatedAt).toISOString()
-
-    const { error } = await supabase
-      .from('tasks')
-      .update(dbUpdates)
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error updating task:', error)
-      return
-    }
-
     setTasks(prev => prev.map(task =>
       task.id === id ? { ...task, ...updates, updatedAt } : task
     ))
-  }, [supabase])
+
+    // Check if all update fields are debounce-eligible (text fields)
+    const updateKeys = Object.keys(updates)
+    const shouldDebounce = updateKeys.every(key => DEBOUNCE_FIELDS.has(key))
+
+    if (shouldDebounce) {
+      // Merge with any pending updates for this task and reset the timer
+      const pending = pendingDbUpdates.current[id]
+      if (pending) {
+        clearTimeout(pending.timer)
+        Object.assign(pending.updates, dbUpdates)
+      } else {
+        pendingDbUpdates.current[id] = { updates: dbUpdates, timer: setTimeout(() => {}, 0) }
+        clearTimeout(pendingDbUpdates.current[id].timer)
+      }
+      pendingDbUpdates.current[id].timer = setTimeout(() => {
+        const accumulated = pendingDbUpdates.current[id]?.updates
+        delete pendingDbUpdates.current[id]
+        if (accumulated) flushDbUpdate(id, accumulated)
+      }, DEBOUNCE_MS)
+    } else {
+      // Flush any pending debounced updates for this task first, then send immediate update
+      const pending = pendingDbUpdates.current[id]
+      if (pending) {
+        clearTimeout(pending.timer)
+        Object.assign(pending.updates, dbUpdates)
+        delete pendingDbUpdates.current[id]
+        flushDbUpdate(id, pending.updates)
+      } else {
+        flushDbUpdate(id, dbUpdates)
+      }
+    }
+  }, [supabase, flushDbUpdate])
 
   const deleteTask = useCallback(async (id: string) => {
     const { error } = await supabase
@@ -454,9 +501,21 @@ export function useKanban(boardId: string = '') {
     return tasks.find(task => task.id === id)
   }, [tasks])
 
+  // Flush pending debounced updates on unmount
+  useEffect(() => {
+    return () => {
+      for (const [id, pending] of Object.entries(pendingDbUpdates.current)) {
+        clearTimeout(pending.timer)
+        flushDbUpdate(id, pending.updates)
+      }
+      pendingDbUpdates.current = {}
+    }
+  }, [flushDbUpdate])
+
   return {
     tasks,
     loading,
+    error,
     addTask,
     updateTask,
     deleteTask,

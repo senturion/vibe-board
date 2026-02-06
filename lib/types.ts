@@ -318,6 +318,14 @@ export const HABIT_COLORS: string[] = [
   '#2a9d8f', // teal
   '#e76f51', // coral
   '#264653', // dark teal
+  '#6366f1', // indigo
+  '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#14b8a6', // cyan
+  '#f97316', // bright orange
+  '#84cc16', // lime
+  '#06b6d4', // sky blue
+  '#a855f7', // violet
 ]
 
 // =====================================================

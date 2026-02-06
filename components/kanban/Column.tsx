@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { KanbanTask, ColumnId } from '@/lib/types'
@@ -26,7 +26,7 @@ interface ColumnProps {
   focusedTaskId?: string | null
 }
 
-export function Column({
+export const Column = memo(function Column({
   id,
   title,
   tasks,
@@ -146,4 +146,4 @@ export function Column({
       </div>
     </div>
   )
-}
+})

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { validateEmail, validatePassword } from '@/lib/validation'
 import { Loader2, CheckCircle } from 'lucide-react'
 
 export default function SignupPage() {
@@ -18,6 +19,19 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    const emailCheck = validateEmail(email)
+    if (!emailCheck.valid) {
+      setError(emailCheck.error!)
+      return
+    }
+
+    const passwordCheck = validatePassword(password)
+    if (!passwordCheck.valid) {
+      setError(passwordCheck.error!)
+      return
+    }
+
     setLoading(true)
 
     const { error } = await supabase.auth.signUp({
@@ -100,9 +114,9 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className="w-full px-4 py-3 bg-[#111] border border-[#222] rounded-lg text-white placeholder-[#555] focus:outline-none focus:border-[#333] transition-colors"
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
             />
           </div>
 

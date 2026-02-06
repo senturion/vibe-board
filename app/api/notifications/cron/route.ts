@@ -110,8 +110,7 @@ export async function GET(request: Request) {
       if (statusCode === 404 || statusCode === 410) {
         const stale = userSubs[index]
         if (stale) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase.from('push_subscriptions') as any)
+          await supabase.from('push_subscriptions')
             .delete()
             .eq('user_id', stale.user_id)
             .eq('endpoint', stale.endpoint)
@@ -120,8 +119,7 @@ export async function GET(request: Request) {
     }
 
     if (hadSuccess) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('notification_settings') as any)
+      await supabase.from('notification_settings')
         .update({ last_sent_at: now.toISOString(), updated_at: now.toISOString() })
         .eq('user_id', setting.user_id)
     }
