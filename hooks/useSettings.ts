@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { ViewId, WorkLocation, DayOfWeek } from '@/lib/types'
+import { DayOfWeek, GoalPlannerProvider, ViewId, WorkLocation } from '@/lib/types'
 import type { Json } from '@/lib/supabase/types'
 
 export interface AppSettings {
@@ -51,6 +51,12 @@ export interface AppSettings {
   // Calendar
   calendarShowWeekends: boolean
   calendarDefaultMonthView: boolean
+
+  // AI
+  aiProvider: GoalPlannerProvider
+  aiModel: string
+  aiApiBaseUrl: string
+  aiApiKey: string
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -106,9 +112,54 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // Calendar
   calendarShowWeekends: true,
   calendarDefaultMonthView: true,
+
+  // AI
+  aiProvider: 'rules',
+  aiModel: '',
+  aiApiBaseUrl: '',
+  aiApiKey: '',
 }
 
 const SETTINGS_KEY = 'vibe-app-settings'
+const VALID_AI_PROVIDERS: GoalPlannerProvider[] = ['rules', 'openai', 'openai-compatible', 'ollama']
+
+function normalizeSettings(raw: unknown, base: AppSettings = DEFAULT_SETTINGS): AppSettings {
+  const payload = (raw && typeof raw === 'object' && !Array.isArray(raw))
+    ? raw as Record<string, unknown>
+    : {}
+
+  const merged = { ...base, ...payload } as AppSettings
+
+  // Backward compatibility with older goal planner keys.
+  const legacyProvider = typeof payload.goalPlannerProvider === 'string' ? payload.goalPlannerProvider : ''
+  const legacyModel = typeof payload.goalPlannerModel === 'string' ? payload.goalPlannerModel : ''
+
+  const providerCandidate = typeof payload.aiProvider === 'string'
+    ? payload.aiProvider
+    : legacyProvider
+  const normalizedProvider = providerCandidate.trim().toLowerCase()
+  merged.aiProvider = VALID_AI_PROVIDERS.includes(normalizedProvider as GoalPlannerProvider)
+    ? normalizedProvider as GoalPlannerProvider
+    : base.aiProvider
+
+  const modelCandidate = typeof payload.aiModel === 'string'
+    ? payload.aiModel
+    : legacyModel
+  merged.aiModel = modelCandidate.trim().slice(0, 120)
+
+  const baseUrlCandidate = typeof payload.aiApiBaseUrl === 'string' ? payload.aiApiBaseUrl : ''
+  merged.aiApiBaseUrl = baseUrlCandidate.trim().slice(0, 240)
+
+  const keyCandidate = typeof payload.aiApiKey === 'string' ? payload.aiApiKey : ''
+  merged.aiApiKey = keyCandidate.trim().slice(0, 500)
+
+  return merged
+}
+
+function toCloudSettings(settings: AppSettings): Json {
+  const { aiApiKey, ...rest } = settings
+  return rest as unknown as Json
+}
 
 export function useSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
@@ -121,13 +172,16 @@ export function useSettings() {
     let isActive = true
 
     const loadSettings = async () => {
+      let localSettings = DEFAULT_SETTINGS
+
       // Load from localStorage for instant access
       const stored = localStorage.getItem(SETTINGS_KEY)
       if (stored) {
         try {
-          const parsed = JSON.parse(stored)
+          const parsed = JSON.parse(stored) as unknown
+          localSettings = normalizeSettings(parsed)
           if (isActive) {
-            setSettings({ ...DEFAULT_SETTINGS, ...parsed })
+            setSettings(localSettings)
           }
         } catch {
           // Invalid JSON, use defaults
@@ -143,9 +197,14 @@ export function useSettings() {
           .single()
 
         if (!error && data?.app_settings && isActive) {
-          const cloudSettings = { ...DEFAULT_SETTINGS, ...(data.app_settings as Record<string, unknown>) } as AppSettings
-          setSettings(cloudSettings)
-          localStorage.setItem(SETTINGS_KEY, JSON.stringify(cloudSettings))
+          const cloudSettings = normalizeSettings(data.app_settings)
+          const mergedSettings = {
+            ...cloudSettings,
+            // Keep API key local to this device.
+            aiApiKey: localSettings.aiApiKey || cloudSettings.aiApiKey,
+          }
+          setSettings(mergedSettings)
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(mergedSettings))
         }
       }
 
@@ -177,7 +236,7 @@ export function useSettings() {
           .from('user_settings')
           .upsert({
             user_id: user.id,
-            app_settings: newSettings,
+            app_settings: toCloudSettings(newSettings),
           }, { onConflict: 'user_id' })
           .then(({ error }) => {
             if (error) console.error('Error saving settings:', error)
@@ -202,7 +261,7 @@ export function useSettings() {
           .from('user_settings')
           .upsert({
             user_id: user.id,
-            app_settings: newSettings,
+            app_settings: toCloudSettings(newSettings),
           }, { onConflict: 'user_id' })
           .then(({ error }) => {
             if (error) console.error('Error saving settings:', error)
@@ -223,7 +282,7 @@ export function useSettings() {
         .from('user_settings')
         .upsert({
           user_id: user.id,
-          app_settings: DEFAULT_SETTINGS as unknown as Json,
+          app_settings: toCloudSettings(DEFAULT_SETTINGS),
         }, { onConflict: 'user_id' })
         .then(({ error }) => {
           if (error) console.error('Error resetting settings:', error)

@@ -1,15 +1,17 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Flag, Filter } from 'lucide-react'
+import { Plus, Flag } from 'lucide-react'
 import { useGoals } from '@/hooks/useGoals'
+import { useBoards } from '@/hooks/useBoards'
 import { Goal, GoalStatus, GOAL_STATUSES } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
 import { ProgressRing } from '@/components/ui/Progress'
 import { EmptyState, LoadingState } from '@/components/ui/EmptyState'
 import { GoalCard } from './GoalCard'
 import { GoalEditor } from './GoalEditor'
+import { GoalTaskPlannerModal } from './GoalTaskPlannerModal'
 
 type FilterStatus = 'all' | GoalStatus
 
@@ -25,12 +27,17 @@ export function GoalsPage() {
     completeGoal,
     addMilestone,
     toggleMilestone,
+    generateTaskSuggestions,
+    createTasksFromSuggestions,
     getMilestones,
     getActiveGoals,
   } = useGoals()
+  const { boards, activeBoardId } = useBoards()
 
   const [showEditor, setShowEditor] = useState(false)
+  const [showPlanner, setShowPlanner] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>()
+  const [planningGoal, setPlanningGoal] = useState<Goal | undefined>()
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [showMobileFilterMenu, setShowMobileFilterMenu] = useState(false)
 
@@ -74,6 +81,11 @@ export function GoalsPage() {
   const handleEdit = (goal: Goal) => {
     setEditingGoal(goal)
     setShowEditor(true)
+  }
+
+  const handlePlan = (goal: Goal) => {
+    setPlanningGoal(goal)
+    setShowPlanner(true)
   }
 
   if (loading) {
@@ -249,6 +261,7 @@ export function GoalsPage() {
                   onDelete={() => deleteGoal(goal.id)}
                   onArchive={() => archiveGoal(goal.id)}
                   onComplete={() => completeGoal(goal.id)}
+                  onPlanTasks={() => handlePlan(goal)}
                   onToggleMilestone={toggleMilestone}
                 />
               ))}
@@ -268,6 +281,20 @@ export function GoalsPage() {
         goal={editingGoal}
         existingMilestones={editingGoal ? getMilestones(editingGoal.id) : []}
         categories={categories}
+      />
+
+      <GoalTaskPlannerModal
+        isOpen={showPlanner}
+        goal={planningGoal}
+        milestones={planningGoal ? getMilestones(planningGoal.id) : []}
+        boards={boards}
+        defaultBoardId={activeBoardId}
+        onClose={() => {
+          setShowPlanner(false)
+          setPlanningGoal(undefined)
+        }}
+        onGenerate={generateTaskSuggestions}
+        onCreate={createTasksFromSuggestions}
       />
     </div>
   )

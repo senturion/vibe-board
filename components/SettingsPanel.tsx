@@ -5,9 +5,9 @@ import type { ElementType } from 'react'
 import {
   X, Moon, Sun, LayoutList, LayoutGrid, RotateCcw,
   ChevronDown, ChevronUp, Home, Building2, Target,
-  ListChecks, BookOpen, Timer, CalendarDays, Kanban, Tag, Bell
+  ListChecks, BookOpen, Timer, CalendarDays, Kanban, Tag, Bell, Sparkles
 } from 'lucide-react'
-import { ColumnId, COLUMNS, VIEWS, DAYS_OF_WEEK, WorkLocation } from '@/lib/types'
+import { ColumnId, COLUMNS, DAYS_OF_WEEK, GoalPlannerProvider, VIEWS, WorkLocation } from '@/lib/types'
 import { COLOR_PALETTE } from '@/hooks/useColumnColors'
 import { useSettings } from '@/hooks/useSettings'
 import { useNotifications } from '@/hooks/useNotifications'
@@ -27,7 +27,14 @@ interface SettingsPanelProps {
   onResetColors: () => void
 }
 
-type SettingsSection = 'general' | 'board' | 'notifications' | 'workLocation' | 'habits' | 'routines' | 'journal' | 'focus' | 'calendar'
+type SettingsSection = 'general' | 'ai' | 'board' | 'notifications' | 'workLocation' | 'habits' | 'routines' | 'journal' | 'focus' | 'calendar'
+
+const GOAL_PLANNER_PROVIDERS: { id: GoalPlannerProvider; label: string; note: string }[] = [
+  { id: 'rules', label: 'Rules (No LLM)', note: 'Deterministic templates' },
+  { id: 'openai', label: 'OpenAI', note: 'Uses server OpenAI config' },
+  { id: 'openai-compatible', label: 'OpenAI-Compatible', note: 'vLLM / LM Studio / others' },
+  { id: 'ollama', label: 'Ollama', note: 'Local open-source model' },
+]
 
 interface SectionHeaderProps {
   section: SettingsSection
@@ -269,6 +276,90 @@ export function SettingsPanel({
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* AI Section */}
+            <div className="border-b border-[var(--border-subtle)]">
+              <SectionHeader
+                section="ai"
+                icon={Sparkles}
+                title="AI"
+                expanded={expandedSection === 'ai'}
+                onToggle={toggleSection}
+              />
+              {expandedSection === 'ai' && (
+                <div className="pb-4 space-y-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+                      Suggestion Engine
+                    </p>
+                    <select
+                      value={settings.aiProvider}
+                      onChange={(e) => updateSetting('aiProvider', e.target.value as GoalPlannerProvider)}
+                      className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                    >
+                      {GOAL_PLANNER_PROVIDERS.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-2 text-[10px] text-[var(--text-tertiary)]">
+                      {GOAL_PLANNER_PROVIDERS.find((provider) => provider.id === settings.aiProvider)?.note}
+                    </p>
+                  </div>
+
+                  {settings.aiProvider !== 'rules' && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+                        Model Override (optional)
+                      </p>
+                      <input
+                        type="text"
+                        value={settings.aiModel}
+                        onChange={(e) => updateSetting('aiModel', e.target.value)}
+                        placeholder="e.g., llama3.1 / gpt-4.1-mini"
+                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                      />
+                    </div>
+                  )}
+
+                  {settings.aiProvider !== 'rules' && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+                        API Base URL (optional)
+                      </p>
+                      <input
+                        type="text"
+                        value={settings.aiApiBaseUrl}
+                        onChange={(e) => updateSetting('aiApiBaseUrl', e.target.value)}
+                        placeholder="e.g., http://localhost:11434 or https://api.openai.com/v1"
+                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                      />
+                    </div>
+                  )}
+
+                  {settings.aiProvider !== 'rules' && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+                        API Key (optional)
+                      </p>
+                      <input
+                        type="password"
+                        value={settings.aiApiKey}
+                        onChange={(e) => updateSetting('aiApiKey', e.target.value)}
+                        placeholder="sk-... or provider key"
+                        autoComplete="off"
+                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                      />
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-[var(--text-tertiary)]">
+                    Provider/model/base URL sync with your account. API key stays on this device and is sent only when making AI requests.
+                  </p>
                 </div>
               )}
             </div>

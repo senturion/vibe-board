@@ -14,6 +14,7 @@ interface GoalCardProps {
   onDelete: () => void
   onArchive: () => void
   onComplete: () => void
+  onPlanTasks: () => void
   onToggleMilestone: (id: string) => void
   onClick?: () => void
   compact?: boolean
@@ -26,6 +27,7 @@ export function GoalCard({
   onDelete,
   onArchive,
   onComplete,
+  onPlanTasks,
   onToggleMilestone,
   onClick,
   compact = false,
@@ -186,6 +188,13 @@ export function GoalCard({
                       Complete
                     </button>
                   )}
+                  <button
+                    onClick={() => { setShowMenu(false); onPlanTasks(); }}
+                    className="w-full px-3 py-2 text-left text-[12px] text-[var(--accent)] hover:bg-[var(--bg-tertiary)] flex items-center gap-2"
+                  >
+                    <Target size={12} />
+                    Plan Tasks
+                  </button>
                   <button
                     onClick={() => { setShowMenu(false); onEdit(); }}
                     className="w-full px-3 py-2 text-left text-[12px] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-2"

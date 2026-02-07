@@ -1,5 +1,8 @@
 export type GoalStatus = 'active' | 'completed' | 'paused' | 'abandoned'
 export type GoalPriority = 'low' | 'medium' | 'high'
+export type GoalTaskSuggestionTemplate = 'scope' | 'first_action' | 'review'
+
+import type { ColumnId, Priority } from './kanban'
 
 export interface GoalCategory {
   id: string
@@ -45,6 +48,28 @@ export interface GoalTaskLink {
   goalId: string
   taskId: string
   createdAt: number
+}
+
+export interface GoalTaskPlanOptions {
+  boardId: string
+  column: ColumnId
+  horizonDays: number
+  maxTasks: number
+}
+
+export interface GoalTaskSuggestion {
+  id: string
+  goalId: string
+  milestoneId?: string
+  milestoneTitle?: string
+  title: string
+  description?: string
+  dueDate?: string // YYYY-MM-DD
+  priority: Priority
+  column: ColumnId
+  accepted: boolean
+  template: GoalTaskSuggestionTemplate
+  planHash: string
 }
 
 export const GOAL_STATUSES: { id: GoalStatus; label: string; color: string }[] = [

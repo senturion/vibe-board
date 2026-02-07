@@ -3,15 +3,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSettings } from '@/hooks/useSettings'
 import {
+  ColumnId,
   Goal,
   GoalCategory,
+  GoalTaskPlanOptions,
+  GoalTaskSuggestion,
   Milestone,
   GoalTaskLink,
   GoalStatus,
   GoalPriority,
-  formatDateKey,
+  Priority,
 } from '@/lib/types'
+import { generateGoalTaskSuggestions as createGoalTaskSuggestions } from '@/lib/planner/goalTaskPlanner'
+import { Database } from '@/lib/supabase/types'
+
+type TaskInsert = Database['public']['Tables']['tasks']['Insert']
 
 export function useGoals() {
   const [goals, setGoals] = useState<Goal[]>([])
@@ -20,6 +28,7 @@ export function useGoals() {
   const [taskLinks, setTaskLinks] = useState<GoalTaskLink[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
+  const { settings } = useSettings()
   const supabase = useMemo(() => createClient(), [])
 
   // Fetch goals, categories, milestones, and task links
@@ -503,6 +512,172 @@ export function useGoals() {
     setGoals(prev => prev.map(g => g.categoryId === id ? { ...g, categoryId: undefined } : g))
   }, [user, supabase])
 
+  const generateTaskSuggestions = useCallback(async (goalId: string, options: GoalTaskPlanOptions) => {
+    if (!user) return []
+    const goal = goals.find(g => g.id === goalId)
+    if (!goal) return []
+
+    try {
+      const response = await fetch('/api/goals/plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          goalId,
+          options,
+          aiSettings: {
+            provider: settings.aiProvider,
+            model: settings.aiModel,
+            baseUrl: settings.aiApiBaseUrl,
+            apiKey: settings.aiApiKey,
+          },
+        }),
+      })
+
+      if (response.ok) {
+        const payload = await response.json()
+        if (Array.isArray(payload?.suggestions)) {
+          return payload.suggestions as GoalTaskSuggestion[]
+        }
+      }
+    } catch (error) {
+      console.error('Server planner request failed, using local fallback:', error)
+    }
+
+    const goalMilestones = milestones.filter(m => m.goalId === goalId)
+    const linkedTaskIds = taskLinks.filter(link => link.goalId === goalId).map(link => link.taskId)
+    let existingTaskTitles: string[] = []
+
+    if (linkedTaskIds.length > 0) {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('title')
+        .in('id', linkedTaskIds)
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Error loading linked task titles for fallback planner:', error)
+      } else {
+        existingTaskTitles = (data || []).map(task => task.title).filter(Boolean)
+      }
+    }
+
+    return createGoalTaskSuggestions({
+      goal,
+      milestones: goalMilestones,
+      options,
+      existingTaskTitles,
+    })
+  }, [goals, milestones, settings.aiApiBaseUrl, settings.aiApiKey, settings.aiModel, settings.aiProvider, taskLinks, supabase, user])
+
+  const createTasksFromSuggestions = useCallback(async (
+    goalId: string,
+    suggestions: GoalTaskSuggestion[],
+    options: GoalTaskPlanOptions
+  ) => {
+    if (!user || !options.boardId) {
+      return { created: 0, skipped: suggestions.length }
+    }
+
+    const accepted = suggestions.filter(s => s.accepted)
+    if (accepted.length === 0) {
+      return { created: 0, skipped: 0 }
+    }
+
+    const linkedTaskIds = taskLinks.filter(link => link.goalId === goalId).map(link => link.taskId)
+    const existingTitleSet = new Set<string>()
+    if (linkedTaskIds.length > 0) {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('title')
+        .in('id', linkedTaskIds)
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Error loading existing tasks for dedupe:', error)
+      } else {
+        ;(data || []).forEach(task => {
+          if (task.title) existingTitleSet.add(task.title.trim().toLowerCase())
+        })
+      }
+    }
+
+    const nowIso = new Date().toISOString()
+    const toCreate = accepted.filter((suggestion) => {
+      const normalized = suggestion.title.trim().toLowerCase()
+      if (existingTitleSet.has(normalized)) return false
+      existingTitleSet.add(normalized)
+      return true
+    })
+
+    if (toCreate.length === 0) {
+      return { created: 0, skipped: accepted.length }
+    }
+
+    const taskPayloads: TaskInsert[] = toCreate.map((suggestion, index) => ({
+      user_id: user.id,
+      board_id: options.boardId,
+      title: suggestion.title,
+      description: suggestion.description || null,
+      status: suggestion.column as ColumnId,
+      priority: suggestion.priority as Priority,
+      labels: [],
+      subtasks: [],
+      due_date: suggestion.dueDate ? new Date(`${suggestion.dueDate}T12:00:00.000Z`).toISOString() : null,
+      order: Date.now() + index,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }))
+
+    const { data: createdTasks, error: taskError } = await supabase
+      .from('tasks')
+      .insert(taskPayloads)
+      .select('id')
+
+    if (taskError) {
+      console.error('Error creating planner tasks:', taskError)
+      return { created: 0, skipped: accepted.length }
+    }
+
+    const taskIds = (createdTasks || []).map(task => task.id)
+    if (taskIds.length === 0) {
+      return { created: 0, skipped: accepted.length }
+    }
+
+    const linkRows = taskIds.map((taskId) => ({
+      user_id: user.id,
+      goal_id: goalId,
+      task_id: taskId,
+    }))
+
+    const { data: createdLinks, error: linkError } = await supabase
+      .from('goal_task_links')
+      .insert(linkRows)
+      .select()
+
+    if (linkError) {
+      console.error('Error linking planner tasks to goal:', linkError)
+      return { created: taskIds.length, skipped: accepted.length - taskIds.length }
+    }
+
+    const mappedLinks: GoalTaskLink[] = (createdLinks || []).map(link => ({
+      id: link.id,
+      goalId: link.goal_id,
+      taskId: link.task_id,
+      createdAt: new Date(link.created_at).getTime(),
+    }))
+
+    if (mappedLinks.length > 0) {
+      setTaskLinks(prev => [...prev, ...mappedLinks])
+    }
+
+    return {
+      created: taskIds.length,
+      skipped: accepted.length - taskIds.length,
+    }
+  }, [supabase, taskLinks, user])
+
   return {
     goals,
     categories,
@@ -519,6 +694,8 @@ export function useGoals() {
     toggleMilestone,
     linkTask,
     unlinkTask,
+    generateTaskSuggestions,
+    createTasksFromSuggestions,
     getLinkedTaskIds,
     getMilestones,
     calculateProgress,

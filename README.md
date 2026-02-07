@@ -20,6 +20,54 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Goal Planner LLM Providers
+
+The Goal Task Planner supports multiple backends via environment variables:
+
+`GOAL_PLANNER_PROVIDER=rules|openai|openai-compatible|ollama`
+
+`rules` keeps deterministic in-app templates (default fallback).
+
+### OpenAI
+
+```bash
+GOAL_PLANNER_PROVIDER=openai
+OPENAI_API_KEY=your_key
+GOAL_PLANNER_MODEL=gpt-4.1-mini
+# optional
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+### OpenAI-Compatible APIs (vLLM, LM Studio, etc.)
+
+```bash
+GOAL_PLANNER_PROVIDER=openai-compatible
+GOAL_PLANNER_API_URL=http://localhost:1234/v1
+GOAL_PLANNER_MODEL=your-model-name
+# optional (only if your endpoint requires auth)
+GOAL_PLANNER_API_KEY=your_key
+```
+
+### Ollama
+
+```bash
+GOAL_PLANNER_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+GOAL_PLANNER_MODEL=llama3.1
+```
+
+Optional tuning:
+
+```bash
+GOAL_PLANNER_TIMEOUT_MS=20000
+```
+
+If provider calls fail, the app automatically falls back to rules-based suggestions.
+
+You can also choose provider/model/base URL per user in the app Settings under `AI`.
+You can enter an API key there too; it stays local to your device and is sent only with AI requests.
+Server environment variables still act as defaults/fallbacks.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
