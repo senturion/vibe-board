@@ -17,7 +17,7 @@ export const VIEWS: { id: ViewId; title: string; icon: string }[] = [
 export type SectionViewMode = 'list' | 'day' | 'week' | 'month'
 export type TemporalViewMode = 'day' | 'week' | 'month'
 export type TemporalSectionId = 'habits' | 'goals' | 'routines' | 'board'
-export type GoalPlannerProvider = 'rules' | 'openai' | 'openai-compatible' | 'ollama'
+export type GoalPlannerProvider = 'rules' | 'openai' | 'openai-compatible' | 'ollama' | 'anthropic'
 
 // =====================================================
 // WORK LOCATION

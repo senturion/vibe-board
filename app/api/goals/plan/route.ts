@@ -86,7 +86,8 @@ function parsePlannerPreference(appSettings: UserSettingsRow['app_settings']): G
     rawProvider === 'rules' ||
     rawProvider === 'openai' ||
     rawProvider === 'openai-compatible' ||
-    rawProvider === 'ollama'
+    rawProvider === 'ollama' ||
+    rawProvider === 'anthropic'
   ) ? rawProvider as GoalPlannerProvider : undefined
 
   return {
@@ -108,7 +109,8 @@ function parseRequestPlannerPreference(value: unknown): GoalPlannerPreference {
     (payload.provider === 'rules' ||
       payload.provider === 'openai' ||
       payload.provider === 'openai-compatible' ||
-      payload.provider === 'ollama')
+      payload.provider === 'ollama' ||
+      payload.provider === 'anthropic')
   ) ? payload.provider as GoalPlannerProvider : undefined
 
   const model = typeof payload.model === 'string' ? payload.model.trim().slice(0, 120) : undefined

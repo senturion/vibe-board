@@ -121,7 +121,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 }
 
 const SETTINGS_KEY = 'vibe-app-settings'
-const VALID_AI_PROVIDERS: GoalPlannerProvider[] = ['rules', 'openai', 'openai-compatible', 'ollama']
+const VALID_AI_PROVIDERS: GoalPlannerProvider[] = ['rules', 'openai', 'openai-compatible', 'ollama', 'anthropic']
 
 function normalizeSettings(raw: unknown, base: AppSettings = DEFAULT_SETTINGS): AppSettings {
   const payload = (raw && typeof raw === 'object' && !Array.isArray(raw))

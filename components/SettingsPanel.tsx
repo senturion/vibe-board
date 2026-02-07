@@ -32,9 +32,17 @@ type SettingsSection = 'general' | 'ai' | 'board' | 'notifications' | 'workLocat
 const GOAL_PLANNER_PROVIDERS: { id: GoalPlannerProvider; label: string; note: string }[] = [
   { id: 'rules', label: 'Rules (No LLM)', note: 'Deterministic templates' },
   { id: 'openai', label: 'OpenAI', note: 'Uses server OpenAI config' },
+  { id: 'anthropic', label: 'Anthropic (Claude)', note: 'Claude via Anthropic API' },
   { id: 'openai-compatible', label: 'OpenAI-Compatible', note: 'vLLM / LM Studio / others' },
   { id: 'ollama', label: 'Ollama', note: 'Local open-source model' },
 ]
+
+const PROVIDER_PLACEHOLDERS: Record<string, { model: string; baseUrl: string; apiKey: string }> = {
+  openai: { model: 'gpt-4.1-mini', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-...' },
+  anthropic: { model: 'claude-sonnet-4-5-20250929', baseUrl: 'https://api.anthropic.com', apiKey: 'sk-ant-...' },
+  'openai-compatible': { model: 'gpt-4.1-mini', baseUrl: 'http://localhost:8000/v1', apiKey: 'sk-...' },
+  ollama: { model: 'llama3.1', baseUrl: 'http://localhost:11434', apiKey: '' },
+}
 
 interface SectionHeaderProps {
   section: SettingsSection
@@ -320,7 +328,7 @@ export function SettingsPanel({
                         type="text"
                         value={settings.aiModel}
                         onChange={(e) => updateSetting('aiModel', e.target.value)}
-                        placeholder="e.g., llama3.1 / gpt-4.1-mini"
+                        placeholder={PROVIDER_PLACEHOLDERS[settings.aiProvider]?.model ?? 'model name'}
                         className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                       />
                     </div>
@@ -335,13 +343,13 @@ export function SettingsPanel({
                         type="text"
                         value={settings.aiApiBaseUrl}
                         onChange={(e) => updateSetting('aiApiBaseUrl', e.target.value)}
-                        placeholder="e.g., http://localhost:11434 or https://api.openai.com/v1"
+                        placeholder={PROVIDER_PLACEHOLDERS[settings.aiProvider]?.baseUrl ?? 'https://...'}
                         className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                       />
                     </div>
                   )}
 
-                  {settings.aiProvider !== 'rules' && (
+                  {settings.aiProvider !== 'rules' && settings.aiProvider !== 'ollama' && (
                     <div>
                       <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
                         API Key (optional)
@@ -350,7 +358,7 @@ export function SettingsPanel({
                         type="password"
                         value={settings.aiApiKey}
                         onChange={(e) => updateSetting('aiApiKey', e.target.value)}
-                        placeholder="sk-... or provider key"
+                        placeholder={PROVIDER_PLACEHOLDERS[settings.aiProvider]?.apiKey ?? 'API key'}
                         autoComplete="off"
                         className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                       />

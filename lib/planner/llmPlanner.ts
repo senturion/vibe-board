@@ -9,8 +9,12 @@ import {
   Priority,
 } from '@/lib/types'
 import { buildGoalTaskPlanHash } from '@/lib/planner/goalTaskPlanner'
+import { complete } from '@/lib/ai'
+import { extractJsonString } from '@/lib/ai/json'
+import { stripTrailingSlash } from '@/lib/ai/http'
+import type { AIProvider } from '@/lib/ai'
 
-type PlannerProvider = 'rules' | 'openai' | 'openai-compatible' | 'ollama'
+type PlannerProvider = 'rules' | 'openai' | 'openai-compatible' | 'ollama' | 'anthropic'
 
 type RawSuggestion = {
   title?: unknown
@@ -31,17 +35,6 @@ interface LLMPlanParams {
   existingTaskTitles: string[]
 }
 
-interface ProviderConfig {
-  provider: PlannerProvider
-  model: string
-  timeoutMs: number
-  openaiBaseUrl?: string
-  openaiApiKey?: string
-  compatBaseUrl?: string
-  compatApiKey?: string
-  ollamaBaseUrl?: string
-}
-
 export interface GoalPlannerPreference {
   provider?: GoalPlannerProvider
   model?: string
@@ -57,6 +50,27 @@ export interface LLMPlanResult {
 const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent']
 const TEMPLATE_CYCLE: GoalTaskSuggestion['template'][] = ['scope', 'first_action', 'review']
 const VALID_COLUMNS = new Set<ColumnId>(COLUMNS.map((column) => column.id))
+
+const OLLAMA_JSON_SCHEMA = {
+  type: 'object',
+  required: ['suggestions'],
+  properties: {
+    suggestions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['title', 'priority'],
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          dueDate: { type: 'string' },
+          priority: { type: 'string' },
+          milestoneTitle: { type: 'string' },
+        },
+      },
+    },
+  },
+}
 
 function normalizeTitle(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -102,7 +116,7 @@ function normalizePriority(value: unknown, fallback: Priority): Priority {
 function sanitizeProvider(value: unknown): PlannerProvider | null {
   if (typeof value !== 'string') return null
   const raw = value.trim().toLowerCase()
-  if (raw === 'openai' || raw === 'openai-compatible' || raw === 'ollama' || raw === 'rules') {
+  if (raw === 'openai' || raw === 'openai-compatible' || raw === 'ollama' || raw === 'anthropic' || raw === 'rules') {
     return raw
   }
   return null
@@ -131,101 +145,18 @@ function sanitizeApiKey(value: unknown) {
   return value.trim().slice(0, 500)
 }
 
-function getConfig(preference?: GoalPlannerPreference): ProviderConfig {
+function resolveProvider(preference?: GoalPlannerPreference): PlannerProvider {
   const preferredProvider = sanitizeProvider(preference?.provider)
   const rawProvider = (preferredProvider || process.env.GOAL_PLANNER_PROVIDER || 'rules').trim().toLowerCase()
-  const provider: PlannerProvider = (
+  if (
     rawProvider === 'openai' ||
     rawProvider === 'openai-compatible' ||
-    rawProvider === 'ollama'
-  ) ? rawProvider : 'rules'
-
-  const preferredModel = sanitizeModel(preference?.model)
-  const preferredBaseUrl = sanitizeBaseUrl(preference?.baseUrl)
-  const preferredApiKey = sanitizeApiKey(preference?.apiKey)
-  return {
-    provider,
-    model: preferredModel || process.env.GOAL_PLANNER_MODEL || process.env.OLLAMA_MODEL || 'gpt-4.1-mini',
-    timeoutMs: Number(process.env.GOAL_PLANNER_TIMEOUT_MS || 20000),
-    openaiBaseUrl: preferredBaseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
-    openaiApiKey: preferredApiKey || process.env.OPENAI_API_KEY,
-    compatBaseUrl: preferredBaseUrl || process.env.GOAL_PLANNER_API_URL,
-    compatApiKey: preferredApiKey || process.env.GOAL_PLANNER_API_KEY,
-    ollamaBaseUrl: preferredBaseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+    rawProvider === 'ollama' ||
+    rawProvider === 'anthropic'
+  ) {
+    return rawProvider
   }
-}
-
-function stripTrailingSlash(value: string) {
-  return value.replace(/\/$/, '')
-}
-
-function withTimeout(signal: AbortSignal | undefined, timeoutMs: number) {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), timeoutMs)
-
-  if (signal) {
-    signal.addEventListener('abort', () => controller.abort(), { once: true })
-  }
-
-  return {
-    signal: controller.signal,
-    cancel: () => clearTimeout(timeout),
-  }
-}
-
-async function postJson(url: string, init: RequestInit, timeoutMs: number) {
-  const timeout = withTimeout(init.signal ?? undefined, timeoutMs)
-  try {
-    const response = await fetch(url, {
-      ...init,
-      signal: timeout.signal,
-    })
-
-    const text = await response.text()
-    if (!response.ok) {
-      throw new Error(`Planner provider request failed (${response.status}): ${text.slice(0, 300)}`)
-    }
-
-    if (!text) return null
-    return JSON.parse(text)
-  } finally {
-    timeout.cancel()
-  }
-}
-
-function extractJsonString(value: unknown): string {
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if (!trimmed) return ''
-
-    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
-    if (fenced?.[1]) return fenced[1].trim()
-
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-      return trimmed
-    }
-
-    const firstBrace = trimmed.indexOf('{')
-    const lastBrace = trimmed.lastIndexOf('}')
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-      return trimmed.slice(firstBrace, lastBrace + 1)
-    }
-
-    return ''
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(item => extractJsonString(item)).join('\n').trim()
-  }
-
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>
-    if (typeof record.text === 'string') return extractJsonString(record.text)
-    if (typeof record.content === 'string') return extractJsonString(record.content)
-    if (record.message) return extractJsonString(record.message)
-  }
-
-  return ''
+  return 'rules'
 }
 
 function parseRawSuggestions(value: unknown): RawSuggestion[] {
@@ -336,167 +267,46 @@ function buildPrompt(params: LLMPlanParams) {
   ].join('\n')
 }
 
-async function callOpenAIChatApi(config: ProviderConfig, prompt: string, baseUrl: string, apiKey?: string) {
-  const payload = {
-    model: config.model,
-    temperature: 0.25,
-    response_format: { type: 'json_object' },
-    messages: [
-      {
-        role: 'system',
-        content: 'You are a strict JSON planner for productivity goals. Return valid JSON only.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  }
-
-  const response = await postJson(
-    `${stripTrailingSlash(baseUrl)}/chat/completions`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    },
-    config.timeoutMs
-  )
-
-  const messageContent = (response as {
-    choices?: Array<{ message?: { content?: unknown } }>
-  })?.choices?.[0]?.message?.content
-
-  if (!messageContent) return []
-  return parseRawSuggestions(messageContent)
-}
-
-async function callOllama(config: ProviderConfig, prompt: string, baseUrl: string) {
-  const payload = {
-    model: config.model,
-    stream: false,
-    format: {
-      type: 'object',
-      required: ['suggestions'],
-      properties: {
-        suggestions: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['title', 'priority'],
-            properties: {
-              title: { type: 'string' },
-              description: { type: 'string' },
-              dueDate: { type: 'string' },
-              priority: { type: 'string' },
-              milestoneTitle: { type: 'string' },
-            },
-          },
-        },
-      },
-    },
-    options: {
-      temperature: 0.2,
-    },
-    messages: [
-      {
-        role: 'system',
-        content: 'You are a strict JSON planner for productivity goals. Return valid JSON only.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  }
-
-  const response = await postJson(
-    `${stripTrailingSlash(baseUrl)}/api/chat`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    },
-    config.timeoutMs
-  )
-
-  const content = (response as {
-    message?: { content?: unknown }
-  })?.message?.content
-
-  if (!content) return []
-  return parseRawSuggestions(content)
-}
-
-function getOllamaBaseUrlCandidates(baseUrl: string) {
-  const primary = stripTrailingSlash(baseUrl || 'http://localhost:11434')
-  const candidates: string[] = [primary]
-  const fallbacks = ['http://localhost:11434', 'http://127.0.0.1:11434', 'http://[::1]:11434']
-
-  for (const candidate of fallbacks) {
-    const normalized = stripTrailingSlash(candidate)
-    if (!candidates.includes(normalized)) {
-      candidates.push(normalized)
-    }
-  }
-
-  return candidates
-}
-
 export async function generateGoalTaskSuggestionsFromLLM(
   params: LLMPlanParams,
   preference?: GoalPlannerPreference
 ): Promise<LLMPlanResult | null> {
-  const config = getConfig(preference)
-  if (config.provider === 'rules') {
+  const provider = resolveProvider(preference)
+  if (provider === 'rules') {
     return null
   }
 
   const prompt = buildPrompt(params)
+  const preferredModel = sanitizeModel(preference?.model)
+  const preferredBaseUrl = sanitizeBaseUrl(preference?.baseUrl)
+  const preferredApiKey = sanitizeApiKey(preference?.apiKey)
 
   try {
-    let rawSuggestions: RawSuggestion[] = []
-
-    if (config.provider === 'openai') {
-      if (!config.openaiApiKey) return null
-      rawSuggestions = await callOpenAIChatApi(config, prompt, config.openaiBaseUrl || 'https://api.openai.com/v1', config.openaiApiKey)
-    }
-
-    if (config.provider === 'openai-compatible') {
-      if (!config.compatBaseUrl) return null
-      const apiKey = config.compatApiKey || process.env.OPENAI_API_KEY || ''
-      rawSuggestions = await callOpenAIChatApi(config, prompt, config.compatBaseUrl, apiKey)
-    }
-
-    if (config.provider === 'ollama') {
-      const candidates = getOllamaBaseUrlCandidates(config.ollamaBaseUrl || 'http://localhost:11434')
-      let lastError: unknown = null
-
-      for (const baseUrl of candidates) {
-        try {
-          rawSuggestions = await callOllama(config, prompt, baseUrl)
-          if (rawSuggestions.length > 0) break
-        } catch (error) {
-          lastError = error
-        }
+    const response = await complete(
+      {
+        provider: provider as AIProvider,
+        model: preferredModel || undefined,
+        baseUrl: preferredBaseUrl || undefined,
+        apiKey: preferredApiKey || undefined,
+        timeoutMs: Number(process.env.GOAL_PLANNER_TIMEOUT_MS || 20000),
+      },
+      {
+        system: 'You are a strict JSON planner for productivity goals. Return valid JSON only.',
+        prompt,
+        model: preferredModel || '',
+        temperature: provider === 'ollama' ? 0.2 : 0.25,
+        jsonMode: provider === 'openai' || provider === 'openai-compatible',
+        jsonSchema: provider === 'ollama' ? OLLAMA_JSON_SCHEMA : undefined,
       }
+    )
 
-      if (rawSuggestions.length === 0 && lastError) {
-        throw lastError
-      }
-    }
-
+    const rawSuggestions = parseRawSuggestions(response.text)
     const suggestions = mapRawSuggestions(params, rawSuggestions)
     if (suggestions.length === 0) return null
 
     return {
       suggestions,
-      provider: config.provider,
+      provider,
     }
   } catch (error) {
     console.error('LLM planner failed; falling back to rules planner:', error)
