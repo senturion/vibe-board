@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair } from 'lucide-react'
+import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair, Sparkles, Loader2 } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES, COLUMNS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useTagsContext } from '@/contexts/TagsContext'
+import { useSettings } from '@/hooks/useSettings'
 import { TagPicker, TagManager, TagBadge } from '@/components/tags'
 
 interface CardDetailModalProps {
@@ -52,8 +53,11 @@ export function CardDetailModal({
   const [showDueDatePicker, setShowDueDatePicker] = useState(false)
   const [showTagManager, setShowTagManager] = useState(false)
   const [taskTagIds, setTaskTagIds] = useState<string[]>([])
+  const [generatingSubtasks, setGeneratingSubtasks] = useState(false)
 
   const { tags, getTaskTagIds, setTaskTags, getTagsForTask } = useTagsContext()
+  const { settings } = useSettings()
+  const aiConfigured = settings.aiProvider !== 'rules'
 
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const subtaskInputRef = useRef<HTMLInputElement>(null)
@@ -138,6 +142,34 @@ export function CardDetailModal({
       onAddSubtask(task.id, newSubtask.trim())
       setNewSubtask('')
       subtaskInputRef.current?.focus()
+    }
+  }
+
+  const handleGenerateSubtasks = async () => {
+    if (generatingSubtasks || !task.title.trim()) return
+    setGeneratingSubtasks(true)
+    try {
+      const res = await fetch('/api/tasks/generate-subtasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: task.title,
+          description: task.description,
+          existingSubtasks: (task.subtasks || []).map(s => s.text),
+          priority: task.priority,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const subtasks: string[] = data.subtasks || []
+        for (const text of subtasks) {
+          onAddSubtask(task.id, text)
+        }
+      }
+    } catch {
+      // Silently fail — user can retry
+    } finally {
+      setGeneratingSubtasks(false)
     }
   }
 
@@ -431,9 +463,25 @@ export function CardDetailModal({
           {/* Subtasks */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">
-                Subtasks
-              </label>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-tertiary)]">
+                  Subtasks
+                </label>
+                {aiConfigured && (
+                  <button
+                    onClick={handleGenerateSubtasks}
+                    disabled={generatingSubtasks || !task.title.trim()}
+                    title="Generate subtasks with AI"
+                    className="p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
+                  >
+                    {generatingSubtasks ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={12} />
+                    )}
+                  </button>
+                )}
+              </div>
               {totalSubtasks > 0 && (
                 <span className="text-[10px] text-[var(--text-tertiary)]">
                   {completedSubtasks}/{totalSubtasks}

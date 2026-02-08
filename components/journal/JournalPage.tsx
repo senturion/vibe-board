@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { BookOpen, ChevronLeft, ChevronRight, Star, Sparkles, Calendar } from 'lucide-react'
+import { BookOpen, ChevronLeft, ChevronRight, Star, Sparkles, Calendar, Loader2 } from 'lucide-react'
 import { useJournal } from '@/hooks/useJournal'
+import { useSettings } from '@/hooks/useSettings'
+import { useGoals } from '@/hooks/useGoals'
 import { formatDateKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
@@ -33,6 +35,11 @@ export function JournalPage() {
     label: string
     value: number | null
   } | null>(null)
+  const [promptLoading, setPromptLoading] = useState(false)
+
+  const { settings } = useSettings()
+  const { getActiveGoals } = useGoals()
+  const aiConfigured = settings.aiProvider !== 'rules'
 
   const dateKey = formatDateKey(selectedDate)
   const isToday = dateKey === formatDateKey(new Date())
@@ -115,10 +122,53 @@ export function JournalPage() {
     setSelectedDate(new Date())
   }
 
-  const handlePrompt = () => {
-    const prompt = getRandomPrompt()
-    setCurrentPrompt(prompt)
-    setShowPrompt(true)
+  const handlePrompt = async () => {
+    if (promptLoading) return
+
+    if (!aiConfigured) {
+      const prompt = getRandomPrompt()
+      setCurrentPrompt(prompt)
+      setShowPrompt(true)
+      return
+    }
+
+    setPromptLoading(true)
+    try {
+      const recentEntries = entries.slice(0, 5).map(e => ({
+        date: e.entryDate,
+        mood: e.mood,
+      }))
+
+      const moodValues = getMoodTrend(7)
+        .map(p => p.mood)
+        .filter((v): v is number => v !== null)
+      const moodTrend = moodValues.length > 0
+        ? moodValues.reduce((a, b) => a + b, 0) / moodValues.length
+        : undefined
+
+      const activeGoalTitles = getActiveGoals().map(g => g.title).slice(0, 5)
+
+      const res = await fetch('/api/journal/generate-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recentEntries, moodTrend, activeGoalTitles }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentPrompt(data.prompt)
+        setShowPrompt(true)
+      } else {
+        // Fallback to random prompt
+        setCurrentPrompt(getRandomPrompt())
+        setShowPrompt(true)
+      }
+    } catch {
+      setCurrentPrompt(getRandomPrompt())
+      setShowPrompt(true)
+    } finally {
+      setPromptLoading(false)
+    }
   }
 
   const handleMoodChange = (value: number) => {
@@ -368,16 +418,27 @@ export function JournalPage() {
                 {/* Prompt button */}
                 <button
                   onClick={handlePrompt}
-                  className="p-2 border border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                  disabled={promptLoading}
+                  className="p-2 border border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 transition-colors"
                   title="Get a writing prompt"
                 >
-                  <Sparkles size={14} />
+                  {promptLoading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={14} />
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Prompt display */}
-            {showPrompt && (
+            {promptLoading && (
+              <div className="px-4 py-3 bg-[var(--accent-glow)] border-b border-[var(--accent-muted)] flex items-center gap-2">
+                <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
+                <p className="text-[13px] text-[var(--accent)] italic">Generating prompt...</p>
+              </div>
+            )}
+            {showPrompt && !promptLoading && (
               <div className="px-4 py-3 bg-[var(--accent-glow)] border-b border-[var(--accent-muted)]">
                 <p className="text-[13px] text-[var(--accent)] italic">{currentPrompt}</p>
                 <button

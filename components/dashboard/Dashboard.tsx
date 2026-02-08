@@ -18,7 +18,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { LayoutGrid, Plus, Settings2, RotateCcw } from 'lucide-react'
+import { LayoutGrid, Plus, Settings2, RotateCcw, Sparkles } from 'lucide-react'
 import { useDashboard } from '@/hooks/useDashboard'
 import { DashboardWidget, WidgetType, WIDGET_TYPES } from '@/lib/types'
 import { Widget } from './Widget'
@@ -30,6 +30,7 @@ import {
   StatsWidget,
   JournalWidget,
   TasksWidget,
+  InsightsWidget,
 } from './widgets'
 import { DeadlinesWidget } from './widgets/DeadlinesWidget'
 import { StreaksWidget } from './widgets/StreaksWidget'
@@ -65,6 +66,7 @@ const WIDGET_ICONS: Record<string, React.ComponentType<{ size: number }>> = {
   Clock,
   Flame,
   Activity,
+  Sparkles,
 }
 
 // Widget content map
@@ -81,6 +83,7 @@ const WIDGET_COMPONENTS: Record<WidgetType, React.ComponentType> = {
   deadlines: DeadlinesWidget,
   streaks: StreaksWidget,
   activity: ActivityFeedWidget,
+  insights: InsightsWidget,
 }
 
 function SortableWidget({

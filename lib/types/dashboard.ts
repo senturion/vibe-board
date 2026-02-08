@@ -1,6 +1,6 @@
 import { ViewId, TemporalSectionId, SectionViewMode, formatDateKey } from './shared'
 
-export type WidgetType = 'routines' | 'habits' | 'goals' | 'journal' | 'focus' | 'stats' | 'calendar' | 'weather' | 'tasks' | 'deadlines' | 'streaks' | 'activity'
+export type WidgetType = 'routines' | 'habits' | 'goals' | 'journal' | 'focus' | 'stats' | 'calendar' | 'weather' | 'tasks' | 'deadlines' | 'streaks' | 'activity' | 'insights'
 
 export interface DashboardWidget {
   id: string
@@ -28,6 +28,7 @@ export const WIDGET_TYPES: { id: WidgetType; title: string; icon: string; defaul
   { id: 'deadlines', title: 'Upcoming Deadlines', icon: 'Clock', defaultSize: { width: 1, height: 2 }, description: 'Tasks and goals due soon' },
   { id: 'streaks', title: 'Habit Streaks', icon: 'Flame', defaultSize: { width: 1, height: 1 }, description: 'Current habit streaks' },
   { id: 'activity', title: 'Activity Feed', icon: 'Activity', defaultSize: { width: 1, height: 2 }, description: 'Recent activity log' },
+  { id: 'insights', title: 'AI Insights', icon: 'Sparkles', defaultSize: { width: 2, height: 1 }, description: 'AI-powered daily insights' },
 ]
 
 export interface UserUIState {
