@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair, Sparkles, Loader2 } from 'lucide-react'
+import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair, Sparkles, Loader2, MessageCircle } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES, COLUMNS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { useSettings } from '@/hooks/useSettings'
 import { TagPicker, TagManager, TagBadge } from '@/components/tags'
+import { ClarifyDrawer } from './ClarifyDrawer'
 
 interface CardDetailModalProps {
   task: KanbanTask
@@ -54,6 +55,7 @@ export function CardDetailModal({
   const [showTagManager, setShowTagManager] = useState(false)
   const [taskTagIds, setTaskTagIds] = useState<string[]>([])
   const [generatingSubtasks, setGeneratingSubtasks] = useState(false)
+  const [showClarifyDrawer, setShowClarifyDrawer] = useState(false)
 
   const { tags, getTaskTagIds, setTaskTags, getTagsForTask } = useTagsContext()
   const { settings } = useSettings()
@@ -161,9 +163,16 @@ export function CardDetailModal({
       })
       if (res.ok) {
         const data = await res.json()
-        const subtasks: string[] = data.subtasks || []
-        for (const text of subtasks) {
-          onAddSubtask(task.id, text)
+        const generated: string[] = data.subtasks || []
+        if (generated.length > 0) {
+          const newSubtasks = generated.map(text => ({
+            id: crypto.randomUUID(),
+            text,
+            completed: false,
+          }))
+          onUpdate(task.id, {
+            subtasks: [...(task.subtasks || []), ...newSubtasks],
+          })
         }
       }
     } catch {
@@ -171,6 +180,12 @@ export function CardDetailModal({
     } finally {
       setGeneratingSubtasks(false)
     }
+  }
+
+  const handleClarifiedSubtasks = (subtasks: { id: string; text: string; completed: boolean }[]) => {
+    onUpdate(task.id, {
+      subtasks: [...(task.subtasks || []), ...subtasks],
+    })
   }
 
   const completedSubtasks = (task.subtasks || []).filter(s => s.completed).length
@@ -468,18 +483,28 @@ export function CardDetailModal({
                   Subtasks
                 </label>
                 {aiConfigured && (
-                  <button
-                    onClick={handleGenerateSubtasks}
-                    disabled={generatingSubtasks || !task.title.trim()}
-                    title="Generate subtasks with AI"
-                    className="p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
-                  >
-                    {generatingSubtasks ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Sparkles size={12} />
-                    )}
-                  </button>
+                  <>
+                    <button
+                      onClick={handleGenerateSubtasks}
+                      disabled={generatingSubtasks || !task.title.trim()}
+                      title="Generate subtasks with AI"
+                      className="p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
+                    >
+                      {generatingSubtasks ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={12} />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowClarifyDrawer(true)}
+                      disabled={!task.title.trim()}
+                      title="Clarify task before generating subtasks"
+                      className="p-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
+                    >
+                      <MessageCircle size={12} />
+                    </button>
+                  </>
                 )}
               </div>
               {totalSubtasks > 0 && (
@@ -603,6 +628,14 @@ export function CardDetailModal({
 
       {/* Tag Manager Modal */}
       <TagManager isOpen={showTagManager} onClose={() => setShowTagManager(false)} />
+
+      {/* Clarify Drawer */}
+      <ClarifyDrawer
+        isOpen={showClarifyDrawer}
+        onClose={() => setShowClarifyDrawer(false)}
+        task={task}
+        onSubtasksGenerated={handleClarifiedSubtasks}
+      />
     </>
   )
 }

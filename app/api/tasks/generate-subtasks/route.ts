@@ -36,6 +36,14 @@ export async function POST(request: NextRequest) {
   const labels = Array.isArray(body.labels)
     ? body.labels.filter((l: unknown) => typeof l === 'string')
     : []
+  const clarifications: { question: string; answer: string }[] = Array.isArray(body.clarifications)
+    ? body.clarifications.filter(
+        (c: unknown) =>
+          c && typeof c === 'object' &&
+          typeof (c as Record<string, unknown>).question === 'string' &&
+          typeof (c as Record<string, unknown>).answer === 'string'
+      )
+    : []
 
   // Resolve AI settings
   const { data: settingsRow } = await supabase
@@ -58,6 +66,12 @@ export async function POST(request: NextRequest) {
   if (priority) prompt += `\nPriority: ${priority}`
   if (labels.length > 0) prompt += `\nLabels: ${labels.join(', ')}`
   if (existingSubtasks.length > 0) prompt += `\nExisting subtasks (do not repeat): ${existingSubtasks.join(', ')}`
+  if (clarifications.length > 0) {
+    prompt += '\nClarifications from the user:'
+    for (const c of clarifications) {
+      prompt += `\nQ: ${c.question}\nA: ${c.answer}`
+    }
+  }
 
   try {
     const useJsonSchema = aiSettings.provider === 'ollama'
