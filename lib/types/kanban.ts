@@ -1,6 +1,11 @@
-export type ColumnId = 'backlog' | 'todo' | 'in-progress' | 'complete'
+export type ColumnId = string
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type LabelId = 'bug' | 'feature' | 'design' | 'docs' | 'refactor' | 'research'
+
+export interface KanbanColumn {
+  id: ColumnId
+  title: string
+}
 
 export interface Subtask {
   id: string
@@ -51,17 +56,50 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'n', description: 'New task' },
   { key: '⌘ k', description: 'Quick capture' },
   { key: '/', description: 'Search' },
-  { key: '1 / 2 / 3 / 4', description: 'Move to column' },
+  { key: '1-9', description: 'Move to column' },
   { key: 'Escape', description: 'Close modal' },
   { key: '?', description: 'Show shortcuts' },
 ]
 
-export const COLUMNS: { id: ColumnId; title: string }[] = [
+export const COLUMNS: KanbanColumn[] = [
   { id: 'backlog', title: 'Backlog' },
   { id: 'todo', title: 'Todo' },
   { id: 'in-progress', title: 'In Progress' },
   { id: 'complete', title: 'Complete' },
 ]
+
+const COLUMN_ID_MAX_LENGTH = 36
+const COLUMN_TITLE_MAX_LENGTH = 40
+
+export function normalizeColumnTitle(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').slice(0, COLUMN_TITLE_MAX_LENGTH)
+}
+
+export function normalizeColumnId(value: string): ColumnId {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, COLUMN_ID_MAX_LENGTH)
+}
+
+export function createColumnId(title: string, existingIds: Iterable<string>): ColumnId {
+  const existing = new Set(existingIds)
+  const base = normalizeColumnId(title) || 'column'
+  let candidate = base
+  let suffix = 2
+
+  while (existing.has(candidate)) {
+    const suffixText = `-${suffix}`
+    const trimmedBase = base.slice(0, Math.max(1, COLUMN_ID_MAX_LENGTH - suffixText.length))
+    candidate = `${trimmedBase}${suffixText}`
+    suffix += 1
+  }
+
+  return candidate
+}
 
 // Helper to check if a date is overdue
 export function isOverdue(dueDate: number): boolean {

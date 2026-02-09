@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair, Sparkles, Loader2, MessageCircle } from 'lucide-react'
-import { KanbanTask, Priority, PRIORITIES, COLUMNS, isOverdue, isDueSoon } from '@/lib/types'
+import { KanbanTask, Priority, PRIORITIES, COLUMNS, KanbanColumn, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { useSettings } from '@/hooks/useSettings'
@@ -11,6 +11,7 @@ import { ClarifyDrawer } from './ClarifyDrawer'
 
 interface CardDetailModalProps {
   task: KanbanTask
+  columns?: KanbanColumn[]
   isOpen: boolean
   onClose: () => void
   onUpdate: (id: string, updates: Partial<KanbanTask>) => void
@@ -33,6 +34,7 @@ const PRIORITY_COLORS: Record<Priority, string> = {
 
 export function CardDetailModal({
   task,
+  columns = COLUMNS,
   isOpen,
   onClose,
   onUpdate,
@@ -57,7 +59,7 @@ export function CardDetailModal({
   const [generatingSubtasks, setGeneratingSubtasks] = useState(false)
   const [showClarifyDrawer, setShowClarifyDrawer] = useState(false)
 
-  const { tags, getTaskTagIds, setTaskTags, getTagsForTask } = useTagsContext()
+  const { getTaskTagIds, setTaskTags, getTagsForTask } = useTagsContext()
   const { settings } = useSettings()
   const aiConfigured = settings.aiProvider !== 'rules'
 
@@ -111,21 +113,19 @@ export function CardDetailModal({
 
       // Column shortcuts when not in an input
       if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-        if (e.key === '1') {
-          onMoveTask(task.id, 'backlog')
-        } else if (e.key === '2') {
-          onMoveTask(task.id, 'todo')
-        } else if (e.key === '3') {
-          onMoveTask(task.id, 'in-progress')
-        } else if (e.key === '4') {
-          onMoveTask(task.id, 'complete')
+        const shortcutIndex = Number.parseInt(e.key, 10)
+        if (!Number.isNaN(shortcutIndex) && shortcutIndex >= 1 && shortcutIndex <= 9) {
+          const shortcutColumn = columns[shortcutIndex - 1]
+          if (shortcutColumn) {
+            onMoveTask(task.id, shortcutColumn.id)
+          }
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, task.id, onClose, onMoveTask])
+  }, [columns, isOpen, task.id, onClose, onMoveTask])
 
   const handleTitleBlur = () => {
     if (title.trim() && title !== task.title) {
@@ -193,7 +193,7 @@ export function CardDetailModal({
 
   if (!isOpen) return null
 
-  const currentColumn = COLUMNS.find(c => c.id === task.column)
+  const currentColumn = columns.find(c => c.id === task.column)
   const priorityColor = PRIORITY_COLORS[task.priority || 'medium']
 
   return (
@@ -300,16 +300,16 @@ export function CardDetailModal({
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
                 aria-haspopup="listbox"
                 aria-expanded={showColumnMenu}
-                aria-label={`Status: ${currentColumn?.title}`}
+                aria-label={`Status: ${currentColumn?.title || task.column}`}
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
               >
-                {currentColumn?.title}
+                {currentColumn?.title || task.column}
               </button>
               {showColumnMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
                   <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[140px]">
-                    {COLUMNS.map((col, idx) => (
+                    {columns.map((col, idx) => (
                       <button
                         key={col.id}
                         onClick={() => {
@@ -322,7 +322,7 @@ export function CardDetailModal({
                         )}
                       >
                         {col.title}
-                        <span className="text-[var(--text-tertiary)]">{idx + 1}</span>
+                        <span className="text-[var(--text-tertiary)]">{idx < 9 ? idx + 1 : '•'}</span>
                       </button>
                     ))}
                   </div>

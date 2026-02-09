@@ -3,6 +3,7 @@
 import { memo, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { Check, ChevronLeft, ChevronRight, Edit2, Trash2, X } from 'lucide-react'
 import { KanbanTask, ColumnId } from '@/lib/types'
 import { useKanbanActions } from '@/contexts/KanbanActionsContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -19,6 +20,13 @@ interface ColumnProps {
   index: number
   accentColor: string
   onColorChange: (color: string) => void
+  canMoveLeft?: boolean
+  canMoveRight?: boolean
+  onMoveLeft?: () => void
+  onMoveRight?: () => void
+  isCustom?: boolean
+  onRename?: (title: string) => void
+  onDelete?: () => void | Promise<void>
   compact?: boolean
   focusedTaskId?: string | null
 }
@@ -30,12 +38,34 @@ export const Column = memo(function Column({
   index,
   accentColor,
   onColorChange,
+  canMoveLeft = false,
+  canMoveRight = false,
+  onMoveLeft,
+  onMoveRight,
+  isCustom = false,
+  onRename,
+  onDelete,
   compact = false,
   focusedTaskId,
 }: ColumnProps) {
   const { onAddTask } = useKanbanActions()
   const { setNodeRef, isOver } = useDroppable({ id })
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(title)
+
+  const handleStartRename = () => {
+    setDraftTitle(title)
+    setIsRenaming(true)
+  }
+
+  const handleSaveRename = () => {
+    if (!isCustom || !onRename) return
+    const normalizedTitle = draftTitle.trim()
+    if (!normalizedTitle) return
+    onRename(normalizedTitle)
+    setIsRenaming(false)
+  }
 
   return (
     <div
@@ -44,11 +74,87 @@ export const Column = memo(function Column({
       style={{ animationDelay: `${index * 0.1}s`, opacity: 0 }}
     >
       {/* Editorial Column Header */}
-      <div className="mb-6 px-1">
-        <div className="flex items-baseline gap-3 mb-1">
-          <h3 className="font-display text-2xl text-[var(--text-primary)] tracking-tight italic">
-            {title}
-          </h3>
+      <div className="mb-6 px-1 group">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <div className="min-w-0 flex-1">
+            {isRenaming && isCustom ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveRename()
+                    if (e.key === 'Escape') {
+                      setIsRenaming(false)
+                      setDraftTitle(title)
+                    }
+                  }}
+                  className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
+                />
+                <button
+                  onClick={handleSaveRename}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                  aria-label="Save column name"
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsRenaming(false)
+                    setDraftTitle(title)
+                  }}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                  aria-label="Cancel rename"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <h3 className="font-display text-2xl text-[var(--text-primary)] tracking-tight italic truncate">
+                {title}
+              </h3>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 opacity-40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={onMoveLeft}
+              disabled={!canMoveLeft}
+              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label={`Move ${title} left`}
+            >
+              <ChevronLeft size={12} />
+            </button>
+            <button
+              onClick={onMoveRight}
+              disabled={!canMoveRight}
+              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label={`Move ${title} right`}
+            >
+              <ChevronRight size={12} />
+            </button>
+            {isCustom && (
+              <>
+                <button
+                  onClick={handleStartRename}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                  aria-label={`Rename ${title}`}
+                >
+                  <Edit2 size={11} />
+                </button>
+                <button
+                  onClick={() => { void onDelete?.() }}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-red-400"
+                  aria-label={`Delete ${title}`}
+                >
+                  <Trash2 size={11} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mb-1">
           <span
             className="text-xs font-medium px-2 py-0.5"
             style={{

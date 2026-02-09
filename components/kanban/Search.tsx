@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Search as SearchIcon, X, Flag, Tag, Clock } from 'lucide-react'
-import { KanbanTask, LABELS, COLUMNS, isOverdue, isDueSoon } from '@/lib/types'
+import { Search as SearchIcon, X, Clock } from 'lucide-react'
+import { KanbanTask, LABELS, COLUMNS, KanbanColumn, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface SearchProps {
@@ -10,6 +10,7 @@ interface SearchProps {
   onClose: () => void
   onSearch: (query: string) => KanbanTask[]
   onSelectTask: (task: KanbanTask) => void
+  columns?: KanbanColumn[]
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -19,7 +20,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: '#ef4444',
 }
 
-export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps) {
+export function Search({ isOpen, onClose, onSearch, onSelectTask, columns = COLUMNS }: SearchProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<KanbanTask[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -119,7 +120,7 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
           {results.length > 0 && (
             <div id="search-results" role="listbox" aria-label="Search results" className="max-h-[50vh] overflow-y-auto py-2">
               {results.map((task, index) => {
-                const column = COLUMNS.find(c => c.id === task.column)
+                const column = columns.find(c => c.id === task.column)
                 const taskLabels = LABELS.filter(l => (task.labels || []).includes(l.id))
                 const priorityColor = PRIORITY_COLORS[task.priority || 'medium']
                 const hasDueDate = !!task.dueDate
@@ -156,7 +157,7 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask }: SearchProps)
                         <div className="flex items-center gap-3 mt-1.5">
                           {/* Column badge */}
                           <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-                            {column?.title}
+                            {column?.title || task.column}
                           </span>
 
                           {/* Labels */}

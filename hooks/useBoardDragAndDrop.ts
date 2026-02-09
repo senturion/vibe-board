@@ -6,17 +6,19 @@ import {
   DragOverEvent,
   DragStartEvent,
 } from '@dnd-kit/core'
-import { COLUMNS, ColumnId, KanbanTask } from '@/lib/types'
+import { ColumnId, KanbanTask } from '@/lib/types'
 import { haptics } from '@/lib/haptics'
 
 interface UseBoardDragAndDropOptions {
   tasks: KanbanTask[]
+  columns: { id: ColumnId }[]
   getTasksByColumn: (column: ColumnId) => KanbanTask[]
   moveTask: (taskId: string, toColumn: ColumnId, newOrder?: number) => Promise<void>
 }
 
 export function useBoardDragAndDrop({
   tasks,
+  columns,
   getTasksByColumn,
   moveTask,
 }: UseBoardDragAndDropOptions) {
@@ -42,7 +44,7 @@ export function useBoardDragAndDrop({
     const activeTaskItem = tasks.find(t => t.id === activeId)
     if (!activeTaskItem) return
 
-    const overColumn = COLUMNS.find(c => c.id === overId)
+    const overColumn = columns.find(c => c.id === overId)
     if (overColumn && activeTaskItem.column !== overColumn.id) {
       if (lastColumnRef.current !== overColumn.id) {
         lastColumnRef.current = overColumn.id
@@ -60,7 +62,7 @@ export function useBoardDragAndDrop({
       }
       moveTask(activeId, overTask.column)
     }
-  }, [tasks, moveTask])
+  }, [tasks, columns, moveTask])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event

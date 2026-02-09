@@ -117,7 +117,7 @@ export function useUndoRedoKanbanActions(boardId: string = '') {
     await rawMoveTask(taskId, toColumn, newOrder)
     // Only track column changes (not reordering within column)
     if (previousColumn !== toColumn) {
-      const toCol = COLUMNS.find(c => c.id === toColumn)?.title
+      const toCol = COLUMNS.find(c => c.id === toColumn)?.title || toColumn
       pushAction({
         type: 'move',
         description: `Moved to ${toCol}`,

@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Flag, ListChecks, Clock, Crosshair, ChevronDown } from 'lucide-react'
@@ -24,12 +24,11 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export const Card = memo(function Card({ task, index = 0, compact = false, accentColor, focusedTaskId }: CardProps) {
+export const Card = memo(function Card({ task, compact = false, accentColor, focusedTaskId }: CardProps) {
   const { onDeleteTask: onDelete, onUpdateTask: onUpdate, onOpenDetail, onToggleSubtask, onFocusTask } = useKanbanActions()
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const { settings } = useSettings()
-  const [showSubtasks, setShowSubtasks] = useState(false)
-  const userToggledSubtasks = useRef(false)
+  const [manualShowSubtasks, setManualShowSubtasks] = useState<boolean | null>(null)
 
   const {
     attributes,
@@ -51,6 +50,8 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
   const hasSubtasks = subtasks.length > 0
   const subtaskProgress = hasSubtasks ? Math.round((completedSubtasks / subtasks.length) * 100) : 0
   const maxSubtasksInCard = 4
+  const defaultShowSubtasks = !!settings.expandSubtasksByDefault && hasSubtasks
+  const showSubtasks = manualShowSubtasks ?? defaultShowSubtasks
   const labels = task.labels || []
   const taskLabels = LABELS.filter(l => labels.includes(l.id))
   const hasLabels = taskLabels.length > 0
@@ -64,12 +65,6 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
       onOpenDetail(task)
     }
   }
-
-  useEffect(() => {
-    if (!userToggledSubtasks.current) {
-      setShowSubtasks(!!settings.expandSubtasksByDefault && hasSubtasks)
-    }
-  }, [settings.expandSubtasksByDefault, hasSubtasks])
 
   // Compact mode: just title with subtle indicators
   if (compact) {
@@ -170,11 +165,6 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
             <p className="text-[13px] text-[var(--text-primary)] leading-relaxed break-words">
               {task.title}
             </p>
-            {task.description && (
-              <p className="mt-1 text-[11px] text-[var(--text-tertiary)] leading-relaxed line-clamp-2">
-                {task.description}
-              </p>
-            )}
             {/* Labels */}
             {hasLabels && (
               <div className="flex flex-wrap gap-1 mt-2">
@@ -221,8 +211,10 @@ export const Card = memo(function Card({ task, index = 0, compact = false, accen
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                userToggledSubtasks.current = true
-                setShowSubtasks((prev) => !prev)
+                setManualShowSubtasks((prev) => {
+                  const current = prev ?? defaultShowSubtasks
+                  return !current
+                })
               }}
               onPointerDown={(e) => e.stopPropagation()}
               aria-expanded={showSubtasks}

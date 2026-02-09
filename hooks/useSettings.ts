@@ -3,7 +3,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { DayOfWeek, GoalPlannerProvider, ViewId, WorkLocation } from '@/lib/types'
+import {
+  COLUMNS,
+  ColumnId,
+  DayOfWeek,
+  GoalPlannerProvider,
+  KanbanColumn,
+  ViewId,
+  WorkLocation,
+  normalizeColumnId,
+  normalizeColumnTitle,
+} from '@/lib/types'
 import type { Json } from '@/lib/supabase/types'
 
 export interface AppSettings {
@@ -18,6 +28,8 @@ export interface AppSettings {
   autoArchiveCompleted: boolean
   archiveAfterDays: number
   expandSubtasksByDefault: boolean
+  boardCustomColumns: Record<string, KanbanColumn[]>
+  boardColumnOrder: Record<string, ColumnId[]>
 
   // Work Location
   defaultWorkSchedule: Record<DayOfWeek, WorkLocation | null>
@@ -71,6 +83,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoArchiveCompleted: false,
   archiveAfterDays: 7,
   expandSubtasksByDefault: false,
+  boardCustomColumns: {},
+  boardColumnOrder: {},
 
   // Work Location
   defaultWorkSchedule: {
@@ -153,12 +167,69 @@ function normalizeSettings(raw: unknown, base: AppSettings = DEFAULT_SETTINGS): 
   const keyCandidate = typeof payload.aiApiKey === 'string' ? payload.aiApiKey : ''
   merged.aiApiKey = keyCandidate.trim().slice(0, 500)
 
+  const rawBoardCustomColumns = payload.boardCustomColumns
+  const reservedColumnIds = new Set(COLUMNS.map((column) => column.id))
+  const normalizedBoardColumns: Record<string, KanbanColumn[]> = {}
+
+  if (rawBoardCustomColumns && typeof rawBoardCustomColumns === 'object' && !Array.isArray(rawBoardCustomColumns)) {
+    for (const [boardId, rawColumns] of Object.entries(rawBoardCustomColumns as Record<string, unknown>)) {
+      if (!boardId || !Array.isArray(rawColumns)) continue
+      const seenIds = new Set<string>()
+      const parsedColumns: KanbanColumn[] = []
+
+      for (const rawColumn of rawColumns) {
+        if (!rawColumn || typeof rawColumn !== 'object' || Array.isArray(rawColumn)) continue
+        const candidate = rawColumn as { id?: unknown; title?: unknown }
+        const normalizedId = normalizeColumnId(typeof candidate.id === 'string' ? candidate.id : '')
+        const normalizedTitle = normalizeColumnTitle(typeof candidate.title === 'string' ? candidate.title : '')
+
+        if (!normalizedId || !normalizedTitle) continue
+        if (reservedColumnIds.has(normalizedId) || seenIds.has(normalizedId)) continue
+
+        seenIds.add(normalizedId)
+        parsedColumns.push({ id: normalizedId, title: normalizedTitle })
+      }
+
+      if (parsedColumns.length > 0) {
+        normalizedBoardColumns[boardId] = parsedColumns
+      }
+    }
+  }
+
+  merged.boardCustomColumns = normalizedBoardColumns
+
+  const rawBoardColumnOrder = payload.boardColumnOrder
+  const normalizedBoardColumnOrder: Record<string, ColumnId[]> = {}
+
+  if (rawBoardColumnOrder && typeof rawBoardColumnOrder === 'object' && !Array.isArray(rawBoardColumnOrder)) {
+    for (const [boardId, rawOrder] of Object.entries(rawBoardColumnOrder as Record<string, unknown>)) {
+      if (!boardId || !Array.isArray(rawOrder)) continue
+      const seenIds = new Set<string>()
+      const parsedOrder: ColumnId[] = []
+
+      for (const rawId of rawOrder) {
+        if (typeof rawId !== 'string') continue
+        const normalizedId = normalizeColumnId(rawId)
+        if (!normalizedId || seenIds.has(normalizedId)) continue
+        seenIds.add(normalizedId)
+        parsedOrder.push(normalizedId)
+      }
+
+      if (parsedOrder.length > 0) {
+        normalizedBoardColumnOrder[boardId] = parsedOrder
+      }
+    }
+  }
+
+  merged.boardColumnOrder = normalizedBoardColumnOrder
+
   return merged
 }
 
 function toCloudSettings(settings: AppSettings): Json {
-  const { aiApiKey, ...rest } = settings
-  return rest as unknown as Json
+  const cloudSettings = { ...settings } as Record<string, unknown>
+  delete cloudSettings.aiApiKey
+  return cloudSettings as Json
 }
 
 export function useSettings() {

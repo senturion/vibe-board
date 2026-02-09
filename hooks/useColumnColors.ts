@@ -12,6 +12,7 @@ const DEFAULT_COLORS: Record<ColumnId, string> = {
   'in-progress': '#4ade80',
   'complete': '#60a5fa',
 }
+const FALLBACK_COLOR = DEFAULT_COLORS.todo
 
 // Available color palette
 export const COLOR_PALETTE = [
@@ -83,7 +84,7 @@ export function useColumnColors() {
   }, [colors, setColors])
 
   const getColumnColor = (columnId: ColumnId): string => {
-    return colors[columnId] || DEFAULT_COLORS[columnId]
+    return colors[columnId] || DEFAULT_COLORS[columnId] || FALLBACK_COLOR
   }
 
   const resetColors = useCallback(() => {

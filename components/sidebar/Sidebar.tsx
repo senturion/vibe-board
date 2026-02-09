@@ -14,11 +14,12 @@ import {
   DeadlinesMiniWidget,
   StreaksMiniWidget,
   ActivityMiniWidget,
+  InsightsMiniWidget,
 } from './widgets'
 import { cn } from '@/lib/utils'
 
 // Define all available sidebar widgets
-type SidebarWidgetId = 'weather' | 'quote' | 'workLocation' | 'focus' | 'habits' | 'goals' | 'tasks' | 'notes' | 'deadlines' | 'streaks' | 'activity'
+type SidebarWidgetId = 'weather' | 'quote' | 'workLocation' | 'focus' | 'habits' | 'goals' | 'tasks' | 'notes' | 'deadlines' | 'streaks' | 'activity' | 'insights'
 
 interface SidebarWidgetConfig {
   id: SidebarWidgetId
@@ -40,6 +41,7 @@ const SIDEBAR_WIDGETS: SidebarWidgetConfig[] = [
   { id: 'activity', title: 'Recent Activity', component: ActivityMiniWidget, defaultVisible: false, defaultOrder: 8 },
   { id: 'tasks', title: 'Quick Tasks', component: () => <div className="max-h-[200px] overflow-y-auto"><TodoList compact /></div>, defaultVisible: true, defaultOrder: 9 },
   { id: 'notes', title: 'Quick Notes', component: () => <div className="max-h-[250px] overflow-y-auto"><Notes compact /></div>, defaultVisible: false, defaultOrder: 10 },
+  { id: 'insights', title: 'AI Insights', component: InsightsMiniWidget, defaultVisible: true, defaultOrder: 11 },
 ]
 
 interface SectionProps {

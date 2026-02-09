@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { KanbanTask, ColumnId, isOverdue, isDueSoon } from '@/lib/types'
 import { FilterState, SortState } from '@/components/FilterSort'
 
@@ -111,28 +111,16 @@ export function useFilteredTasks({
     }
   }, [tasks, getTaskTagIdsByTaskIds, taskTagsVersion])
 
-  // Pre-compute filtered+sorted results per column so we don't redo work on each call
-  const columnResults = useMemo(() => {
-    const columns: ColumnId[] = ['backlog', 'todo', 'in-progress', 'complete']
-    const results: Record<string, KanbanTask[]> = {}
-
-    for (const column of columns) {
-      let columnTasks = getTasksByColumn(column)
-      if (filters) {
-        columnTasks = applyFilters(columnTasks, filters, taskTagMap)
-      }
-      if (sort) {
-        columnTasks = applySorting(columnTasks, sort)
-      }
-      results[column] = columnTasks
-    }
-
-    return results
-  }, [getTasksByColumn, filters, sort, taskTagMap])
-
   const getFilteredTasksByColumn = useCallback((column: ColumnId) => {
-    return columnResults[column] || []
-  }, [columnResults])
+    let columnTasks = getTasksByColumn(column)
+    if (filters) {
+      columnTasks = applyFilters(columnTasks, filters, taskTagMap)
+    }
+    if (sort) {
+      columnTasks = applySorting(columnTasks, sort)
+    }
+    return columnTasks
+  }, [filters, getTasksByColumn, sort, taskTagMap])
 
   return {
     taskTagMap,
