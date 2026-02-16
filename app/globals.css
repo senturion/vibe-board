@@ -85,8 +85,8 @@
   --theme-transition: background-color 0.4s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Light theme */
-[data-theme="light"] {
+/* Sand theme */
+[data-theme="sand"] {
   /* Warm cream/paper backgrounds */
   --bg-primary: #faf8f5;
   --bg-secondary: #f2efe9;
@@ -154,6 +154,357 @@
   --heatmap-4: var(--success);
 }
 
+/* Midnight - Deep cool focus */
+[data-theme="midnight"] {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1e2536;
+  --bg-elevated: #252d40;
+
+  --border: #2a3348;
+  --border-subtle: #1e2a3e;
+
+  --text-primary: #e8ecf4;
+  --text-secondary: #8892a8;
+  --text-tertiary: #4f5b73;
+
+  --accent: #6c8aec;
+  --accent-muted: #5a75d4;
+  --accent-glow: rgba(108, 138, 236, 0.15);
+
+  --success: #6cc0a1;
+  --complete: #3d4f7c;
+
+  --chart-1: #6c8aec;
+  --chart-2: #6cc0a1;
+  --chart-3: #c084fc;
+  --chart-4: #f0b866;
+  --chart-5: #67c5d0;
+
+  --habit-complete: var(--success);
+  --habit-partial: #f0b866;
+  --habit-missed: #e0736a;
+
+  --focus-work: var(--accent);
+  --focus-break: var(--success);
+  --focus-long-break: #6cc0a1;
+
+  --goal-progress: var(--chart-2);
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  --routine-active: var(--accent);
+  --routine-complete: var(--success);
+
+  --journal-mood-1: #ef4444;
+  --journal-mood-2: #f97316;
+  --journal-mood-3: #eab308;
+  --journal-mood-4: #94a3b8;
+  --journal-mood-5: #84cc16;
+  --journal-mood-6: #22c55e;
+  --journal-mood-7: #c084fc;
+
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(108, 192, 161, 0.25);
+  --heatmap-2: rgba(108, 192, 161, 0.5);
+  --heatmap-3: rgba(108, 192, 161, 0.75);
+  --heatmap-4: var(--success);
+}
+
+/* Forest - Rich natural greens & amber */
+[data-theme="forest"] {
+  --bg-primary: #0b120d;
+  --bg-secondary: #141f16;
+  --bg-tertiary: #1d2b20;
+  --bg-elevated: #253528;
+
+  --border: #2e3d30;
+  --border-subtle: #223026;
+
+  --text-primary: #e4ebe5;
+  --text-secondary: #8a9a8c;
+  --text-tertiary: #556857;
+
+  --accent: #c4a35a;
+  --accent-muted: #b0923f;
+  --accent-glow: rgba(196, 163, 90, 0.15);
+
+  --success: #6aab7d;
+  --complete: #3d5b42;
+
+  --chart-1: #c4a35a;
+  --chart-2: #6aab7d;
+  --chart-3: #d4826a;
+  --chart-4: #8fbb6a;
+  --chart-5: #7ab5a0;
+
+  --habit-complete: var(--success);
+  --habit-partial: #c4a35a;
+  --habit-missed: #d4826a;
+
+  --focus-work: var(--accent);
+  --focus-break: var(--success);
+  --focus-long-break: #6aab7d;
+
+  --goal-progress: var(--chart-2);
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  --routine-active: var(--accent);
+  --routine-complete: var(--success);
+
+  --journal-mood-1: #d4564a;
+  --journal-mood-2: #d4826a;
+  --journal-mood-3: #c4a35a;
+  --journal-mood-4: #8a9a8c;
+  --journal-mood-5: #8fbb6a;
+  --journal-mood-6: #6aab7d;
+  --journal-mood-7: #c084a0;
+
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(106, 171, 125, 0.25);
+  --heatmap-2: rgba(106, 171, 125, 0.5);
+  --heatmap-3: rgba(106, 171, 125, 0.75);
+  --heatmap-4: var(--success);
+}
+
+/* Nord - Arctic muted */
+[data-theme="nord"] {
+  --bg-primary: #1a1e2e;
+  --bg-secondary: #222738;
+  --bg-tertiary: #2e3446;
+  --bg-elevated: #353c50;
+
+  --border: #3e4660;
+  --border-subtle: #313854;
+
+  --text-primary: #eceff4;
+  --text-secondary: #8890a4;
+  --text-tertiary: #5a6378;
+
+  --accent: #88c0d0;
+  --accent-muted: #72a8b8;
+  --accent-glow: rgba(136, 192, 208, 0.15);
+
+  --success: #a3be8c;
+  --complete: #4c566a;
+
+  --chart-1: #88c0d0;
+  --chart-2: #a3be8c;
+  --chart-3: #b48ead;
+  --chart-4: #ebcb8b;
+  --chart-5: #81a1c1;
+
+  --habit-complete: var(--success);
+  --habit-partial: #ebcb8b;
+  --habit-missed: #bf616a;
+
+  --focus-work: var(--accent);
+  --focus-break: var(--success);
+  --focus-long-break: #a3be8c;
+
+  --goal-progress: var(--chart-2);
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  --routine-active: var(--accent);
+  --routine-complete: var(--success);
+
+  --journal-mood-1: #bf616a;
+  --journal-mood-2: #d08770;
+  --journal-mood-3: #ebcb8b;
+  --journal-mood-4: #8890a4;
+  --journal-mood-5: #a3be8c;
+  --journal-mood-6: #88c0d0;
+  --journal-mood-7: #b48ead;
+
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(163, 190, 140, 0.25);
+  --heatmap-2: rgba(163, 190, 140, 0.5);
+  --heatmap-3: rgba(163, 190, 140, 0.75);
+  --heatmap-4: var(--success);
+
+  --font-display: var(--font-inter), system-ui, sans-serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Mono - Clean minimal */
+[data-theme="mono"] {
+  --bg-primary: #111111;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #222222;
+  --bg-elevated: #2a2a2a;
+
+  --border: #333333;
+  --border-subtle: #282828;
+
+  --text-primary: #e5e5e5;
+  --text-secondary: #888888;
+  --text-tertiary: #555555;
+
+  --accent: #ffffff;
+  --accent-muted: #cccccc;
+  --accent-glow: rgba(255, 255, 255, 0.08);
+
+  --success: #888888;
+  --complete: #333333;
+
+  --chart-1: #ffffff;
+  --chart-2: #aaaaaa;
+  --chart-3: #666666;
+  --chart-4: #cccccc;
+  --chart-5: #888888;
+
+  --habit-complete: #aaaaaa;
+  --habit-partial: #666666;
+  --habit-missed: #444444;
+
+  --focus-work: var(--accent);
+  --focus-break: #888888;
+  --focus-long-break: #888888;
+
+  --goal-progress: #aaaaaa;
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  --routine-active: var(--accent);
+  --routine-complete: #aaaaaa;
+
+  --journal-mood-1: #e5e5e5;
+  --journal-mood-2: #cccccc;
+  --journal-mood-3: #aaaaaa;
+  --journal-mood-4: #888888;
+  --journal-mood-5: #999999;
+  --journal-mood-6: #bbbbbb;
+  --journal-mood-7: #dddddd;
+
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(170, 170, 170, 0.2);
+  --heatmap-2: rgba(170, 170, 170, 0.4);
+  --heatmap-3: rgba(170, 170, 170, 0.6);
+  --heatmap-4: #aaaaaa;
+
+  --font-display: var(--font-mono), 'Courier New', monospace;
+  --font-body: var(--font-mono), 'Courier New', monospace;
+}
+
+/* Ocean - Deep sea calm */
+[data-theme="ocean"] {
+  --bg-primary: #0a1419;
+  --bg-secondary: #111f26;
+  --bg-tertiary: #1a2d36;
+  --bg-elevated: #223842;
+
+  --border: #2a4250;
+  --border-subtle: #1e3540;
+
+  --text-primary: #e0eef2;
+  --text-secondary: #7a9eaa;
+  --text-tertiary: #4a6e7c;
+
+  --accent: #4db8a4;
+  --accent-muted: #3da08e;
+  --accent-glow: rgba(77, 184, 164, 0.15);
+
+  --success: #68c4a0;
+  --complete: #2a5060;
+
+  --chart-1: #4db8a4;
+  --chart-2: #68c4a0;
+  --chart-3: #6a9fd4;
+  --chart-4: #e0a860;
+  --chart-5: #7ac4d4;
+
+  --habit-complete: var(--success);
+  --habit-partial: #e0a860;
+  --habit-missed: #d07060;
+
+  --focus-work: var(--accent);
+  --focus-break: var(--success);
+  --focus-long-break: #68c4a0;
+
+  --goal-progress: var(--chart-2);
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  --routine-active: var(--accent);
+  --routine-complete: var(--success);
+
+  --journal-mood-1: #d07060;
+  --journal-mood-2: #e09060;
+  --journal-mood-3: #e0c060;
+  --journal-mood-4: #7a9eaa;
+  --journal-mood-5: #68c4a0;
+  --journal-mood-6: #4db8a4;
+  --journal-mood-7: #a080c0;
+
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(104, 196, 160, 0.25);
+  --heatmap-2: rgba(104, 196, 160, 0.5);
+  --heatmap-3: rgba(104, 196, 160, 0.75);
+  --heatmap-4: var(--success);
+}
+
+/* Paper - Clean editorial */
+[data-theme="paper"] {
+  --bg-primary: #f4f1ec;
+  --bg-secondary: #eae6df;
+  --bg-tertiary: #ddd8cf;
+  --bg-elevated: #ffffff;
+
+  --border: #ccc6ba;
+  --border-subtle: #ddd8cf;
+
+  --text-primary: #1a1a18;
+  --text-secondary: #5c5850;
+  --text-tertiary: #8a857c;
+
+  --accent: #2d2d2d;
+  --accent-muted: #444444;
+  --accent-glow: rgba(45, 45, 45, 0.08);
+
+  --success: #5a8a6a;
+  --complete: #6a7080;
+
+  --chart-1: #2d2d2d;
+  --chart-2: #5a8a6a;
+  --chart-3: #8a6a5a;
+  --chart-4: #a08a5a;
+  --chart-5: #5a7a8a;
+
+  --habit-complete: var(--success);
+  --habit-partial: #a08a5a;
+  --habit-missed: #8a5a5a;
+
+  --focus-work: var(--accent);
+  --focus-break: var(--success);
+  --focus-long-break: #5a8a6a;
+
+  --goal-progress: var(--chart-2);
+  --goal-active: var(--accent);
+  --goal-paused: var(--text-tertiary);
+
+  --routine-active: var(--accent);
+  --routine-complete: var(--success);
+
+  --journal-mood-1: #b04040;
+  --journal-mood-2: #c07040;
+  --journal-mood-3: #b0a040;
+  --journal-mood-4: #808080;
+  --journal-mood-5: #60a040;
+  --journal-mood-6: #409040;
+  --journal-mood-7: #a060a0;
+
+  --heatmap-0: var(--bg-tertiary);
+  --heatmap-1: rgba(90, 138, 106, 0.2);
+  --heatmap-2: rgba(90, 138, 106, 0.4);
+  --heatmap-3: rgba(90, 138, 106, 0.6);
+  --heatmap-4: var(--success);
+
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-body: var(--font-source-serif), Georgia, serif;
+}
+
 @theme inline {
   --color-bg-primary: var(--bg-primary);
   --color-bg-secondary: var(--bg-secondary);
@@ -196,7 +547,8 @@ body::before {
   transition: opacity 0.4s ease;
 }
 
-[data-theme="light"] body::before {
+[data-theme="sand"] body::before,
+[data-theme="paper"] body::before {
   opacity: 0.015;
 }
 
