@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { ElementType } from 'react'
 import {
-  X, Moon, Sun, LayoutList, LayoutGrid, RotateCcw,
+  X, Sun, LayoutList, LayoutGrid, RotateCcw,
   ChevronDown, ChevronUp, Home, Building2, Target,
   ListChecks, BookOpen, Timer, CalendarDays, Kanban, Tag, Bell, Sparkles
 } from 'lucide-react'
@@ -12,6 +12,7 @@ import { COLOR_PALETTE } from '@/hooks/useColumnColors'
 import { useSettings } from '@/hooks/useSettings'
 import { useNotifications } from '@/hooks/useNotifications'
 import { cn } from '@/lib/utils'
+import { THEMES, ThemeId } from '@/lib/themes'
 import { TagManager } from '@/components/tags'
 
 interface SettingsPanelProps {
@@ -19,7 +20,8 @@ interface SettingsPanelProps {
   onClose: () => void
   // Legacy props for backward compatibility
   isDark: boolean
-  onToggleTheme: () => void
+  currentTheme: ThemeId
+  onSetTheme: (theme: ThemeId) => void
   compact: boolean
   onToggleCompact: () => void
   columnColors: Record<ColumnId, string>
@@ -136,7 +138,8 @@ export function SettingsPanel({
   isOpen,
   onClose,
   isDark,
-  onToggleTheme,
+  currentTheme,
+  onSetTheme,
   compact,
   onToggleCompact,
   columnColors,
@@ -214,31 +217,38 @@ export function SettingsPanel({
                   {/* Theme */}
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">Theme</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => isDark && onToggleTheme()}
-                        className={cn(
-                          'flex-1 flex items-center justify-center gap-2 py-2 border transition-colors',
-                          !isDark
-                            ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10'
-                            : 'border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)]'
-                        )}
-                      >
-                        <Sun size={14} />
-                        <span className="text-[10px] uppercase tracking-[0.1em]">Light</span>
-                      </button>
-                      <button
-                        onClick={() => !isDark && onToggleTheme()}
-                        className={cn(
-                          'flex-1 flex items-center justify-center gap-2 py-2 border transition-colors',
-                          isDark
-                            ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10'
-                            : 'border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)]'
-                        )}
-                      >
-                        <Moon size={14} />
-                        <span className="text-[10px] uppercase tracking-[0.1em]">Dark</span>
-                      </button>
+                    <div className="grid grid-cols-4 gap-3">
+                      {THEMES.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => onSetTheme(t.id)}
+                          className="flex flex-col items-center gap-1.5 group"
+                        >
+                          <div
+                            className={cn(
+                              'w-8 h-8 rounded-full overflow-hidden border-2 transition-all',
+                              currentTheme === t.id
+                                ? 'border-[var(--accent)] scale-110'
+                                : 'border-transparent hover:border-[var(--text-tertiary)]'
+                            )}
+                          >
+                            <div className="w-full h-full flex">
+                              <div className="w-1/2 h-full" style={{ backgroundColor: t.colors.bg }} />
+                              <div className="w-1/2 h-full" style={{ backgroundColor: t.colors.accent }} />
+                            </div>
+                          </div>
+                          <span
+                            className={cn(
+                              'text-[9px] uppercase tracking-[0.05em] transition-colors',
+                              currentTheme === t.id
+                                ? 'text-[var(--accent)]'
+                                : 'text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]'
+                            )}
+                          >
+                            {t.name}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
