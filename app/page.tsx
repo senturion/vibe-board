@@ -48,7 +48,7 @@ export default function Home() {
     deleteSubtask,
   } = useKanban(activeBoardId)
 
-  const { isDark, toggleTheme, mounted: themeMounted } = useTheme()
+  const { isDark, setTheme, theme, mounted: themeMounted } = useTheme()
   const { colors: columnColors, setColumnColor, resetColors } = useColumnColors()
 
   // Focus timer (lifted from FocusPage so FocusBar can access it)
@@ -285,7 +285,8 @@ export default function Home() {
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         isDark={isDark}
-        onToggleTheme={toggleTheme}
+        currentTheme={theme}
+        onSetTheme={setTheme}
         compact={compact}
         onToggleCompact={() => setCompact(!compact)}
         columnColors={columnColors}
