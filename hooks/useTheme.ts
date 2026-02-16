@@ -9,17 +9,17 @@ export function useTheme() {
   const [theme, setThemeState] = useState<ThemeId>(DEFAULT_DARK_THEME)
   const [mounted, setMounted] = useState(false)
   const { user } = useAuth()
-  const supabase = createClient()
 
   useEffect(() => {
     setMounted(true)
+
+    const supabase = createClient()
 
     const initTheme = async () => {
       // Check localStorage first for immediate display
       const stored = localStorage.getItem('theme')
       if (stored) {
         const migrated = migrateLegacyTheme(stored)
-        // Persist migration if value changed
         if (migrated !== stored) {
           localStorage.setItem('theme', migrated)
         }
@@ -32,7 +32,7 @@ export function useTheme() {
         document.documentElement.setAttribute('data-theme', defaultTheme)
       }
 
-      // If logged in, fetch from Supabase and sync
+      // If logged in, fetch from Supabase and sync (only on initial load)
       if (user) {
         const { data } = await supabase
           .from('user_settings')
@@ -49,7 +49,8 @@ export function useTheme() {
     }
 
     initTheme()
-  }, [user, supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   const setTheme = useCallback(async (newTheme: ThemeId) => {
     setThemeState(newTheme)
@@ -57,11 +58,12 @@ export function useTheme() {
     document.documentElement.setAttribute('data-theme', newTheme)
 
     if (user) {
+      const supabase = createClient()
       await supabase
         .from('user_settings')
         .upsert({ user_id: user.id, theme: newTheme })
     }
-  }, [user, supabase])
+  }, [user])
 
   const themeDefinition = getTheme(theme)
 
