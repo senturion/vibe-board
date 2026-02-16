@@ -3,11 +3,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-
-type Theme = 'dark' | 'light'
+import { ThemeId, DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME, getTheme, migrateLegacyTheme } from '@/lib/themes'
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>('dark')
+  const [theme, setThemeState] = useState<ThemeId>(DEFAULT_DARK_THEME)
   const [mounted, setMounted] = useState(false)
   const { user } = useAuth()
   const supabase = createClient()
@@ -16,14 +15,19 @@ export function useTheme() {
     setMounted(true)
 
     const initTheme = async () => {
-      // First check localStorage for immediate display
-      const stored = localStorage.getItem('theme') as Theme | null
+      // Check localStorage first for immediate display
+      const stored = localStorage.getItem('theme')
       if (stored) {
-        setThemeState(stored)
-        document.documentElement.setAttribute('data-theme', stored)
+        const migrated = migrateLegacyTheme(stored)
+        // Persist migration if value changed
+        if (migrated !== stored) {
+          localStorage.setItem('theme', migrated)
+        }
+        setThemeState(migrated)
+        document.documentElement.setAttribute('data-theme', migrated)
       } else {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        const defaultTheme = prefersDark ? 'dark' : 'light'
+        const defaultTheme = prefersDark ? DEFAULT_DARK_THEME : DEFAULT_LIGHT_THEME
         setThemeState(defaultTheme)
         document.documentElement.setAttribute('data-theme', defaultTheme)
       }
@@ -36,7 +40,7 @@ export function useTheme() {
           .single()
 
         if (data?.theme) {
-          const serverTheme = data.theme as Theme
+          const serverTheme = migrateLegacyTheme(data.theme)
           setThemeState(serverTheme)
           localStorage.setItem('theme', serverTheme)
           document.documentElement.setAttribute('data-theme', serverTheme)
@@ -47,12 +51,11 @@ export function useTheme() {
     initTheme()
   }, [user, supabase])
 
-  const setTheme = useCallback(async (newTheme: Theme) => {
+  const setTheme = useCallback(async (newTheme: ThemeId) => {
     setThemeState(newTheme)
     localStorage.setItem('theme', newTheme)
     document.documentElement.setAttribute('data-theme', newTheme)
 
-    // Sync to Supabase if logged in
     if (user) {
       await supabase
         .from('user_settings')
@@ -60,16 +63,13 @@ export function useTheme() {
     }
   }, [user, supabase])
 
-  const toggleTheme = useCallback(() => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
-  }, [theme, setTheme])
+  const themeDefinition = getTheme(theme)
 
   return {
     theme,
     setTheme,
-    toggleTheme,
-    isDark: theme === 'dark',
-    isLight: theme === 'light',
+    isDark: themeDefinition?.type === 'dark',
+    isLight: themeDefinition?.type === 'light',
     mounted,
   }
 }
