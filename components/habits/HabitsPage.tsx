@@ -15,6 +15,7 @@ import { StreakBadge, StatBadge } from '@/components/ui/Badge'
 import { HabitCard } from './HabitCard'
 import { HabitEditor } from './HabitEditor'
 import { HabitHeatmap } from './HabitHeatmap'
+import { HabitIcon } from './IconPicker'
 import { TemporalNav, DayView, WeekView, MonthView } from '@/components/temporal'
 
 type ViewMode = 'today' | 'all' | 'analytics' | 'calendar'
@@ -537,10 +538,10 @@ export function HabitsPage() {
                       style={{ borderLeft: `3px solid ${habit.color}` }}
                     >
                       <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                        style={{ backgroundColor: habit.color + '20', color: habit.color }}
+                        className="w-6 h-6 flex items-center justify-center"
+                        style={{ color: habit.color }}
                       >
-                        ✓
+                        <HabitIcon name={habit.icon || 'target'} size={16} color={habit.color} />
                       </div>
                       <span className="text-sm text-[var(--text-primary)]">{habit.name}</span>
                       {completion.count > 1 && (
@@ -566,9 +567,10 @@ export function HabitsPage() {
                   if (!habit) return null
                   return (
                     <div
-                      className="px-1.5 py-0.5 rounded text-[10px] truncate"
+                      className="px-1.5 py-0.5 rounded text-[10px] truncate flex items-center gap-1"
                       style={{ backgroundColor: habit.color + '20', color: habit.color }}
                     >
+                      <HabitIcon name={habit.icon || 'target'} size={10} color={habit.color} />
                       {habit.name}
                     </div>
                   )
@@ -588,33 +590,63 @@ export function HabitsPage() {
                   temporal.setMode('day')
                 }}
                 renderDayContent={(date, dayCompletions) => {
-                  // Group completions by habit
-                  const habitCounts = new Map<string, number>()
-                  dayCompletions.forEach(c => {
-                    habitCounts.set(c.habitId, (habitCounts.get(c.habitId) || 0) + c.count)
+                  // Get all active habits for this date
+                  const activeForDay = habits.filter(h => {
+                    if (!h.isActive) return false
+                    if (h.frequencyType === 'daily') return true
+                    if (h.frequencyType === 'specific_days') {
+                      const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay()
+                      return h.specificDays?.includes(dayOfWeek as DayOfWeek) ?? false
+                    }
+                    return true
                   })
 
-                  const uniqueHabits = Array.from(habitCounts.keys())
-                  const totalCompleted = uniqueHabits.length
+                  if (activeForDay.length === 0) return null
 
-                  if (totalCompleted === 0) return null
+                  // Build completion set for this day
+                  const completedHabitIds = new Set<string>()
+                  activeForDay.forEach(h => {
+                    if (h.habitType === 'avoid' && h.trackingMode === 'auto-complete') {
+                      // No completion record = success
+                      const hasSlip = dayCompletions.some(c => c.habitId === h.id)
+                      if (!hasSlip) completedHabitIds.add(h.id)
+                    } else {
+                      const total = dayCompletions
+                        .filter(c => c.habitId === h.id)
+                        .reduce((sum, c) => sum + c.count, 0)
+                      if (total >= h.targetCount) completedHabitIds.add(h.id)
+                    }
+                  })
+
+                  const displayHabits = activeForDay.slice(0, 4)
+                  const overflow = activeForDay.length - 4
+                  const allComplete = activeForDay.every(h => completedHabitIds.has(h.id))
+                  const noneComplete = activeForDay.every(h => !completedHabitIds.has(h.id))
+                  const isPast = date < new Date(new Date().toDateString())
 
                   return (
-                    <div className="space-y-0.5">
-                      {uniqueHabits.slice(0, 2).map(habitId => {
-                        const habit = habits.find(h => h.id === habitId)
-                        if (!habit) return null
-                        return (
-                          <div
-                            key={habitId}
-                            className="h-1.5 rounded-full"
-                            style={{ backgroundColor: habit.color }}
+                    <div className={cn(
+                      'space-y-0.5',
+                      allComplete && 'border-l-2 border-[var(--success)] -ml-1 pl-0.5',
+                      !allComplete && noneComplete && isPast && 'border-l-2 border-red-400/30 -ml-1 pl-0.5'
+                    )}>
+                      <div className="flex flex-wrap gap-0.5">
+                        {displayHabits.map(h => (
+                          <HabitIcon
+                            key={h.id}
+                            name={h.icon || 'target'}
+                            size={12}
+                            color={h.color}
+                            className={cn(
+                              'transition-opacity',
+                              completedHabitIds.has(h.id) ? 'opacity-100' : 'opacity-30'
+                            )}
                           />
-                        )
-                      })}
-                      {totalCompleted > 2 && (
-                        <div className="text-[9px] text-[var(--text-tertiary)]">
-                          +{totalCompleted - 2}
+                        ))}
+                      </div>
+                      {overflow > 0 && (
+                        <div className="text-[8px] text-[var(--text-tertiary)]">
+                          +{overflow}
                         </div>
                       )}
                     </div>
