@@ -253,6 +253,8 @@ create table public.habits (
   is_active boolean default true not null,
   color text default '#e07a5f' not null,
   icon text, -- lucide icon name
+  habit_type text not null default 'build', -- 'build' or 'avoid'
+  tracking_mode text not null default 'manual', -- 'manual' or 'auto-complete'
   "order" integer not null default 0,
   created_at timestamptz default now() not null,
   archived_at timestamptz
