@@ -1,9 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, MoreHorizontal, Edit2, Trash2, Archive, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Check, MoreHorizontal, Edit2, Trash2, Archive, TrendingUp, AlertTriangle, Ban } from 'lucide-react'
 import { Habit, DAYS_OF_WEEK, getWeekStart, isHabitActiveToday } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { HabitIcon } from './IconPicker'
 import { StreakBadge } from '@/components/ui/Badge'
 import { ProgressRing } from '@/components/ui/Progress'
 import { useSettings } from '@/hooks/useSettings'
@@ -37,6 +38,8 @@ export function HabitCard({
   const { settings } = useSettings()
   const showWeeklyProgress = habit.frequencyType === 'weekly'
   const showTargetProgress = habit.targetCount > 1 && !showWeeklyProgress
+  const isAvoid = habit.habitType === 'avoid'
+  const isAutoComplete = habit.trackingMode === 'auto-complete'
   const weeklyProgress = showWeeklyProgress && completionStatus.target > 0
     ? Math.min(100, (completionStatus.count / completionStatus.target) * 100)
     : 0
@@ -110,6 +113,9 @@ export function HabitCard({
         </button>
 
         {/* Name */}
+        {habit.icon && (
+          <HabitIcon name={habit.icon} size={12} color={habit.color} className="shrink-0" />
+        )}
         <span
           className={cn(
             'flex-1 text-[13px] font-medium truncate',
@@ -188,6 +194,9 @@ export function HabitCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
+            {habit.icon && (
+              <HabitIcon name={habit.icon} size={14} color={habit.color} className="shrink-0" />
+            )}
             <h3
               className={cn(
                 'text-sm font-medium truncate',
@@ -208,12 +217,38 @@ export function HabitCard({
                 {completionStatus.count}/{completionStatus.target}
               </span>
             )}
+            {isAvoid && isAutoComplete && (
+              <span className={cn(
+                'text-[10px] px-1.5 py-0.5',
+                completionStatus.completed
+                  ? 'text-amber-400 bg-amber-400/10'
+                  : 'text-[var(--success)] bg-[var(--success)]/10'
+              )}>
+                {completionStatus.completed ? 'Slipped' : 'Clean'}
+              </span>
+            )}
+            {isAvoid && !isAutoComplete && (
+              <span className={cn(
+                'text-[10px] px-1.5 py-0.5',
+                completionStatus.completed
+                  ? 'text-[var(--success)] bg-[var(--success)]/10'
+                  : 'text-[var(--text-tertiary)] bg-[var(--bg-tertiary)]'
+              )}>
+                {completionStatus.completed ? 'Confirmed' : 'Not tracked'}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3 mt-1">
             <span className="text-[11px] text-[var(--text-tertiary)]">
               {frequencyLabel()}
             </span>
+            {isAvoid && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                <Ban size={10} />
+                Avoid
+              </span>
+            )}
             {showWeeklyProgress && (
               <ProgressRing
                 value={weeklyProgress}
