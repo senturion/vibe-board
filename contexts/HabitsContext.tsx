@@ -265,6 +265,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
   const updateHabit = useCallback(async (id: string, updates: Partial<Habit>) => {
     if (!user) return
 
+    const oldHabit = habits.find(h => h.id === id)
+
     const dbUpdates: Record<string, unknown> = {}
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.description !== undefined) dbUpdates.description = updates.description
@@ -290,7 +292,81 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     }
 
     setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h))
-  }, [user, supabase])
+
+    // Migrate completions when switching from build → avoid+auto-complete
+    const wasAutoComplete = oldHabit?.habitType === 'avoid' && oldHabit?.trackingMode === 'auto-complete'
+    const becomingAutoComplete = updates.habitType === 'avoid' && updates.trackingMode === 'auto-complete'
+    if (oldHabit && !wasAutoComplete && becomingAutoComplete) {
+      await migrateCompletionsForAvoid(id, oldHabit)
+    }
+  }, [user, supabase, habits])
+
+  // Invert completion records when switching to avoid+auto-complete
+  const migrateCompletionsForAvoid = useCallback(async (habitId: string, habit: Habit) => {
+    if (!user) return
+
+    const habitCompletions = completions.filter(c => c.habitId === habitId)
+    const existingDates = new Set(habitCompletions.map(c => c.completionDate))
+
+    // All applicable dates from creation to yesterday
+    const startDate = new Date(habit.createdAt)
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    const datesToCreate: string[] = []
+    for (let d = new Date(startDate); d <= yesterday; d.setDate(d.getDate() + 1)) {
+      if (habit.frequencyType === 'specific_days') {
+        const dow = d.getDay() === 0 ? 7 : d.getDay()
+        if (!habit.specificDays?.includes(dow as DayOfWeek)) continue
+      }
+      const key = formatDateKey(new Date(d))
+      if (!existingDates.has(key)) datesToCreate.push(key)
+    }
+
+    // Delete old completions (were successes, no record needed in auto-complete)
+    const idsToDelete = habitCompletions.map(c => c.id)
+    if (idsToDelete.length > 0) {
+      await supabase.from('habit_completions').delete().in('id', idsToDelete)
+    }
+
+    // Create records for unmarked days (now slips in auto-complete)
+    let newCompletions: HabitCompletion[] = []
+    if (datesToCreate.length > 0) {
+      const inserts = datesToCreate.map(dateKey => ({
+        user_id: user.id,
+        habit_id: habitId,
+        completion_date: dateKey,
+        count: 1,
+      }))
+      const { data } = await supabase
+        .from('habit_completions')
+        .insert(inserts)
+        .select()
+
+      if (data) {
+        newCompletions = data.map(row => ({
+          id: row.id,
+          habitId: row.habit_id,
+          completionDate: row.completion_date,
+          count: row.count,
+          completedAt: new Date(row.completed_at).getTime(),
+        }))
+      }
+    }
+
+    // Update local state
+    setCompletions(prev => [
+      ...prev.filter(c => c.habitId !== habitId),
+      ...newCompletions,
+    ])
+
+    // Clear cached streak so it recomputes from new completions
+    setStreaks(prev => {
+      const next = new Map(prev)
+      next.delete(habitId)
+      return next
+    })
+  }, [user, supabase, completions])
 
   // Archive a habit
   const archiveHabit = useCallback(async (id: string) => {
