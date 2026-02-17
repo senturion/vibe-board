@@ -1,9 +1,28 @@
 'use client'
 
 import { useMemo } from 'react'
-import * as LucideIcons from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  Dumbbell, Bike, Footprints, Heart, Activity,
+  Moon, Sun, Droplets, Apple, Leaf,
+  Book, BookOpen, Brain, Pencil, GraduationCap,
+  Users, MessageCircle, Phone, HeartHandshake,
+  Clock, Target, Zap, SquareCheck, ListTodo,
+  Ban, ShieldOff, CircleOff, XCircle, Coffee, Wine, Cigarette, Smartphone,
+} from 'lucide-react'
 import { HABIT_ICON_GROUPS } from '@/lib/constants/habit-icons'
 import { cn } from '@/lib/utils'
+
+// Explicit map — Next.js tree-shakes `import *` for lucide-react
+const ICON_MAP: Record<string, LucideIcon> = {
+  dumbbell: Dumbbell, bike: Bike, footprints: Footprints, heart: Heart, activity: Activity,
+  moon: Moon, sun: Sun, droplets: Droplets, apple: Apple, leaf: Leaf,
+  book: Book, 'book-open': BookOpen, brain: Brain, pencil: Pencil, 'graduation-cap': GraduationCap,
+  users: Users, 'message-circle': MessageCircle, phone: Phone, 'hand-heart': HeartHandshake,
+  clock: Clock, target: Target, zap: Zap, 'check-square': SquareCheck, 'list-todo': ListTodo,
+  ban: Ban, 'shield-x': ShieldOff, 'circle-off': CircleOff, 'x-circle': XCircle,
+  coffee: Coffee, wine: Wine, cigarette: Cigarette, smartphone: Smartphone,
+}
 
 interface IconPickerProps {
   selected: string | undefined
@@ -11,15 +30,8 @@ interface IconPickerProps {
   color: string
 }
 
-/** Convert kebab-case icon name to PascalCase component name */
-function getIconComponent(name: string): LucideIcons.LucideIcon | null {
-  const pascalCase = name
-    .split('-')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('')
-
-  const icon = (LucideIcons as Record<string, unknown>)[pascalCase]
-  return (typeof icon === 'function' ? icon : null) as LucideIcons.LucideIcon | null
+function getIconComponent(name: string): LucideIcon | null {
+  return ICON_MAP[name] || null
 }
 
 export function IconPicker({ selected, onSelect, color }: IconPickerProps) {
