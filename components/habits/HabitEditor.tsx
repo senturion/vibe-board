@@ -12,6 +12,9 @@ import {
   HABIT_COLORS,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { IconPicker } from './IconPicker'
+import { HabitType, TrackingMode } from '@/lib/types'
+import { inferIconFromName } from '@/lib/constants/habit-icons'
 
 interface HabitEditorProps {
   isOpen: boolean
@@ -36,6 +39,9 @@ export function HabitEditor({
   const [specificDays, setSpecificDays] = useState<DayOfWeek[]>(DAY_PRESETS.weekdays)
   const [targetCount, setTargetCount] = useState(1)
   const [color, setColor] = useState(HABIT_COLORS[0])
+  const [habitType, setHabitType] = useState<HabitType>('build')
+  const [trackingMode, setTrackingMode] = useState<TrackingMode>('manual')
+  const [icon, setIcon] = useState<string | undefined>()
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -51,6 +57,9 @@ export function HabitEditor({
         setSpecificDays(habit.specificDays || DAY_PRESETS.weekdays)
         setTargetCount(habit.targetCount)
         setColor(habit.color)
+        setHabitType(habit.habitType || 'build')
+        setTrackingMode(habit.trackingMode || 'manual')
+        setIcon(habit.icon)
       } else {
         setName('')
         setDescription('')
@@ -60,6 +69,9 @@ export function HabitEditor({
         setSpecificDays(DAY_PRESETS.weekdays)
         setTargetCount(1)
         setColor(HABIT_COLORS[0])
+        setHabitType('build')
+        setTrackingMode('manual')
+        setIcon(undefined)
       }
       setTimeout(() => nameInputRef.current?.focus(), 100)
     }, 0)
@@ -78,10 +90,12 @@ export function HabitEditor({
       frequencyType,
       frequencyValue,
       specificDays: frequencyType === 'specific_days' ? specificDays : undefined,
-      targetCount,
+      targetCount: habitType === 'avoid' ? 1 : targetCount,
       isActive: true,
       color,
-      icon: undefined,
+      icon: icon || inferIconFromName(name.trim()),
+      habitType,
+      trackingMode: habitType === 'avoid' ? trackingMode : 'manual',
     })
 
     onClose()
@@ -127,6 +141,82 @@ export function HabitEditor({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Habit Type */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+              Type
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setHabitType('build')}
+                className={cn(
+                  'flex-1 px-3 py-2 text-[12px] border transition-colors',
+                  habitType === 'build'
+                    ? 'bg-[var(--accent-glow)] border-[var(--accent-muted)] text-[var(--accent)]'
+                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
+                )}
+              >
+                Build
+              </button>
+              <button
+                type="button"
+                onClick={() => setHabitType('avoid')}
+                className={cn(
+                  'flex-1 px-3 py-2 text-[12px] border transition-colors',
+                  habitType === 'avoid'
+                    ? 'bg-[var(--accent-glow)] border-[var(--accent-muted)] text-[var(--accent)]'
+                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
+                )}
+              >
+                Avoid
+              </button>
+            </div>
+            <p className="text-[10px] text-[var(--text-tertiary)] mt-1">
+              {habitType === 'build' ? 'Do something regularly' : 'Stop doing something'}
+            </p>
+          </div>
+
+          {/* Tracking Mode (avoid only) */}
+          {habitType === 'avoid' && (
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+                Tracking
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTrackingMode('auto-complete')}
+                  className={cn(
+                    'flex-1 px-3 py-2 text-[12px] border transition-colors',
+                    trackingMode === 'auto-complete'
+                      ? 'bg-[var(--accent-glow)] border-[var(--accent-muted)] text-[var(--accent)]'
+                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
+                  )}
+                >
+                  Mark failures
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTrackingMode('manual')}
+                  className={cn(
+                    'flex-1 px-3 py-2 text-[12px] border transition-colors',
+                    trackingMode === 'manual'
+                      ? 'bg-[var(--accent-glow)] border-[var(--accent-muted)] text-[var(--accent)]'
+                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
+                  )}
+                >
+                  Confirm daily
+                </button>
+              </div>
+              <p className="text-[10px] text-[var(--text-tertiary)] mt-1">
+                {trackingMode === 'auto-complete'
+                  ? 'Assumed successful — only log slips'
+                  : 'Manually confirm avoidance each day'}
+              </p>
+            </div>
+          )}
+
           {/* Name */}
           <div>
             <label className="block text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
@@ -260,28 +350,30 @@ export function HabitEditor({
           )}
 
           {/* Target count */}
-          <div>
-            <label className="block text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
-              Target per day
-            </label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setTargetCount(val)}
-                  className={cn(
-                    'w-10 h-8 text-[12px] border transition-colors',
-                    targetCount === val
-                      ? 'bg-[var(--accent-glow)] border-[var(--accent-muted)] text-[var(--accent)]'
-                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
-                  )}
-                >
-                  {val}x
-                </button>
-              ))}
+          {habitType === 'build' && (
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+                Target per day
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setTargetCount(val)}
+                    className={cn(
+                      'w-10 h-8 text-[12px] border transition-colors',
+                      targetCount === val
+                        ? 'bg-[var(--accent-glow)] border-[var(--accent-muted)] text-[var(--accent)]'
+                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
+                    )}
+                  >
+                    {val}x
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Color */}
           <div>
@@ -305,6 +397,18 @@ export function HabitEditor({
                 />
               ))}
             </div>
+          </div>
+
+          {/* Icon */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">
+              Icon
+            </label>
+            <IconPicker
+              selected={icon}
+              onSelect={setIcon}
+              color={color}
+            />
           </div>
 
           {/* Category */}
