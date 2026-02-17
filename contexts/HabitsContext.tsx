@@ -11,6 +11,8 @@ import {
   HabitCategory,
   HabitCompletion,
   HabitStreak,
+  HabitType,
+  TrackingMode,
   FrequencyType,
   DayOfWeek,
   formatDateKey,
@@ -135,6 +137,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         isActive: h.is_active,
         color: h.color,
         icon: h.icon || undefined,
+        habitType: ((h as any).habit_type || 'build') as HabitType,
+        trackingMode: ((h as any).tracking_mode || 'manual') as TrackingMode,
         order: h.order,
         createdAt: new Date(h.created_at).getTime(),
         archivedAt: h.archived_at ? new Date(h.archived_at).getTime() : undefined,
@@ -202,6 +206,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         is_active: habit.isActive,
         color: habit.color,
         icon: habit.icon || null,
+        habit_type: habit.habitType || 'build',
+        tracking_mode: habit.trackingMode || 'manual',
         order,
       })
       .select()
@@ -224,6 +230,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
       isActive: data.is_active,
       color: data.color,
       icon: data.icon || undefined,
+      habitType: ((data as any).habit_type || 'build') as HabitType,
+      trackingMode: ((data as any).tracking_mode || 'manual') as TrackingMode,
       order: data.order,
       createdAt: new Date(data.created_at).getTime(),
     }
@@ -268,6 +276,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
     if (updates.color !== undefined) dbUpdates.color = updates.color
     if (updates.icon !== undefined) dbUpdates.icon = updates.icon
+    if (updates.habitType !== undefined) dbUpdates.habit_type = updates.habitType
+    if (updates.trackingMode !== undefined) dbUpdates.tracking_mode = updates.trackingMode
 
     const { error } = await supabase
       .from('habits')
@@ -373,6 +383,65 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
   const computeStreakFromCompletions = useCallback((habitId: string, completionsOverride?: HabitCompletion[]) => {
     const habit = habits.find(h => h.id === habitId)
     if (!habit) return undefined
+
+    // For avoid habits with auto-complete, streak = consecutive days with NO completions (no slips)
+    const isAvoidAutoComplete = habit.habitType === 'avoid' && habit.trackingMode === 'auto-complete'
+
+    if (isAvoidAutoComplete) {
+      const sourceCompletions = completionsOverride || completions
+      const slipDates = new Set<string>()
+      sourceCompletions.forEach((completion) => {
+        if (completion.habitId !== habitId) return
+        slipDates.add(completion.completionDate)
+      })
+
+      // Count consecutive clean days going backward from today
+      const today = new Date()
+      const todayKey = formatDateKey(today)
+
+      let currentStreak = 0
+      let cursor = new Date(today)
+
+      // Check today first
+      if (!slipDates.has(todayKey)) {
+        currentStreak = 1
+        cursor.setDate(cursor.getDate() - 1)
+
+        while (true) {
+          const key = formatDateKey(cursor)
+          // Don't count days before habit was created
+          if (cursor.getTime() < habit.createdAt) break
+          if (slipDates.has(key)) break
+          currentStreak += 1
+          cursor.setDate(cursor.getDate() - 1)
+        }
+      }
+
+      // Calculate best streak: find longest gap between slips
+      const habitCreatedDate = new Date(habit.createdAt)
+      const sortedSlips = Array.from(slipDates).sort()
+
+      let bestStreak = currentStreak
+      let prevDate = habitCreatedDate
+
+      for (const slipKey of sortedSlips) {
+        const slipDate = parseDateKey(slipKey)
+        const daysBetween = Math.floor((slipDate.getTime() - prevDate.getTime()) / 86400000)
+        if (daysBetween > bestStreak) bestStreak = daysBetween
+        prevDate = new Date(slipDate)
+        prevDate.setDate(prevDate.getDate() + 1) // day after the slip
+      }
+
+      // Check streak from last slip to today
+      const daysSinceLastSlip = sortedSlips.length > 0
+        ? Math.floor((today.getTime() - parseDateKey(sortedSlips[sortedSlips.length - 1]).getTime()) / 86400000)
+        : Math.floor((today.getTime() - habitCreatedDate.getTime()) / 86400000) + 1
+      if (daysSinceLastSlip > bestStreak) bestStreak = daysSinceLastSlip
+
+      const lastCompletionDate = sortedSlips.length > 0 ? sortedSlips[sortedSlips.length - 1] : undefined
+
+      return { currentStreak, bestStreak, lastCompletionDate }
+    }
 
     const sourceCompletions = completionsOverride || completions
     const dailyCounts = new Map<string, number>()
