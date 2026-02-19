@@ -690,12 +690,12 @@ export function HabitsPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <StatBadge
                     value={selectedHabitAnalytics.stats.totalCompletions}
-                    label="Total Completions"
+                    label={selectedHabitForStats.habitType === 'avoid' && selectedHabitForStats.trackingMode === 'auto-complete' ? 'Total Slips' : 'Total Completions'}
                     icon="target"
                   />
                   <StatBadge
                     value={`${selectedHabitAnalytics.stats.completionRate}%`}
-                    label="Completion Rate"
+                    label={selectedHabitForStats.habitType === 'avoid' && selectedHabitForStats.trackingMode === 'auto-complete' ? 'Success Rate' : 'Completion Rate'}
                     icon="zap"
                   />
                   <StatBadge
@@ -729,7 +729,7 @@ export function HabitsPage() {
                   <CardHeader>
                     <CardTitle>
                       <BarChart3 size={14} className="mr-2 inline" />
-                      Weekly Completion Rate
+                      {selectedHabitForStats.habitType === 'avoid' && selectedHabitForStats.trackingMode === 'auto-complete' ? 'Weekly Success Rate' : 'Weekly Completion Rate'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
