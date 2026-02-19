@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, MoreHorizontal, Edit2, Trash2, Archive, TrendingUp, AlertTriangle, Ban } from 'lucide-react'
+import { Check, X, MoreHorizontal, Edit2, Trash2, Archive, TrendingUp, AlertTriangle, Ban } from 'lucide-react'
 import { Habit, DAYS_OF_WEEK, getWeekStart, isHabitActiveToday } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { HabitIcon } from './IconPicker'
@@ -85,14 +85,20 @@ export function HabitCard({
     }
   }
 
+  // Avoid+auto-complete: "completed" means slipped (bad), unchecked means clean (good)
+  const isSlip = isAvoid && isAutoComplete && completionStatus.completed
+  const isSuccess = isAvoid && isAutoComplete ? !completionStatus.completed : completionStatus.completed
+
   if (compact) {
     return (
       <div
         className={cn(
           'flex items-center gap-3 p-3 border transition-all',
-          completionStatus.completed
-            ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
-            : 'bg-[var(--bg-secondary)] border-[var(--border)] hover:border-[var(--text-tertiary)]'
+          isSlip
+            ? 'bg-amber-400/5 border-amber-400/20'
+            : isSuccess
+              ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
+              : 'bg-[var(--bg-secondary)] border-[var(--border)] hover:border-[var(--text-tertiary)]'
         )}
       >
         {/* Checkbox */}
@@ -100,16 +106,22 @@ export function HabitCard({
           onClick={onToggle}
           className={cn(
             'flex-shrink-0 w-6 h-6 border-2 flex items-center justify-center transition-all',
-            completionStatus.completed
-              ? 'border-[var(--success)] bg-[var(--success)]'
-              : 'border-[var(--border)] hover:border-[var(--text-tertiary)]'
+            isSlip
+              ? 'border-amber-400 bg-amber-400'
+              : completionStatus.completed
+                ? 'border-[var(--success)] bg-[var(--success)]'
+                : isAvoid && isAutoComplete
+                  ? 'border-[var(--success)] hover:border-amber-400'
+                  : 'border-[var(--border)] hover:border-[var(--text-tertiary)]'
           )}
           style={{
-            borderColor: completionStatus.completed ? undefined : habit.color,
-            backgroundColor: completionStatus.completed ? habit.color : undefined,
+            borderColor: isSlip ? undefined : completionStatus.completed ? undefined : habit.color,
+            backgroundColor: isSlip ? undefined : completionStatus.completed ? habit.color : undefined,
           }}
         >
-          {completionStatus.completed && <Check size={14} className="text-[var(--bg-primary)]" />}
+          {isSlip && <X size={14} className="text-[var(--bg-primary)]" />}
+          {!isSlip && completionStatus.completed && <Check size={14} className="text-[var(--bg-primary)]" />}
+          {!completionStatus.completed && isAvoid && isAutoComplete && <Check size={14} className="text-[var(--success)]" />}
         </button>
 
         {/* Name */}
@@ -119,7 +131,7 @@ export function HabitCard({
         <span
           className={cn(
             'flex-1 text-[13px] font-medium truncate',
-            completionStatus.completed ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-primary)]'
+            isSlip ? 'text-amber-400' : isSuccess ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-primary)]'
           )}
         >
           {habit.name}
@@ -160,35 +172,41 @@ export function HabitCard({
     <div
       className={cn(
         'relative group p-4 border transition-all',
-        completionStatus.completed
-          ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
-          : 'bg-[var(--bg-secondary)] border-[var(--border)] hover:border-[var(--text-tertiary)]'
+        isSlip
+          ? 'bg-amber-400/5 border-amber-400/20'
+          : isSuccess
+            ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
+            : 'bg-[var(--bg-secondary)] border-[var(--border)] hover:border-[var(--text-tertiary)]'
       )}
     >
       {/* Color indicator */}
       <div
         className="absolute left-0 top-0 bottom-0 w-1"
-        style={{ backgroundColor: habit.color }}
+        style={{ backgroundColor: isSlip ? 'rgb(251 191 36)' : habit.color }}
       />
 
       <div className="flex items-start gap-3 pl-2">
-        {/* Checkbox */}
+        {/* Checkbox / Slip toggle */}
         <button
           onClick={onToggle}
           className={cn(
             'flex-shrink-0 w-7 h-7 border-2 flex items-center justify-center transition-all mt-0.5',
-            completionStatus.completed
-              ? 'bg-[var(--success)]'
-              : 'hover:border-[var(--text-tertiary)]'
+            isSlip
+              ? 'border-amber-400 bg-amber-400'
+              : completionStatus.completed
+                ? 'bg-[var(--success)]'
+                : isAvoid && isAutoComplete
+                  ? 'border-[var(--success)] hover:border-amber-400'
+                  : 'hover:border-[var(--text-tertiary)]'
           )}
           style={{
-            borderColor: completionStatus.completed ? 'var(--success)' : habit.color,
-            backgroundColor: completionStatus.completed ? habit.color : undefined,
+            borderColor: isSlip ? undefined : completionStatus.completed ? 'var(--success)' : habit.color,
+            backgroundColor: isSlip ? undefined : completionStatus.completed ? habit.color : undefined,
           }}
         >
-          {completionStatus.completed && (
-            <Check size={16} className="text-[var(--bg-primary)]" />
-          )}
+          {isSlip && <X size={16} className="text-[var(--bg-primary)]" />}
+          {!isSlip && completionStatus.completed && <Check size={16} className="text-[var(--bg-primary)]" />}
+          {!completionStatus.completed && isAvoid && isAutoComplete && <Check size={14} className="text-[var(--success)]" />}
         </button>
 
         {/* Content */}
@@ -200,9 +218,11 @@ export function HabitCard({
             <h3
               className={cn(
                 'text-sm font-medium truncate',
-                completionStatus.completed
-                  ? 'text-[var(--text-tertiary)] line-through'
-                  : 'text-[var(--text-primary)]'
+                isSlip
+                  ? 'text-amber-400'
+                  : isSuccess && !isAvoid
+                    ? 'text-[var(--text-tertiary)] line-through'
+                    : 'text-[var(--text-primary)]'
               )}
             >
               {habit.name}
