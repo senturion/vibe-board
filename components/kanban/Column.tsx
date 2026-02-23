@@ -29,6 +29,7 @@ interface ColumnProps {
   onDelete?: () => void | Promise<void>
   compact?: boolean
   focusedTaskId?: string | null
+  staleTaskIds?: Set<string>
 }
 
 export const Column = memo(function Column({
@@ -47,6 +48,7 @@ export const Column = memo(function Column({
   onDelete,
   compact = false,
   focusedTaskId,
+  staleTaskIds,
 }: ColumnProps) {
   const { onAddTask } = useKanbanActions()
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -233,6 +235,7 @@ export const Column = memo(function Column({
                 compact={compact}
                 accentColor={accentColor}
                 focusedTaskId={focusedTaskId}
+                isStale={staleTaskIds?.has(task.id)}
               />
             </ErrorBoundary>
           ))}

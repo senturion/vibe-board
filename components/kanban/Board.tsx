@@ -19,6 +19,8 @@ import { useBoardDragAndDrop } from '@/hooks/useBoardDragAndDrop'
 import { useBoardKeyboardShortcuts, useCloseOnAnyKey } from '@/hooks/useBoardKeyboardShortcuts'
 import { useColumnColors } from '@/hooks/useColumnColors'
 import { useSettings } from '@/hooks/useSettings'
+import { useBoards } from '@/hooks/useBoards'
+import { useStaleTasks } from '@/hooks/useStaleTasks'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { cn } from '@/lib/utils'
 import { KanbanActionsProvider } from '@/contexts/KanbanActionsContext'
@@ -46,6 +48,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
   const { getColumnColor, setColumnColor } = useColumnColors()
   const { settings, updateSettings } = useSettings()
   const { getTaskTagIdsByTaskIds, taskTagsVersion } = useTagsContext()
+  const { boards } = useBoards()
   const boardCustomColumns = useMemo(
     () => settings.boardCustomColumns[boardId] || [],
     [settings.boardCustomColumns, boardId]
@@ -102,6 +105,8 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     getArchivedTasks,
     getTaskById,
   } = useUndoRedoKanbanActions(boardId)
+
+  const { staleTaskIds } = useStaleTasks(tasks, boards)
 
   // Filtering and sorting
   const { getFilteredTasksByColumn } = useFilteredTasks({
@@ -491,6 +496,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
                 }}
                 compact={compact}
                 focusedTaskId={focusedTaskId}
+                staleTaskIds={staleTaskIds}
               />
             </ErrorBoundary>
           ))}
