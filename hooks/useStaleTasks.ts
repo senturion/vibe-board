@@ -33,7 +33,8 @@ function saveSnoozeState(state: Record<string, number>) {
 interface UseStaleTasks {
   staleTasks: KanbanTask[]
   staleTaskIds: Set<string>
-  snoozeTask: (id: string) => void
+  snoozeTask: (id: string, durationMs?: number) => void
+  snoozeAll: (durationMs: number) => void
 }
 
 export function useStaleTasks(tasks: KanbanTask[], boards: Board[]): UseStaleTasks {
@@ -78,13 +79,25 @@ export function useStaleTasks(tasks: KanbanTask[], boards: Board[]): UseStaleTas
 
   const staleTaskIds = useMemo(() => new Set(staleTasks.map(t => t.id)), [staleTasks])
 
-  const snoozeTask = useCallback((id: string) => {
+  const snoozeTask = useCallback((id: string, durationMs?: number) => {
     setSnoozeState(prev => {
-      const next = { ...prev, [id]: Date.now() + SNOOZE_DURATION_MS }
+      const next = { ...prev, [id]: Date.now() + (durationMs ?? SNOOZE_DURATION_MS) }
       saveSnoozeState(next)
       return next
     })
   }, [])
 
-  return { staleTasks, staleTaskIds, snoozeTask }
+  const snoozeAll = useCallback((durationMs: number) => {
+    setSnoozeState(prev => {
+      const next = { ...prev }
+      const until = Date.now() + durationMs
+      for (const task of staleTasks) {
+        next[task.id] = until
+      }
+      saveSnoozeState(next)
+      return next
+    })
+  }, [staleTasks])
+
+  return { staleTasks, staleTaskIds, snoozeTask, snoozeAll }
 }

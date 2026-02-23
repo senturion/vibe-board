@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Board } from '@/components/kanban/Board'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { Header } from '@/components/Header'
@@ -24,7 +24,7 @@ import { ActivityLog } from '@/components/activity/ActivityLog'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthGuard } from '@/components/AuthGuard'
 import { useStaleTasks } from '@/hooks/useStaleTasks'
-import { useUndoRedo } from '@/contexts/UndoRedoContext'
+import { StaleTasksBanner } from '@/components/StaleTasksBanner'
 import { useFocusTimer } from '@/hooks/useFocusTimer'
 import { useFocusTask } from '@/hooks/useFocusTask'
 import { Menu, X } from 'lucide-react'
@@ -74,19 +74,9 @@ export default function Home() {
     isRunning: focusTimer.isRunning,
   })
 
-  // Stale tasks toast
-  const { staleTasks: allStaleTasks } = useStaleTasks(tasks, boards)
-  const { showInfoToast } = useUndoRedo()
-
-  useEffect(() => {
-    if (allStaleTasks.length === 0) return
-    if (typeof window === 'undefined') return
-    if (sessionStorage.getItem('vibe-stale-toast-shown')) return
-
-    sessionStorage.setItem('vibe-stale-toast-shown', '1')
-    const count = allStaleTasks.length
-    showInfoToast(`You have ${count} task${count === 1 ? '' : 's'} that haven't been touched in a while`)
-  }, [allStaleTasks.length, showInfoToast])
+  // Stale tasks banner
+  const { staleTasks: allStaleTasks, snoozeTask, snoozeAll } = useStaleTasks(tasks, boards)
+  const [staleBannerDismissed, setStaleBannerDismissed] = useState(false)
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)
@@ -257,6 +247,17 @@ export default function Home() {
           <div className="lg:hidden border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
             <MobileNav className="px-4 py-3" onNavigate={() => setShowMobileNav(false)} />
           </div>
+        )}
+
+        {/* Stale Tasks Banner */}
+        {!staleBannerDismissed && allStaleTasks.length > 0 && (
+          <StaleTasksBanner
+            staleTasks={allStaleTasks}
+            boards={boards}
+            onSnooze={snoozeTask}
+            onSnoozeAll={snoozeAll}
+            onDismiss={() => setStaleBannerDismissed(true)}
+          />
         )}
 
         {/* Focus Bar — visible on all views except focus when a task is focused */}
