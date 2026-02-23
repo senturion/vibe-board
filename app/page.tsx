@@ -78,6 +78,7 @@ export default function Home() {
   const { tasks: allTasks } = useKanban()
   const { staleTasks: allStaleTasks, snoozeTask, snoozeAll } = useStaleTasks(allTasks, boards)
   const [staleBannerDismissed, setStaleBannerDismissed] = useState(false)
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)
@@ -210,6 +211,8 @@ export default function Home() {
                   compact={compact}
                   onFocusTask={focusOnTask}
                   focusedTaskId={focusedTaskId}
+                  openTaskId={openTaskId}
+                  onOpenTaskHandled={() => setOpenTaskId(null)}
                 />
               </ErrorBoundary>
             </div>
@@ -261,6 +264,7 @@ export default function Home() {
             onViewTask={(task) => {
               if (task.boardId) switchBoard(task.boardId)
               setActiveView('board')
+              setOpenTaskId(task.id)
             }}
           />
         )}

@@ -42,9 +42,11 @@ interface BoardProps {
   compact?: boolean
   onFocusTask?: (taskId: string) => void
   focusedTaskId?: string | null
+  openTaskId?: string | null
+  onOpenTaskHandled?: () => void
 }
 
-export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false, onFocusTask, focusedTaskId }: BoardProps) {
+export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false, onFocusTask, focusedTaskId, openTaskId, onOpenTaskHandled }: BoardProps) {
   const { getColumnColor, setColumnColor } = useColumnColors()
   const { settings, updateSettings } = useSettings()
   const { getTaskTagIdsByTaskIds, taskTagsVersion } = useTagsContext()
@@ -203,6 +205,16 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
   }, [])
 
   const archivedTasks = getArchivedTasks()
+
+  // Open task detail when openTaskId is set
+  useEffect(() => {
+    if (!openTaskId) return
+    const task = getTaskById(openTaskId)
+    if (task) {
+      setSelectedTask(task)
+    }
+    onOpenTaskHandled?.()
+  }, [openTaskId, getTaskById, onOpenTaskHandled])
 
   // Keep selected task in sync with updates
   useEffect(() => {
