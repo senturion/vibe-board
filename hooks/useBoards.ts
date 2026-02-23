@@ -50,6 +50,7 @@ export function useBoards() {
         id: b.id,
         name: b.name,
         createdAt: new Date(b.created_at).getTime(),
+        staleDaysThreshold: (b as any).stale_days_threshold ?? undefined,
       }))
 
       if (isActive) {
@@ -145,9 +146,13 @@ export function useBoards() {
   }, [user, supabase])
 
   const updateBoard = useCallback(async (id: string, updates: Partial<Board>) => {
+    const dbUpdates: Record<string, unknown> = {}
+    if (updates.name !== undefined) dbUpdates.name = updates.name
+    if (updates.staleDaysThreshold !== undefined) dbUpdates.stale_days_threshold = updates.staleDaysThreshold
+
     const { error } = await supabase
       .from('boards')
-      .update({ name: updates.name })
+      .update(dbUpdates)
       .eq('id', id)
 
     if (error) {

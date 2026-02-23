@@ -45,6 +45,8 @@ export function useHabitAnalytics({
     return filtered
   }, [completions, habit, dateRange])
 
+  const isAvoidAutoComplete = habit?.habitType === 'avoid' && habit?.trackingMode === 'auto-complete'
+
   // Generate heatmap data for the last 365 days
   const heatmapData = useMemo((): HeatmapEntry[] => {
     const today = new Date()
@@ -64,22 +66,26 @@ export function useHabitAnalytics({
       const dateKey = formatDateKey(date)
       const count = completionMap.get(dateKey) || 0
 
-      // Calculate intensity level (0-4)
       let level: 0 | 1 | 2 | 3 | 4 = 0
-      if (count > 0) {
-        const targetCount = habit?.targetCount || 1
-        const ratio = count / targetCount
-        if (ratio >= 2) level = 4
-        else if (ratio >= 1.5) level = 3
-        else if (ratio >= 1) level = 2
-        else level = 1
+      if (isAvoidAutoComplete) {
+        // For avoid: no record = clean day (good), record = slip (bad)
+        level = count === 0 ? 2 : 0
+      } else {
+        if (count > 0) {
+          const targetCount = habit?.targetCount || 1
+          const ratio = count / targetCount
+          if (ratio >= 2) level = 4
+          else if (ratio >= 1.5) level = 3
+          else if (ratio >= 1) level = 2
+          else level = 1
+        }
       }
 
       entries.push({ date: dateKey, count, level })
     }
 
     return entries
-  }, [filteredCompletions, habit])
+  }, [filteredCompletions, habit, isAvoidAutoComplete])
 
   // Generate heatmap data for a specific month
   const getMonthHeatmap = useMemo(() => {
@@ -160,7 +166,10 @@ export function useHabitAnalytics({
         total++
 
         const dayCompletions = filteredCompletions.filter(c => c.completionDate === dateKey)
-        if (dayCompletions.length > 0) {
+        if (isAvoidAutoComplete) {
+          // For avoid: no record = success
+          if (dayCompletions.length === 0) completed++
+        } else if (dayCompletions.length > 0) {
           const totalCount = dayCompletions.reduce((sum, c) => sum + c.count, 0)
           if (totalCount >= (habit?.targetCount || 1)) {
             completed++
@@ -192,7 +201,10 @@ export function useHabitAnalytics({
 
     let averagePerWeek = recentCompletions.reduce((sum, c) => sum + c.count, 0) / 12
 
-    if (habit?.frequencyType === 'weekly') {
+    if (isAvoidAutoComplete) {
+      // For avoid: average slips per week
+      averagePerWeek = recentCompletions.reduce((sum, c) => sum + c.count, 0) / 12
+    } else if (habit?.frequencyType === 'weekly') {
       const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
       const dailyCounts = new Map<string, number>()
       recentCompletions.forEach(c => {
@@ -215,46 +227,55 @@ export function useHabitAnalytics({
       }
     }
 
-    // Calculate completion rate (days completed / days tracked)
+    // Calculate completion/success rate
     const today = new Date()
-    const firstCompletionDate = filteredCompletions.length > 0
-      ? filteredCompletions.reduce((earliest, c) =>
-          c.completionDate < earliest ? c.completionDate : earliest,
-          filteredCompletions[0].completionDate
-        )
-      : formatDateKey(today)
-
     let completionRate = 0
-    if (habit?.frequencyType === 'weekly') {
-      const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
-      const weekStart = getWeekStart(parseDateKey(firstCompletionDate), settings.weekStartsOn)
-      const currentWeekStart = getWeekStart(today, settings.weekStartsOn)
-      const weeksTracked = Math.floor(daysBetween(weekStart, currentWeekStart) / 7) + 1
 
-      const dailyCounts = new Map<string, number>()
-      filteredCompletions.forEach(c => {
-        const current = dailyCounts.get(c.completionDate) || 0
-        dailyCounts.set(c.completionDate, current + c.count)
-      })
-
-      const weekCounts = new Map<string, number>()
-      dailyCounts.forEach((count, dateKey) => {
-        if (count < (habit.targetCount || 1)) return
-        const weekKey = getWeekKey(parseDateKey(dateKey), settings.weekStartsOn)
-        weekCounts.set(weekKey, (weekCounts.get(weekKey) || 0) + 1)
-      })
-
-      const completedWeeks = Array.from(weekCounts.values())
-        .filter(count => count >= weeklyTarget).length
-      completionRate = weeksTracked > 0 ? (completedWeeks / weeksTracked) * 100 : 0
+    if (isAvoidAutoComplete && habit) {
+      // For avoid: success rate = days without slips / total days
+      const createdDate = new Date(habit.createdAt)
+      const daysTracked = daysBetween(createdDate, today) + 1
+      const slipDays = new Set(filteredCompletions.map(c => c.completionDate)).size
+      completionRate = daysTracked > 0 ? ((daysTracked - slipDays) / daysTracked) * 100 : 100
     } else {
-      const daysTracked = daysBetween(new Date(firstCompletionDate), today) + 1
-      const uniqueDaysCompleted = new Set(
-        filteredCompletions
-          .filter(c => c.count >= (habit?.targetCount || 1))
-          .map(c => c.completionDate)
-      ).size
-      completionRate = daysTracked > 0 ? (uniqueDaysCompleted / daysTracked) * 100 : 0
+      const firstCompletionDate = filteredCompletions.length > 0
+        ? filteredCompletions.reduce((earliest, c) =>
+            c.completionDate < earliest ? c.completionDate : earliest,
+            filteredCompletions[0].completionDate
+          )
+        : formatDateKey(today)
+
+      if (habit?.frequencyType === 'weekly') {
+        const weeklyTarget = Math.max(habit.frequencyValue || 1, 1)
+        const weekStart = getWeekStart(parseDateKey(firstCompletionDate), settings.weekStartsOn)
+        const currentWeekStart = getWeekStart(today, settings.weekStartsOn)
+        const weeksTracked = Math.floor(daysBetween(weekStart, currentWeekStart) / 7) + 1
+
+        const dailyCounts = new Map<string, number>()
+        filteredCompletions.forEach(c => {
+          const current = dailyCounts.get(c.completionDate) || 0
+          dailyCounts.set(c.completionDate, current + c.count)
+        })
+
+        const weekCounts = new Map<string, number>()
+        dailyCounts.forEach((count, dateKey) => {
+          if (count < (habit.targetCount || 1)) return
+          const weekKey = getWeekKey(parseDateKey(dateKey), settings.weekStartsOn)
+          weekCounts.set(weekKey, (weekCounts.get(weekKey) || 0) + 1)
+        })
+
+        const completedWeeks = Array.from(weekCounts.values())
+          .filter(count => count >= weeklyTarget).length
+        completionRate = weeksTracked > 0 ? (completedWeeks / weeksTracked) * 100 : 0
+      } else {
+        const daysTracked = daysBetween(new Date(firstCompletionDate), today) + 1
+        const uniqueDaysCompleted = new Set(
+          filteredCompletions
+            .filter(c => c.count >= (habit?.targetCount || 1))
+            .map(c => c.completionDate)
+        ).size
+        completionRate = daysTracked > 0 ? (uniqueDaysCompleted / daysTracked) * 100 : 0
+      }
     }
 
     return {
@@ -264,7 +285,7 @@ export function useHabitAnalytics({
       bestStreak: streak?.best || 0,
       completionRate: Math.round(completionRate),
     }
-  }, [filteredCompletions, streak, habit, settings.weekStartsOn])
+  }, [filteredCompletions, streak, habit, settings.weekStartsOn, isAvoidAutoComplete])
 
   // Get completion count for a specific date
   const getCompletionCountForDate = useMemo(() => {
@@ -337,7 +358,11 @@ export function useAllHabitsAnalytics(habits: Habit[], completions: HabitComplet
         c => c.habitId === habit.id && c.completionDate === todayKey
       )
       const count = habitCompletions.reduce((sum, c) => sum + c.count, 0)
-      if (count >= habit.targetCount) {
+
+      if (habit.habitType === 'avoid' && habit.trackingMode === 'auto-complete') {
+        // No slip today = success
+        if (count === 0) completed++
+      } else if (count >= habit.targetCount) {
         completed++
       }
     })
@@ -362,12 +387,12 @@ export function useAllHabitsAnalytics(habits: Habit[], completions: HabitComplet
       const dateKey = formatDateKey(new Date(d))
 
       activeHabits.forEach(habit => {
-        if (habit.frequencyType === 'weekly') {
-          return
-        }
+        if (habit.frequencyType === 'weekly') return
         total++
         const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
-        if (count >= habit.targetCount) {
+        if (habit.habitType === 'avoid' && habit.trackingMode === 'auto-complete') {
+          if (count === 0) completed++
+        } else if (count >= habit.targetCount) {
           completed++
         }
       })
@@ -434,7 +459,9 @@ export function useAllHabitsAnalytics(habits: Habit[], completions: HabitComplet
           total++
           const dateKey = formatDateKey(new Date(d))
           const count = completionsByDate.get(dateKey)?.get(habit.id) || 0
-          if (count >= habit.targetCount) {
+          if (habit.habitType === 'avoid' && habit.trackingMode === 'auto-complete') {
+            if (count === 0) completed++
+          } else if (count >= habit.targetCount) {
             completed++
           }
         }

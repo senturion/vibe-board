@@ -48,6 +48,7 @@ export function Header({
   const [newBoardName, setNewBoardName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editStaleThreshold, setEditStaleThreshold] = useState<number>(7)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showMobileControls, setShowMobileControls] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -78,11 +79,15 @@ export function Header({
   const handleStartEdit = (board: Board) => {
     setEditingId(board.id)
     setEditName(board.name)
+    setEditStaleThreshold(board.staleDaysThreshold ?? 7)
   }
 
   const handleSaveEdit = () => {
     if (editingId && editName.trim()) {
-      onUpdateBoard(editingId, { name: editName.trim() })
+      onUpdateBoard(editingId, {
+        name: editName.trim(),
+        staleDaysThreshold: editStaleThreshold,
+      })
     }
     setEditingId(null)
     setEditName('')
@@ -124,37 +129,56 @@ export function Header({
                   {boards.map(board => (
                     <div key={board.id} className="group relative">
                       {editingId === board.id ? (
-                        <div className="flex items-center gap-2 px-3 py-2">
-                          <input
-                            ref={editInputRef}
-                            type="text"
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit()
-                              if (e.key === 'Escape') {
+                        <>
+                          <div className="flex items-center gap-2 px-3 py-2">
+                            <input
+                              ref={editInputRef}
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveEdit()
+                                if (e.key === 'Escape') {
+                                  setEditingId(null)
+                                  setEditName('')
+                                }
+                              }}
+                              className="flex-1 bg-[var(--bg-tertiary)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none border border-[var(--border)]"
+                            />
+                            <button
+                              onClick={handleSaveEdit}
+                              className="p-1 text-[var(--text-tertiary)] hover:text-green-400 transition-colors"
+                            >
+                              <Check size={12} />
+                            </button>
+                            <button
+                              onClick={() => {
                                 setEditingId(null)
                                 setEditName('')
-                              }
-                            }}
-                            className="flex-1 bg-[var(--bg-tertiary)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none border border-[var(--border)]"
-                          />
-                          <button
-                            onClick={handleSaveEdit}
-                            className="p-1 text-[var(--text-tertiary)] hover:text-green-400 transition-colors"
-                          >
-                            <Check size={12} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingId(null)
-                              setEditName('')
-                            }}
-                            className="p-1 text-[var(--text-tertiary)] hover:text-red-400 transition-colors"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
+                              }}
+                              className="p-1 text-[var(--text-tertiary)] hover:text-red-400 transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 px-3 py-1.5 border-t border-[var(--border-subtle)]">
+                            <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] whitespace-nowrap">
+                              Stale after
+                            </span>
+                            <select
+                              value={editStaleThreshold}
+                              onChange={(e) => setEditStaleThreshold(Number(e.target.value))}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 bg-[var(--bg-tertiary)] px-2 py-1 text-[11px] text-[var(--text-primary)] border border-[var(--border)] outline-none"
+                            >
+                              <option value={3}>3 days</option>
+                              <option value={7}>7 days</option>
+                              <option value={14}>14 days</option>
+                              <option value={30}>30 days</option>
+                              <option value={0}>Never</option>
+                            </select>
+                          </div>
+                        </>
                       ) : (
                         <div
                           onClick={() => {

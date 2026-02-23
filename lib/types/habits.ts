@@ -1,6 +1,8 @@
 import { DayOfWeek, getCurrentDayOfWeek } from './shared'
 
 export type FrequencyType = 'daily' | 'weekly' | 'specific_days'
+export type HabitType = 'build' | 'avoid'
+export type TrackingMode = 'manual' | 'auto-complete'
 
 export interface HabitCategory {
   id: string
@@ -23,6 +25,8 @@ export interface Habit {
   isActive: boolean
   color: string
   icon?: string
+  habitType: HabitType
+  trackingMode: TrackingMode
   order: number
   createdAt: number
   archivedAt?: number

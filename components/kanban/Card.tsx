@@ -15,6 +15,7 @@ interface CardProps {
   compact?: boolean
   accentColor?: string
   focusedTaskId?: string | null
+  isStale?: boolean
 }
 
 const PRIORITY_COLORS: Record<Priority, string> = {
@@ -24,7 +25,7 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: '#ef4444',
 }
 
-export const Card = memo(function Card({ task, compact = false, accentColor, focusedTaskId }: CardProps) {
+export const Card = memo(function Card({ task, compact = false, accentColor, focusedTaskId, isStale }: CardProps) {
   const { onDeleteTask: onDelete, onUpdateTask: onUpdate, onOpenDetail, onToggleSubtask, onFocusTask } = useKanbanActions()
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const { settings } = useSettings()
@@ -103,6 +104,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
             )}
             {overdue && <div className="w-1.5 h-1.5 rounded-full bg-red-400" role="status" aria-label="Overdue" />}
             {dueSoon && !overdue && <div className="w-1.5 h-1.5 rounded-full bg-amber-400" role="status" aria-label="Due soon" />}
+            {isStale && !overdue && !dueSoon && <div className="w-1.5 h-1.5 rounded-full bg-amber-400/60" role="status" aria-label="Stale" title={`Last updated ${Math.floor((Date.now() - (task.updatedAt ?? task.createdAt)) / (24 * 60 * 60 * 1000))} days ago`} />}
             {!task.archivedAt && onFocusTask && (
               <button
                 onClick={(e) => {
@@ -155,7 +157,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
       {/* Column color indicator */}
       <div
         className="absolute left-0 top-0 bottom-0 w-0.5"
-        style={{ backgroundColor: accentColor || priorityColor }}
+        style={{ backgroundColor: isStale ? '#f59e0b' : (accentColor || priorityColor) }}
         aria-hidden="true"
       />
 

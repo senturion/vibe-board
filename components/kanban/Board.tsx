@@ -19,6 +19,8 @@ import { useBoardDragAndDrop } from '@/hooks/useBoardDragAndDrop'
 import { useBoardKeyboardShortcuts, useCloseOnAnyKey } from '@/hooks/useBoardKeyboardShortcuts'
 import { useColumnColors } from '@/hooks/useColumnColors'
 import { useSettings } from '@/hooks/useSettings'
+import { useBoards } from '@/hooks/useBoards'
+import { useStaleTasks } from '@/hooks/useStaleTasks'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { cn } from '@/lib/utils'
 import { KanbanActionsProvider } from '@/contexts/KanbanActionsContext'
@@ -40,12 +42,15 @@ interface BoardProps {
   compact?: boolean
   onFocusTask?: (taskId: string) => void
   focusedTaskId?: string | null
+  openTaskId?: string | null
+  onOpenTaskHandled?: () => void
 }
 
-export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false, onFocusTask, focusedTaskId }: BoardProps) {
+export function Board({ boardId = 'default', searchOpen, onSearchClose, filters, sort, compact = false, onFocusTask, focusedTaskId, openTaskId, onOpenTaskHandled }: BoardProps) {
   const { getColumnColor, setColumnColor } = useColumnColors()
   const { settings, updateSettings } = useSettings()
   const { getTaskTagIdsByTaskIds, taskTagsVersion } = useTagsContext()
+  const { boards } = useBoards()
   const boardCustomColumns = useMemo(
     () => settings.boardCustomColumns[boardId] || [],
     [settings.boardCustomColumns, boardId]
@@ -102,6 +107,8 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     getArchivedTasks,
     getTaskById,
   } = useUndoRedoKanbanActions(boardId)
+
+  const { staleTaskIds } = useStaleTasks(tasks, boards)
 
   // Filtering and sorting
   const { getFilteredTasksByColumn } = useFilteredTasks({
@@ -198,6 +205,16 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
   }, [])
 
   const archivedTasks = getArchivedTasks()
+
+  // Open task detail when openTaskId is set
+  useEffect(() => {
+    if (!openTaskId) return
+    const task = getTaskById(openTaskId)
+    if (task) {
+      setSelectedTask(task)
+    }
+    onOpenTaskHandled?.()
+  }, [openTaskId, getTaskById, onOpenTaskHandled])
 
   // Keep selected task in sync with updates
   useEffect(() => {
@@ -491,6 +508,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
                 }}
                 compact={compact}
                 focusedTaskId={focusedTaskId}
+                staleTaskIds={staleTaskIds}
               />
             </ErrorBoundary>
           ))}

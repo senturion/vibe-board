@@ -71,6 +71,7 @@ export function useKanban(boardId: string = '') {
         updatedAt: t.updated_at ? new Date(t.updated_at).getTime() : new Date(t.created_at).getTime(),
         completedAt: t.completed_at ? new Date(t.completed_at).getTime() : undefined,
         archivedAt: t.archived_at ? new Date(t.archived_at).getTime() : undefined,
+        snoozedUntil: (t as any).snoozed_until ? new Date((t as any).snoozed_until).getTime() : undefined,
         boardId: t.board_id,
       }))
 
@@ -229,6 +230,7 @@ export function useKanban(boardId: string = '') {
     if (updates.order !== undefined) dbUpdates.order = updates.order
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt ? new Date(updates.completedAt).toISOString() : null
     if (updates.archivedAt !== undefined) dbUpdates.archived_at = updates.archivedAt ? new Date(updates.archivedAt).toISOString() : null
+    if (updates.snoozedUntil !== undefined) dbUpdates.snoozed_until = updates.snoozedUntil ? new Date(updates.snoozedUntil).toISOString() : null
 
     // Optimistic local update
     const updatedAt = Date.now()

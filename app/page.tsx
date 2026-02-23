@@ -23,6 +23,8 @@ import { FocusPage, FocusBar, StopFocusPrompt } from '@/components/focus'
 import { ActivityLog } from '@/components/activity/ActivityLog'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthGuard } from '@/components/AuthGuard'
+import { useStaleTasks } from '@/hooks/useStaleTasks'
+import { StaleTasksBanner } from '@/components/StaleTasksBanner'
 import { useFocusTimer } from '@/hooks/useFocusTimer'
 import { useFocusTask } from '@/hooks/useFocusTask'
 import { Menu, X } from 'lucide-react'
@@ -71,6 +73,12 @@ export default function Home() {
     stop: focusTimer.stop,
     isRunning: focusTimer.isRunning,
   })
+
+  // Stale tasks banner — fetch all tasks across boards for staleness check
+  const { tasks: allTasks, moveTask: moveAnyTask, updateTask: updateAnyTask } = useKanban()
+  const { staleTasks: allStaleTasks, snoozeTask, snoozeAll } = useStaleTasks(allTasks, boards, updateAnyTask)
+  const [staleBannerDismissed, setStaleBannerDismissed] = useState(false)
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)
@@ -203,6 +211,8 @@ export default function Home() {
                   compact={compact}
                   onFocusTask={focusOnTask}
                   focusedTaskId={focusedTaskId}
+                  openTaskId={openTaskId}
+                  onOpenTaskHandled={() => setOpenTaskId(null)}
                 />
               </ErrorBoundary>
             </div>
@@ -241,6 +251,23 @@ export default function Home() {
           <div className="lg:hidden border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
             <MobileNav className="px-4 py-3" onNavigate={() => setShowMobileNav(false)} />
           </div>
+        )}
+
+        {/* Stale Tasks Banner */}
+        {!staleBannerDismissed && allStaleTasks.length > 0 && (
+          <StaleTasksBanner
+            staleTasks={allStaleTasks}
+            boards={boards}
+            onSnooze={snoozeTask}
+            onSnoozeAll={snoozeAll}
+            onDismiss={() => setStaleBannerDismissed(true)}
+            onViewTask={(task) => {
+              if (task.boardId) switchBoard(task.boardId)
+              setActiveView('board')
+              setOpenTaskId(task.id)
+            }}
+            onMoveTask={(taskId, column) => moveAnyTask(taskId, column)}
+          />
         )}
 
         {/* Focus Bar — visible on all views except focus when a task is focused */}

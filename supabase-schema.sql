@@ -6,7 +6,8 @@ create table public.boards (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
   name text not null,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now() not null,
+  stale_days_threshold integer default null -- days before tasks are flagged stale; null = 7
 );
 
 -- Tasks table
@@ -25,7 +26,8 @@ create table public.tasks (
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null,
   completed_at timestamptz,
-  archived_at timestamptz
+  archived_at timestamptz,
+  snoozed_until timestamptz -- stale detection snooze expiry
 );
 
 -- Quick todos (sidebar)
@@ -253,6 +255,8 @@ create table public.habits (
   is_active boolean default true not null,
   color text default '#e07a5f' not null,
   icon text, -- lucide icon name
+  habit_type text not null default 'build', -- 'build' or 'avoid'
+  tracking_mode text not null default 'manual', -- 'manual' or 'auto-complete'
   "order" integer not null default 0,
   created_at timestamptz default now() not null,
   archived_at timestamptz
