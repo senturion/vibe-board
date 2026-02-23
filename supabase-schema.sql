@@ -6,7 +6,8 @@ create table public.boards (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
   name text not null,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now() not null,
+  stale_days_threshold integer default null -- days before tasks are flagged stale; null = 7
 );
 
 -- Tasks table

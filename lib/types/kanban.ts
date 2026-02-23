@@ -34,6 +34,7 @@ export interface Board {
   id: string
   name: string
   createdAt: number
+  staleDaysThreshold?: number
 }
 
 export const PRIORITIES: { id: Priority; label: string; color: string }[] = [
