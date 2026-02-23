@@ -258,6 +258,10 @@ export default function Home() {
             onSnooze={snoozeTask}
             onSnoozeAll={snoozeAll}
             onDismiss={() => setStaleBannerDismissed(true)}
+            onViewTask={(task) => {
+              if (task.boardId) switchBoard(task.boardId)
+              setActiveView('board')
+            }}
           />
         )}
 

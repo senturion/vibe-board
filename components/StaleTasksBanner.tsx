@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AlarmClockOff, BellOff, Archive, ChevronDown, X, Eye } from 'lucide-react'
+import { AlarmClockOff, BellOff, ChevronDown, X, Eye, ExternalLink } from 'lucide-react'
 import { KanbanTask, Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -28,9 +28,10 @@ interface StaleTasksBannerProps {
   onSnooze: (taskId: string, durationMs?: number) => void
   onSnoozeAll: (durationMs: number) => void
   onDismiss: () => void
+  onViewTask: (task: KanbanTask) => void
 }
 
-export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, onDismiss }: StaleTasksBannerProps) {
+export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, onDismiss, onViewTask }: StaleTasksBannerProps) {
   const [showTasks, setShowTasks] = useState(false)
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false)
   const [taskSnoozeMenuId, setTaskSnoozeMenuId] = useState<string | null>(null)
@@ -122,6 +123,14 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {/* View task */}
+                  <button
+                    onClick={() => onViewTask(task)}
+                    className="flex items-center gap-1 px-2 py-1 text-[9px] uppercase tracking-[0.08em] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+                  >
+                    <ExternalLink size={9} />
+                    View
+                  </button>
                   {/* Per-task snooze */}
                   <div className="relative">
                     <button
