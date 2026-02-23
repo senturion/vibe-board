@@ -17,15 +17,16 @@ interface ToastProps {
 
 function Toast({ toast, onDismiss }: ToastProps) {
   const [isExiting, setIsExiting] = useState(false)
+  const duration = toast.type === 'info' ? 8000 : 3000
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsExiting(true)
       setTimeout(() => onDismiss(toast.id), 200)
-    }, 3000)
+    }, duration)
 
     return () => clearTimeout(timer)
-  }, [toast.id, onDismiss])
+  }, [toast.id, onDismiss, duration])
 
   const handleDismiss = () => {
     setIsExiting(true)
@@ -75,7 +76,7 @@ function Toast({ toast, onDismiss }: ToastProps) {
       <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--border)]">
         <div
           className="h-full bg-[var(--accent)] animate-shrink"
-          style={{ animationDuration: '3s' }}
+          style={{ animationDuration: `${duration / 1000}s` }}
         />
       </div>
     </div>
@@ -90,11 +91,25 @@ interface ToastContainerProps {
 export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
   if (toasts.length === 0) return null
 
+  const infoToasts = toasts.filter(t => t.type === 'info')
+  const actionToasts = toasts.filter(t => t.type !== 'info')
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2">
-      {toasts.map(toast => (
-        <Toast key={toast.id} toast={toast} onDismiss={onDismiss} />
-      ))}
-    </div>
+    <>
+      {infoToasts.length > 0 && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2">
+          {infoToasts.map(toast => (
+            <Toast key={toast.id} toast={toast} onDismiss={onDismiss} />
+          ))}
+        </div>
+      )}
+      {actionToasts.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2">
+          {actionToasts.map(toast => (
+            <Toast key={toast.id} toast={toast} onDismiss={onDismiss} />
+          ))}
+        </div>
+      )}
+    </>
   )
 }
