@@ -75,7 +75,7 @@ export default function Home() {
   })
 
   // Stale tasks banner — fetch all tasks across boards for staleness check
-  const { tasks: allTasks } = useKanban()
+  const { tasks: allTasks, moveTask: moveAnyTask } = useKanban()
   const { staleTasks: allStaleTasks, snoozeTask, snoozeAll } = useStaleTasks(allTasks, boards)
   const [staleBannerDismissed, setStaleBannerDismissed] = useState(false)
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
@@ -266,6 +266,7 @@ export default function Home() {
               setActiveView('board')
               setOpenTaskId(task.id)
             }}
+            onMoveTask={(taskId, column) => moveAnyTask(taskId, column)}
           />
         )}
 

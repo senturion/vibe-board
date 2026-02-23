@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { AlarmClockOff, BellOff, ChevronDown, X, Eye, ExternalLink } from 'lucide-react'
-import { KanbanTask, Board } from '@/lib/types'
+import { AlarmClockOff, BellOff, ChevronDown, X, Eye, ExternalLink, ArrowRight } from 'lucide-react'
+import { KanbanTask, Board, ColumnId } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const SNOOZE_OPTIONS = [
@@ -29,12 +29,14 @@ interface StaleTasksBannerProps {
   onSnoozeAll: (durationMs: number) => void
   onDismiss: () => void
   onViewTask: (task: KanbanTask) => void
+  onMoveTask: (taskId: string, column: ColumnId) => void
 }
 
-export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, onDismiss, onViewTask }: StaleTasksBannerProps) {
+export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, onDismiss, onViewTask, onMoveTask }: StaleTasksBannerProps) {
   const [showTasks, setShowTasks] = useState(false)
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false)
   const [taskSnoozeMenuId, setTaskSnoozeMenuId] = useState<string | null>(null)
+  const [taskMoveMenuId, setTaskMoveMenuId] = useState<string | null>(null)
 
   if (staleTasks.length === 0) return null
 
@@ -131,10 +133,51 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
                     <ExternalLink size={9} />
                     View
                   </button>
+                  {/* Move task */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setTaskMoveMenuId(taskMoveMenuId === task.id ? null : task.id)
+                        setTaskSnoozeMenuId(null)
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 text-[9px] uppercase tracking-[0.08em] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+                    >
+                      <ArrowRight size={9} />
+                      Move
+                    </button>
+                    {taskMoveMenuId === task.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setTaskMoveMenuId(null)} />
+                        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[100px]">
+                          <button
+                            onClick={() => {
+                              onMoveTask(task.id, 'backlog')
+                              setTaskMoveMenuId(null)
+                            }}
+                            className="w-full px-3 py-1.5 text-left text-[10px] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+                          >
+                            Backlog
+                          </button>
+                          <button
+                            onClick={() => {
+                              onMoveTask(task.id, 'complete')
+                              setTaskMoveMenuId(null)
+                            }}
+                            className="w-full px-3 py-1.5 text-left text-[10px] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                   {/* Per-task snooze */}
                   <div className="relative">
                     <button
-                      onClick={() => setTaskSnoozeMenuId(taskSnoozeMenuId === task.id ? null : task.id)}
+                      onClick={() => {
+                        setTaskSnoozeMenuId(taskSnoozeMenuId === task.id ? null : task.id)
+                        setTaskMoveMenuId(null)
+                      }}
                       className="flex items-center gap-1 px-2 py-1 text-[9px] uppercase tracking-[0.08em] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
                     >
                       <BellOff size={9} />
