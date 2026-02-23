@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Board } from '@/components/kanban/Board'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { Header } from '@/components/Header'
@@ -23,6 +23,8 @@ import { FocusPage, FocusBar, StopFocusPrompt } from '@/components/focus'
 import { ActivityLog } from '@/components/activity/ActivityLog'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthGuard } from '@/components/AuthGuard'
+import { useStaleTasks } from '@/hooks/useStaleTasks'
+import { useUndoRedo } from '@/contexts/UndoRedoContext'
 import { useFocusTimer } from '@/hooks/useFocusTimer'
 import { useFocusTask } from '@/hooks/useFocusTask'
 import { Menu, X } from 'lucide-react'
@@ -71,6 +73,20 @@ export default function Home() {
     stop: focusTimer.stop,
     isRunning: focusTimer.isRunning,
   })
+
+  // Stale tasks toast
+  const { staleTasks: allStaleTasks } = useStaleTasks(tasks, boards)
+  const { showInfoToast } = useUndoRedo()
+
+  useEffect(() => {
+    if (allStaleTasks.length === 0) return
+    if (typeof window === 'undefined') return
+    if (sessionStorage.getItem('vibe-stale-toast-shown')) return
+
+    sessionStorage.setItem('vibe-stale-toast-shown', '1')
+    const count = allStaleTasks.length
+    showInfoToast(`You have ${count} task${count === 1 ? '' : 's'} that haven't been touched in a while`)
+  }, [allStaleTasks.length, showInfoToast])
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [showStats, setShowStats] = useState(false)

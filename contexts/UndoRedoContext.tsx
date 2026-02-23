@@ -15,6 +15,7 @@ interface UndoRedoContextType {
   canUndo: boolean
   canRedo: boolean
   pushAction: (action: HistoryAction) => void
+  showInfoToast: (message: string) => void
 }
 
 const UndoRedoContext = createContext<UndoRedoContextType | null>(null)
@@ -33,6 +34,15 @@ export function UndoRedoProvider({ children }: { children: ReactNode }) {
       message,
     }
     setToasts(prev => [...prev.slice(-2), toast]) // Keep max 3 toasts
+  }, [])
+
+  const showInfoToast = useCallback((message: string) => {
+    const toast: ToastData = {
+      id: generateId(),
+      type: 'info',
+      message,
+    }
+    setToasts(prev => [...prev.slice(-2), toast])
   }, [])
 
   const dismissToast = useCallback((id: string) => {
@@ -112,6 +122,7 @@ export function UndoRedoProvider({ children }: { children: ReactNode }) {
         canUndo: undoStack.length > 0,
         canRedo: redoStack.length > 0,
         pushAction,
+        showInfoToast,
       }}
     >
       {children}
