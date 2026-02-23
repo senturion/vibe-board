@@ -15,9 +15,9 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 export function StaleMiniWidget() {
-  const { tasks } = useKanban()
+  const { tasks, updateTask } = useKanban()
   const { boards } = useBoards()
-  const { staleTasks, snoozeTask } = useStaleTasks(tasks, boards)
+  const { staleTasks, snoozeTask } = useStaleTasks(tasks, boards, updateTask)
 
   if (staleTasks.length === 0) {
     return (

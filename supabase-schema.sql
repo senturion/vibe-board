@@ -26,7 +26,8 @@ create table public.tasks (
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null,
   completed_at timestamptz,
-  archived_at timestamptz
+  archived_at timestamptz,
+  snoozed_until timestamptz -- stale detection snooze expiry
 );
 
 -- Quick todos (sidebar)

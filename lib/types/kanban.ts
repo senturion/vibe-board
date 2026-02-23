@@ -27,6 +27,7 @@ export interface KanbanTask {
   updatedAt?: number
   completedAt?: number  // When task was moved to complete
   archivedAt?: number
+  snoozedUntil?: number  // Stale detection snooze expiry
   boardId?: string  // For multi-board support
 }
 
