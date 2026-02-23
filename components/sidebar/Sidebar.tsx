@@ -15,11 +15,12 @@ import {
   StreaksMiniWidget,
   ActivityMiniWidget,
   InsightsMiniWidget,
+  StaleMiniWidget,
 } from './widgets'
 import { cn } from '@/lib/utils'
 
 // Define all available sidebar widgets
-type SidebarWidgetId = 'weather' | 'quote' | 'workLocation' | 'focus' | 'habits' | 'goals' | 'tasks' | 'notes' | 'deadlines' | 'streaks' | 'activity' | 'insights'
+type SidebarWidgetId = 'weather' | 'quote' | 'workLocation' | 'focus' | 'habits' | 'goals' | 'tasks' | 'notes' | 'deadlines' | 'streaks' | 'activity' | 'insights' | 'stale'
 
 interface SidebarWidgetConfig {
   id: SidebarWidgetId
@@ -37,11 +38,12 @@ const SIDEBAR_WIDGETS: SidebarWidgetConfig[] = [
   { id: 'habits', title: "Today's Habits", component: HabitsMiniWidget, defaultVisible: true, defaultOrder: 4 },
   { id: 'goals', title: 'Goals', component: GoalsMiniWidget, defaultVisible: true, defaultOrder: 5 },
   { id: 'deadlines', title: 'Upcoming Deadlines', component: DeadlinesMiniWidget, defaultVisible: false, defaultOrder: 6 },
-  { id: 'streaks', title: 'Habit Streaks', component: StreaksMiniWidget, defaultVisible: false, defaultOrder: 7 },
-  { id: 'activity', title: 'Recent Activity', component: ActivityMiniWidget, defaultVisible: false, defaultOrder: 8 },
-  { id: 'tasks', title: 'Quick Tasks', component: () => <div className="max-h-[200px] overflow-y-auto"><TodoList compact /></div>, defaultVisible: true, defaultOrder: 9 },
-  { id: 'notes', title: 'Quick Notes', component: () => <div className="max-h-[250px] overflow-y-auto"><Notes compact /></div>, defaultVisible: false, defaultOrder: 10 },
-  { id: 'insights', title: 'AI Insights', component: InsightsMiniWidget, defaultVisible: true, defaultOrder: 11 },
+  { id: 'stale', title: 'Stale Tasks', component: StaleMiniWidget, defaultVisible: true, defaultOrder: 7 },
+  { id: 'streaks', title: 'Habit Streaks', component: StreaksMiniWidget, defaultVisible: false, defaultOrder: 8 },
+  { id: 'activity', title: 'Recent Activity', component: ActivityMiniWidget, defaultVisible: false, defaultOrder: 9 },
+  { id: 'tasks', title: 'Quick Tasks', component: () => <div className="max-h-[200px] overflow-y-auto"><TodoList compact /></div>, defaultVisible: true, defaultOrder: 10 },
+  { id: 'notes', title: 'Quick Notes', component: () => <div className="max-h-[250px] overflow-y-auto"><Notes compact /></div>, defaultVisible: false, defaultOrder: 11 },
+  { id: 'insights', title: 'AI Insights', component: InsightsMiniWidget, defaultVisible: true, defaultOrder: 12 },
 ]
 
 interface SectionProps {
