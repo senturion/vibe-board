@@ -19,18 +19,21 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          stale_days_threshold: number | null
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          stale_days_threshold?: number | null
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          stale_days_threshold?: number | null
           user_id?: string
         }
         Relationships: []
@@ -419,6 +422,7 @@ export type Database = {
           description: string | null
           frequency_type: string
           frequency_value: number | null
+          habit_type: string
           icon: string | null
           id: string
           is_active: boolean
@@ -426,6 +430,7 @@ export type Database = {
           order: number
           specific_days: number[] | null
           target_count: number
+          tracking_mode: string
           user_id: string
         }
         Insert: {
@@ -436,6 +441,7 @@ export type Database = {
           description?: string | null
           frequency_type?: string
           frequency_value?: number | null
+          habit_type?: string
           icon?: string | null
           id?: string
           is_active?: boolean
@@ -443,6 +449,7 @@ export type Database = {
           order?: number
           specific_days?: number[] | null
           target_count?: number
+          tracking_mode?: string
           user_id: string
         }
         Update: {
@@ -453,6 +460,7 @@ export type Database = {
           description?: string | null
           frequency_type?: string
           frequency_value?: number | null
+          habit_type?: string
           icon?: string | null
           id?: string
           is_active?: boolean
@@ -460,6 +468,7 @@ export type Database = {
           order?: number
           specific_days?: number[] | null
           target_count?: number
+          tracking_mode?: string
           user_id?: string
         }
         Relationships: [
@@ -726,7 +735,7 @@ export type Database = {
         Row: {
           completed_at: string
           completion_date: string
-          duration: string
+          duration: unknown
           id: string
           routine_item_id: string
           user_id: string
@@ -763,7 +772,7 @@ export type Database = {
           id: string
           order: number
           routine_id: string
-          target_time: string
+          target_time: unknown
           title: string
           user_id: string
         }
@@ -941,6 +950,7 @@ export type Database = {
           labels: string[] | null
           order: number
           priority: string
+          snoozed_until: string | null
           status: string
           subtasks: Json | null
           title: string
@@ -958,6 +968,7 @@ export type Database = {
           labels?: string[] | null
           order?: number
           priority?: string
+          snoozed_until?: string | null
           status?: string
           subtasks?: Json | null
           title: string
@@ -975,6 +986,7 @@ export type Database = {
           labels?: string[] | null
           order?: number
           priority?: string
+          snoozed_until?: string | null
           status?: string
           subtasks?: Json | null
           title?: string

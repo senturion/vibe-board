@@ -106,7 +106,7 @@ export function useRoutines() {
         id: i.id,
         routineId: i.routine_id,
         title: i.title,
-        targetTime: i.target_time ? parseInterval(i.target_time) : undefined,
+        targetTime: i.target_time ? parseInterval(i.target_time as string) : undefined,
         order: i.order,
         createdAt: new Date(i.created_at).getTime(),
       }))
@@ -117,7 +117,7 @@ export function useRoutines() {
         routineItemId: c.routine_item_id,
         completionDate: c.completion_date,
         completedAt: new Date(c.completed_at).getTime(),
-        duration: c.duration ? parseInterval(c.duration) : undefined,
+        duration: c.duration ? parseInterval(c.duration as string) : undefined,
       }))
 
       if (isActive) {
@@ -242,7 +242,7 @@ export function useRoutines() {
       id: data.id,
       routineId: data.routine_id,
       title: data.title,
-      targetTime: data.target_time ? parseInterval(data.target_time) : undefined,
+      targetTime: data.target_time ? parseInterval(data.target_time as string) : undefined,
       order: data.order,
       createdAt: new Date(data.created_at).getTime(),
     }
@@ -322,7 +322,7 @@ export function useRoutines() {
       routineItemId: data.routine_item_id,
       completionDate: data.completion_date,
       completedAt: new Date(data.completed_at).getTime(),
-      duration: data.duration ? parseInterval(data.duration) : undefined,
+      duration: data.duration ? parseInterval(data.duration as string) : undefined,
     }
 
     setCompletions(prev => [...prev, newCompletion])

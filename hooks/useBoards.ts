@@ -50,7 +50,7 @@ export function useBoards() {
         id: b.id,
         name: b.name,
         createdAt: new Date(b.created_at).getTime(),
-        staleDaysThreshold: (b as any).stale_days_threshold ?? undefined,
+        staleDaysThreshold: b.stale_days_threshold ?? undefined,
       }))
 
       if (isActive) {

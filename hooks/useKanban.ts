@@ -71,7 +71,7 @@ export function useKanban(boardId: string = '') {
         updatedAt: t.updated_at ? new Date(t.updated_at).getTime() : new Date(t.created_at).getTime(),
         completedAt: t.completed_at ? new Date(t.completed_at).getTime() : undefined,
         archivedAt: t.archived_at ? new Date(t.archived_at).getTime() : undefined,
-        snoozedUntil: (t as any).snoozed_until ? new Date((t as any).snoozed_until).getTime() : undefined,
+        snoozedUntil: t.snoozed_until ? new Date(t.snoozed_until).getTime() : undefined,
         boardId: t.board_id,
       }))
 
