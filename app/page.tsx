@@ -176,7 +176,6 @@ export default function Home() {
             <ActivityLog />
           </ErrorBoundary>
         )
-      case 'dashboard':
       case 'board':
       default:
         return (

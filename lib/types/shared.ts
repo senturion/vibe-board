@@ -2,10 +2,10 @@
 // NAVIGATION
 // =====================================================
 
-export type ViewId = 'dashboard' | 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus' | 'activity'
+export type ViewId = 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus' | 'activity'
 
 export const VIEWS: { id: ViewId; title: string; icon: string }[] = [
-  { id: 'dashboard', title: 'Home', icon: 'LayoutDashboard' },
+  { id: 'board', title: 'Home', icon: 'LayoutDashboard' },
   { id: 'habits', title: 'Habits', icon: 'Target' },
   { id: 'goals', title: 'Goals', icon: 'Flag' },
   { id: 'routines', title: 'Routines', icon: 'ListChecks' },
@@ -124,4 +124,36 @@ export function daysBetween(date1: Date, date2: Date): number {
 
 export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(word => word.length > 0).length
+}
+
+// =====================================================
+// UI STATE
+// =====================================================
+
+export interface UserUIState {
+  activeView: ViewId
+  widgetStates: Record<string, { collapsed: boolean }>
+  sectionViewModes: Record<TemporalSectionId, SectionViewMode>
+  sectionSelectedDates: Record<TemporalSectionId, string>
+  sidebarCollapsed: boolean
+  focusedTaskId: string | null
+}
+
+export const DEFAULT_UI_STATE: UserUIState = {
+  activeView: 'board',
+  widgetStates: {},
+  sectionViewModes: {
+    habits: 'list',
+    goals: 'list',
+    routines: 'list',
+    board: 'list',
+  },
+  sectionSelectedDates: {
+    habits: formatDateKey(),
+    goals: formatDateKey(),
+    routines: formatDateKey(),
+    board: formatDateKey(),
+  },
+  sidebarCollapsed: false,
+  focusedTaskId: null,
 }

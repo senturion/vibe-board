@@ -74,7 +74,7 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   // General
   theme: 'dark',
-  defaultView: 'dashboard',
+  defaultView: 'board',
   weekStartsOn: 'monday',
 
   // Board/Kanban

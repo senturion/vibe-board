@@ -13,7 +13,7 @@ interface NavigationContextType {
 }
 
 const NavigationContext = createContext<NavigationContextType>({
-  activeView: 'dashboard',
+  activeView: 'board',
   previousView: null,
   setActiveView: () => {},
   goBack: () => {},
@@ -46,10 +46,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   }, [previousView, setActiveView])
 
-  // Handle legacy calendar view - redirect to dashboard
+  // Handle legacy view IDs - redirect to board
   useEffect(() => {
-    if (isHydrated && (activeView as string) === 'calendar') {
-      setUIActiveView('dashboard')
+    if (isHydrated && ((activeView as string) === 'calendar' || (activeView as string) === 'dashboard')) {
+      setUIActiveView('board')
     }
   }, [isHydrated, activeView, setUIActiveView])
 
