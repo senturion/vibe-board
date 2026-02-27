@@ -222,7 +222,7 @@ export default function Home() {
 
   return (
     <AuthGuard>
-    <div className="flex h-screen flex-col lg:flex-row overflow-hidden bg-[var(--bg-primary)] theme-transition">
+    <div className="flex h-screen flex-col lg:flex-row overflow-hidden bg-[var(--bg-primary)] theme-transition" style={{ paddingTop: 'var(--safe-area-top)', paddingLeft: 'var(--safe-area-left)', paddingRight: 'var(--safe-area-right)' }}>
       {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Header with Navigation */}
