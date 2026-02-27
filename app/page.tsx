@@ -14,7 +14,8 @@ import { useColumnColors } from '@/hooks/useColumnColors'
 import { FilterState, SortState } from '@/components/FilterSort'
 import { SettingsPanel } from '@/components/settings'
 import { useNavigation } from '@/contexts/NavigationContext'
-import { MainNav, MobileNav } from '@/components/navigation/MainNav'
+import { MainNav } from '@/components/navigation/MainNav'
+import { BottomTabBar } from '@/components/navigation/BottomTabBar'
 import { HabitsPage } from '@/components/habits/HabitsPage'
 import { GoalsPage } from '@/components/goals/GoalsPage'
 import { RoutinesPage } from '@/components/routines/RoutinesPage'
@@ -27,7 +28,6 @@ import { useStaleTasks } from '@/hooks/useStaleTasks'
 import { StaleTasksBanner } from '@/components/StaleTasksBanner'
 import { useFocusTimer } from '@/hooks/useFocusTimer'
 import { useFocusTask } from '@/hooks/useFocusTask'
-import { Menu, X } from 'lucide-react'
 
 export default function Home() {
   const { activeView, setActiveView } = useNavigation()
@@ -84,7 +84,6 @@ export default function Home() {
   const [showStats, setShowStats] = useState(false)
   const [showDataManager, setShowDataManager] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [showMobileNav, setShowMobileNav] = useState(false)
   const [compact, setCompact] = useLocalStorage('vibe-compact-mode', false)
 
   // Filter & Sort state
@@ -224,18 +223,11 @@ export default function Home() {
     <AuthGuard>
     <div className="flex h-screen flex-col lg:flex-row overflow-hidden bg-[var(--bg-primary)] theme-transition" style={{ paddingTop: 'var(--safe-area-top)', paddingLeft: 'var(--safe-area-left)', paddingRight: 'var(--safe-area-right)' }}>
       {/* Main Area */}
-      <main className="flex-1 flex flex-col overflow-hidden min-h-0">
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0 pb-[60px] lg:pb-0">
         {/* Header with Navigation */}
         <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-[var(--border-subtle)] theme-transition">
           {/* Left: Logo & Navigation */}
           <div className="flex items-center gap-4 sm:gap-6">
-            <button
-              onClick={() => setShowMobileNav((prev) => !prev)}
-              className="lg:hidden p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
-              aria-label={showMobileNav ? 'Close navigation' : 'Open navigation'}
-            >
-              {showMobileNav ? <X size={16} /> : <Menu size={16} />}
-            </button>
             <h1 className="font-display text-xl tracking-tight text-[var(--text-primary)]">
               <span className="italic">Vibe</span>
               <span className="text-[var(--accent)]">Board</span>
@@ -245,12 +237,6 @@ export default function Home() {
 
           <div />
         </header>
-
-        {showMobileNav && (
-          <div className="lg:hidden border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-            <MobileNav className="px-4 py-3" onNavigate={() => setShowMobileNav(false)} />
-          </div>
-        )}
 
         {/* Stale Tasks Banner */}
         {!staleBannerDismissed && allStaleTasks.length > 0 && (
@@ -286,6 +272,8 @@ export default function Home() {
         {/* View Content */}
         {renderContent()}
       </main>
+
+      <BottomTabBar onOpenSettings={() => setShowSettings(true)} />
 
       {/* Sidebar */}
       <ErrorBoundary section="Sidebar">
