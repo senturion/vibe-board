@@ -403,7 +403,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
               }
             }}
             className={cn(
-              'px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] border transition-colors whitespace-nowrap',
+              'px-3 py-2.5 text-[10px] uppercase tracking-[0.12em] border transition-colors whitespace-nowrap',
               activeLane === column.id
                 ? 'text-[var(--accent)] border-[var(--accent)] bg-[var(--accent-glow)]'
                 : 'text-[var(--text-tertiary)] border-[var(--border)] hover:text-[var(--text-secondary)]'
@@ -415,7 +415,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
         <button
           onClick={() => setAddingColumn(true)}
           disabled={!boardId}
-          className="shrink-0 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="shrink-0 px-3 py-2.5 text-[10px] uppercase tracking-[0.12em] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="inline-flex items-center gap-1">
             <Plus size={11} />

@@ -279,7 +279,7 @@ export function Header({
         <div className="relative sm:hidden">
           <button
             onClick={() => setShowMobileControls((prev) => !prev)}
-            className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-secondary)] border border-[var(--border)]"
+            className="flex items-center gap-2 px-3 py-2.5 text-[12px] uppercase tracking-[0.12em] text-[var(--text-secondary)] border border-[var(--border)]"
           >
             <SlidersHorizontal size={14} />
             Controls
@@ -304,7 +304,7 @@ export function Header({
                       setShowMobileControls(false)
                       onOpenSearch()
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                    className="w-full flex items-center gap-2 px-3 py-3 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
                   >
                     <Search size={14} />
                     Search
@@ -315,7 +315,7 @@ export function Header({
                         setShowMobileControls(false)
                         onOpenStats()
                       }}
-                      className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                      className="flex items-center justify-center gap-2 px-3 py-3 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
                     >
                       <BarChart3 size={14} />
                       Stats
@@ -325,7 +325,7 @@ export function Header({
                         setShowMobileControls(false)
                         onOpenDataManager()
                       }}
-                      className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                      className="flex items-center justify-center gap-2 px-3 py-3 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
                     >
                       <Database size={14} />
                       Data
@@ -335,7 +335,7 @@ export function Header({
                         setShowMobileControls(false)
                         onOpenSettings()
                       }}
-                      className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
+                      className="flex items-center justify-center gap-2 px-3 py-3 text-[12px] text-[var(--text-tertiary)] border border-[var(--border)]"
                     >
                       <Settings size={14} />
                       Settings
@@ -346,7 +346,7 @@ export function Header({
                           setShowMobileControls(false)
                           setShowLogoutConfirm(true)
                         }}
-                        className="flex items-center justify-center gap-2 px-3 py-2 text-[12px] text-red-400 border border-red-400/40"
+                        className="flex items-center justify-center gap-2 px-3 py-3 text-[12px] text-red-400 border border-red-400/40"
                       >
                         <LogOut size={14} />
                         Sign out
