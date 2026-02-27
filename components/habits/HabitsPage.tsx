@@ -226,7 +226,7 @@ export function HabitsPage() {
                         setShowMobileViewMenu(false)
                       }}
                       className={cn(
-                        'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                        'w-full text-left px-3 py-2 text-[12px] sm:text-[11px] uppercase tracking-[0.1em] transition-colors',
                         viewMode === mode
                           ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                           : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -298,7 +298,7 @@ export function HabitsPage() {
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="px-2 text-[11px] text-[var(--text-secondary)]">
+              <span className="px-2 text-[12px] sm:text-[11px] text-[var(--text-secondary)]">
                 {logDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
               <button
@@ -343,7 +343,7 @@ export function HabitsPage() {
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="px-2 text-[11px] text-[var(--text-secondary)]">
+              <span className="px-2 text-[12px] sm:text-[11px] text-[var(--text-secondary)]">
                 {logDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
               <button
@@ -380,7 +380,7 @@ export function HabitsPage() {
                     <p className="text-2xl font-medium text-[var(--text-primary)]">
                       {dayStats.completed}/{dayStats.total}
                     </p>
-                    <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                    <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                       {isLogDateToday ? 'Today' : 'Day'}
                     </p>
                   </div>
@@ -396,7 +396,7 @@ export function HabitsPage() {
                     <p className="text-2xl font-medium text-[var(--text-primary)]">
                       {Math.max(...habits.map(h => getStreak(h.id)?.bestStreak || 0), 0)}
                     </p>
-                    <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                    <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                       Best Streak
                     </p>
                   </div>
@@ -415,7 +415,7 @@ export function HabitsPage() {
                     <p className="text-2xl font-medium text-[var(--text-primary)]">
                       {weeklyStats.percentage}%
                     </p>
-                    <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                    <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                       This Week
                     </p>
                   </div>
@@ -671,7 +671,7 @@ export function HabitsPage() {
                       key={habit.id}
                       onClick={() => setSelectedHabitForStats(habit)}
                       className={cn(
-                        'px-3 py-2 text-[12px] border transition-colors',
+                        'px-3 py-2 text-[13px] sm:text-[12px] border transition-colors',
                         selectedHabitForStats?.id === habit.id
                           ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-glow)]'
                           : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
@@ -736,7 +736,7 @@ export function HabitsPage() {
                     <div className="space-y-3">
                       {selectedHabitAnalytics.completionRateByWeek.map((week, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <span className="w-12 text-[11px] text-[var(--text-tertiary)]">
+                          <span className="w-12 text-[12px] sm:text-[11px] text-[var(--text-tertiary)]">
                             {week.week}
                           </span>
                           <div className="flex-1 h-4 bg-[var(--bg-tertiary)] overflow-hidden">
@@ -748,7 +748,7 @@ export function HabitsPage() {
                               }}
                             />
                           </div>
-                          <span className="w-10 text-right text-[12px] text-[var(--text-secondary)]">
+                          <span className="w-10 text-right text-[13px] sm:text-[12px] text-[var(--text-secondary)]">
                             {week.rate}%
                           </span>
                         </div>
@@ -799,7 +799,7 @@ export function HabitsPage() {
                     <div className="space-y-3">
                       {weeklyTrend.map((week, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <span className="w-12 text-[11px] text-[var(--text-tertiary)]">
+                          <span className="w-12 text-[12px] sm:text-[11px] text-[var(--text-tertiary)]">
                             {week.week}
                           </span>
                           <div className="flex-1 h-4 bg-[var(--bg-tertiary)] overflow-hidden">
@@ -811,7 +811,7 @@ export function HabitsPage() {
                               }}
                             />
                           </div>
-                          <span className="w-10 text-right text-[12px] text-[var(--text-secondary)]">
+                          <span className="w-10 text-right text-[13px] sm:text-[12px] text-[var(--text-secondary)]">
                             {week.rate}%
                           </span>
                         </div>
@@ -829,7 +829,7 @@ export function HabitsPage() {
                   </CardHeader>
                   <CardContent>
                     {mostImprovedHabits.length === 0 ? (
-                      <p className="text-[12px] text-[var(--text-tertiary)]">
+                      <p className="text-[13px] sm:text-[12px] text-[var(--text-tertiary)]">
                         No improvement trend yet. Keep logging to see momentum.
                       </p>
                     ) : (
@@ -841,12 +841,12 @@ export function HabitsPage() {
                             style={{ borderLeft: `3px solid ${habit.color}` }}
                           >
                             <div className="min-w-0">
-                              <p className="text-[12px] text-[var(--text-primary)] truncate">{habit.name}</p>
+                              <p className="text-[13px] sm:text-[12px] text-[var(--text-primary)] truncate">{habit.name}</p>
                               <p className="text-[10px] text-[var(--text-tertiary)]">
                                 {prevAvg}% → {recentAvg}%
                               </p>
                             </div>
-                            <span className="text-[12px] text-[var(--success)] font-medium">
+                            <span className="text-[13px] sm:text-[12px] text-[var(--success)] font-medium">
                               +{improvement}%
                             </span>
                           </div>

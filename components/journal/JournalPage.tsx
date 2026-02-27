@@ -204,7 +204,7 @@ export function JournalPage() {
           <button
             onClick={goToToday}
             className={cn(
-              'px-4 py-2 text-[12px] border transition-colors',
+              'px-4 py-2 text-[13px] sm:text-[12px] border transition-colors',
               isToday
                 ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-glow)]'
                 : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)]'
@@ -235,7 +235,7 @@ export function JournalPage() {
             <Card variant="bordered" padding="md">
               <div className="text-center">
                 <p className="text-3xl font-medium text-[var(--text-primary)]">{stats.totalEntries}</p>
-                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
                   Entries
                 </p>
               </div>
@@ -244,7 +244,7 @@ export function JournalPage() {
             <Card variant="bordered" padding="md">
               <div className="text-center">
                 <p className="text-3xl font-medium text-[var(--accent)]">{stats.streak}</p>
-                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
                   Day Streak
                 </p>
               </div>
@@ -255,7 +255,7 @@ export function JournalPage() {
                 <p className="text-3xl font-medium text-[var(--text-primary)]">
                   {stats.totalWords.toLocaleString()}
                 </p>
-                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
                   Words Written
                 </p>
               </div>
@@ -346,12 +346,12 @@ export function JournalPage() {
                   <span>14d ago</span>
                   <span>Today</span>
                 </div>
-                <div className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+                <div className="mt-2 text-[12px] sm:text-[11px] text-[var(--text-tertiary)]">
                   {hoveredMood
                     ? `${hoveredMood.date} · ${hoveredMood.label}${hoveredMood.value ? ` (${hoveredMood.value})` : ''}`
                     : 'Hover a bar for details'}
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] text-[var(--text-tertiary)]">
+                <div className="mt-3 grid grid-cols-2 gap-3 text-[12px] sm:text-[11px] text-[var(--text-tertiary)]">
                   <div className="flex items-center gap-2">
                     <span>Best:</span>
                     {moodSummary.bestMood ? (
@@ -435,12 +435,12 @@ export function JournalPage() {
             {promptLoading && (
               <div className="px-4 py-3 bg-[var(--accent-glow)] border-b border-[var(--accent-muted)] flex items-center gap-2">
                 <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
-                <p className="text-[13px] text-[var(--accent)] italic">Generating prompt...</p>
+                <p className="text-[14px] sm:text-[13px] text-[var(--accent)] italic">Generating prompt...</p>
               </div>
             )}
             {showPrompt && !promptLoading && (
               <div className="px-4 py-3 bg-[var(--accent-glow)] border-b border-[var(--accent-muted)]">
-                <p className="text-[13px] text-[var(--accent)] italic">{currentPrompt}</p>
+                <p className="text-[14px] sm:text-[13px] text-[var(--accent)] italic">{currentPrompt}</p>
                 <button
                   onClick={() => setShowPrompt(false)}
                   className="text-[10px] text-[var(--accent-muted)] hover:text-[var(--accent)] mt-1"
@@ -453,7 +453,7 @@ export function JournalPage() {
             {/* Mood display */}
             {mood && (
               <div className="px-4 py-2 border-b border-[var(--border-subtle)] flex items-center gap-2">
-                <span className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Mood:</span>
+                <span className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Mood:</span>
                 <MoodBadge mood={mood as MoodValue} showLabel size="sm" />
               </div>
             )}
@@ -472,7 +472,7 @@ export function JournalPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
+            <div className="px-4 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[12px] sm:text-[11px] text-[var(--text-tertiary)]">
               <span>{content.trim().split(/\s+/).filter(Boolean).length} words</span>
               <span>Auto-saved</span>
             </div>
@@ -488,7 +488,7 @@ export function JournalPage() {
             </CardHeader>
             <CardContent>
               {entries.length === 0 ? (
-                <p className="text-[12px] text-[var(--text-tertiary)] text-center py-4">
+                <p className="text-[13px] sm:text-[12px] text-[var(--text-tertiary)] text-center py-4">
                   No entries yet. Start writing today!
                 </p>
               ) : (
@@ -507,14 +507,14 @@ export function JournalPage() {
                       <div className="flex items-center gap-3">
                         {entry.mood && <MoodBadge mood={entry.mood as MoodValue} size="sm" />}
                         <div>
-                          <p className="text-[12px] font-medium text-[var(--text-primary)]">
+                          <p className="text-[13px] sm:text-[12px] font-medium text-[var(--text-primary)]">
                             {new Date(entry.entryDate + 'T00:00:00').toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
                               day: 'numeric',
                             })}
                           </p>
-                          <p className="text-[11px] text-[var(--text-tertiary)] truncate max-w-[200px]">
+                          <p className="text-[12px] sm:text-[11px] text-[var(--text-tertiary)] truncate max-w-[200px]">
                             {entry.content.substring(0, 50)}...
                           </p>
                         </div>

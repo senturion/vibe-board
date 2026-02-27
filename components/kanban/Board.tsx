@@ -518,7 +518,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
           {activeTask ? (
             <div className="bg-[var(--bg-secondary)] border-l-2 border-[var(--accent)] shadow-2xl shadow-black/50 rotate-1 scale-[1.02] opacity-95">
               <div className="p-4">
-                <p className="text-[13px] text-[var(--text-primary)] leading-relaxed">{activeTask.title}</p>
+                <p className="text-[14px] sm:text-[13px] text-[var(--text-primary)] leading-relaxed">{activeTask.title}</p>
               </div>
             </div>
           ) : null}
@@ -528,7 +528,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
       {/* Archive button */}
       <button
         onClick={() => setShowArchive(true)}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center gap-2 px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors shadow-lg shadow-black/20"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center gap-2 px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors shadow-lg shadow-black/20"
         title="View archive (A)"
       >
         <Archive size={14} />

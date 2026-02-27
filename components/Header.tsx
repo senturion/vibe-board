@@ -107,7 +107,7 @@ export function Header({
         <div className="relative">
           <button
             onClick={() => setShowBoardMenu(!showBoardMenu)}
-            className="flex items-center gap-2 px-2.5 py-1.5 sm:px-3 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+            className="flex items-center gap-2 px-2.5 py-1.5 sm:px-3 text-[13px] sm:text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
           >
             <span className="max-w-[50vw] sm:max-w-[150px] truncate">{activeBoard?.name || 'Loading...'}</span>
             <ChevronDown size={14} className={cn(
@@ -186,7 +186,7 @@ export function Header({
                             setShowBoardMenu(false)
                           }}
                           className={cn(
-                            'w-full px-3 py-2 text-left text-[12px] flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer',
+                            'w-full px-3 py-2 text-left text-[13px] sm:text-[12px] flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer',
                             board.id === activeBoard.id ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
                           )}
                         >
@@ -262,7 +262,7 @@ export function Header({
                 ) : (
                   <button
                     onClick={() => setIsCreating(true)}
-                    className="w-full px-3 py-2 text-left text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-2 transition-colors"
+                    className="w-full px-3 py-2 text-left text-[13px] sm:text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-2 transition-colors"
                   >
                     <Plus size={12} />
                     New Board
@@ -429,7 +429,7 @@ export function Header({
         description="Are you sure you want to sign out?"
         size="sm"
       >
-        <p className="text-[12px] text-[var(--text-secondary)]">
+        <p className="text-[13px] sm:text-[12px] text-[var(--text-secondary)]">
           You can sign back in any time.
         </p>
         <ModalActions>

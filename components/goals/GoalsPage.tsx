@@ -123,7 +123,7 @@ export function GoalsPage() {
                       setShowMobileFilterMenu(false)
                     }}
                     className={cn(
-                      'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                      'w-full text-left px-3 py-2 text-[12px] sm:text-[11px] uppercase tracking-[0.1em] transition-colors',
                       filterStatus === 'all'
                         ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                         : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -139,7 +139,7 @@ export function GoalsPage() {
                         setShowMobileFilterMenu(false)
                       }}
                       className={cn(
-                        'w-full text-left px-3 py-2 text-[11px] uppercase tracking-[0.1em] transition-colors',
+                        'w-full text-left px-3 py-2 text-[12px] sm:text-[11px] uppercase tracking-[0.1em] transition-colors',
                         filterStatus === status.id
                           ? 'bg-[var(--bg-tertiary)] text-[var(--accent)]'
                           : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -202,7 +202,7 @@ export function GoalsPage() {
             <Card variant="bordered" padding="md">
               <div className="text-center">
                 <p className="text-3xl font-medium text-[var(--text-primary)]">{stats.total}</p>
-                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
                   Total Goals
                 </p>
               </div>
@@ -211,7 +211,7 @@ export function GoalsPage() {
             <Card variant="bordered" padding="md">
               <div className="text-center">
                 <p className="text-3xl font-medium text-[var(--accent)]">{stats.active}</p>
-                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
                   Active
                 </p>
               </div>
@@ -220,7 +220,7 @@ export function GoalsPage() {
             <Card variant="bordered" padding="md">
               <div className="text-center">
                 <p className="text-3xl font-medium text-[var(--success)]">{stats.completed}</p>
-                <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] sm:text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mt-1">
                   Completed
                 </p>
               </div>
