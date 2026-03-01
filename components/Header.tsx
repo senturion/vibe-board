@@ -118,12 +118,12 @@ export function Header({
 
           {showBoardMenu && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => {
+              <div className="fixed inset-0 z-40" onClick={() => {
                 setShowBoardMenu(false)
                 setIsCreating(false)
                 setEditingId(null)
               }} />
-              <div className="absolute left-0 top-full mt-2 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[200px]">
+              <div className="absolute left-0 top-full mt-2 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-50 min-w-[200px]">
                 {/* Board List */}
                 <div className="py-1">
                   {boards.map(board => (
@@ -287,10 +287,10 @@ export function Header({
           {showMobileControls && (
             <>
               <div
-                className="fixed inset-0 z-10"
+                className="fixed inset-0 z-40"
                 onClick={() => setShowMobileControls(false)}
               />
-              <div className="absolute right-0 mt-2 w-[90vw] max-w-[320px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/40 z-20">
+              <div className="absolute right-0 mt-2 w-[90vw] max-w-[320px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/40 z-50">
                 <div className="p-3 space-y-2">
                   <FilterSort
                     filters={filters}

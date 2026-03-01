@@ -120,34 +120,31 @@ export function HabitsHeader({
         {/* Desktop day nav */}
         {(viewMode === 'today' || viewMode === 'all') && (
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Day</span>
-            <div className="flex items-center border border-[var(--border)] bg-[var(--bg-secondary)]">
-              <button
-                onClick={() => {
-                  const prev = new Date(logDate)
-                  prev.setDate(prev.getDate() - 1)
-                  setLogDateKey(formatDateKey(prev))
-                }}
-                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-                aria-label="Previous day"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span className="px-2 text-[12px] sm:text-[11px] text-[var(--text-secondary)]">
-                {logDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
-              <button
-                onClick={() => {
-                  const next = new Date(logDate)
-                  next.setDate(next.getDate() + 1)
-                  setLogDateKey(formatDateKey(next))
-                }}
-                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-                aria-label="Next day"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                const prev = new Date(logDate)
+                prev.setDate(prev.getDate() - 1)
+                setLogDateKey(formatDateKey(prev))
+              }}
+              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              aria-label="Previous day"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="px-4 py-2 text-[13px] text-[var(--text-secondary)] border border-[var(--border)]">
+              {logDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </span>
+            <button
+              onClick={() => {
+                const next = new Date(logDate)
+                next.setDate(next.getDate() + 1)
+                setLogDateKey(formatDateKey(next))
+              }}
+              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              aria-label="Next day"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         )}
 
@@ -164,34 +161,31 @@ export function HabitsHeader({
       {(viewMode === 'today' || viewMode === 'all') && (
         <div className="px-4 pb-3 sm:hidden">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Day</span>
-            <div className="flex items-center border border-[var(--border)] bg-[var(--bg-secondary)]">
-              <button
-                onClick={() => {
-                  const prev = new Date(logDate)
-                  prev.setDate(prev.getDate() - 1)
-                  setLogDateKey(formatDateKey(prev))
-                }}
-                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-                aria-label="Previous day"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span className="px-2 text-[12px] sm:text-[11px] text-[var(--text-secondary)]">
-                {logDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
-              <button
-                onClick={() => {
-                  const next = new Date(logDate)
-                  next.setDate(next.getDate() + 1)
-                  setLogDateKey(formatDateKey(next))
-                }}
-                className="px-2 py-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-                aria-label="Next day"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                const prev = new Date(logDate)
+                prev.setDate(prev.getDate() - 1)
+                setLogDateKey(formatDateKey(prev))
+              }}
+              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              aria-label="Previous day"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="px-4 py-2 text-[13px] text-[var(--text-secondary)] border border-[var(--border)]">
+              {logDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </span>
+            <button
+              onClick={() => {
+                const next = new Date(logDate)
+                next.setDate(next.getDate() + 1)
+                setLogDateKey(formatDateKey(next))
+              }}
+              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              aria-label="Next day"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       )}

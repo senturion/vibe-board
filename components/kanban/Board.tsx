@@ -403,7 +403,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
               }
             }}
             className={cn(
-              'px-3 py-2.5 text-[10px] uppercase tracking-[0.12em] border transition-colors whitespace-nowrap',
+              'px-4 py-3 sm:px-3 sm:py-2.5 text-[12px] sm:text-[10px] uppercase tracking-[0.12em] border transition-colors whitespace-nowrap',
               activeLane === column.id
                 ? 'text-[var(--accent)] border-[var(--accent)] bg-[var(--accent-glow)]'
                 : 'text-[var(--text-tertiary)] border-[var(--border)] hover:text-[var(--text-secondary)]'

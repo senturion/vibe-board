@@ -112,8 +112,8 @@ export function FilterSort({
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-20" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-[90vw] max-w-[320px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/30 z-30 animate-fade-up">
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 w-[90vw] max-w-[320px] bg-[var(--bg-elevated)] border border-[var(--border)] shadow-2xl shadow-black/30 z-50 animate-fade-up">
             {/* Tabs */}
             <div className="flex border-b border-[var(--border)]">
               <button

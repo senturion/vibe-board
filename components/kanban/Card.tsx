@@ -92,7 +92,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
         />
 
         <div className="px-3 py-2 pl-2 flex items-center justify-between gap-2">
-          <p className="text-[12px] text-[var(--text-primary)] leading-snug truncate flex-1">
+          <p className="text-[14px] sm:text-[12px] text-[var(--text-primary)] leading-snug truncate flex-1">
             {task.title}
           </p>
           <div className="flex items-center gap-2 shrink-0">
@@ -164,7 +164,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
       <div className="p-4 pl-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] text-[var(--text-primary)] leading-relaxed break-words">
+            <p className="text-[15px] sm:text-[13px] text-[var(--text-primary)] leading-relaxed break-words">
               {task.title}
             </p>
             {/* Labels */}
