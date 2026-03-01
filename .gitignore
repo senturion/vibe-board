@@ -50,3 +50,6 @@ public/swe-worker-*.js
 # Capacitor native projects
 /ios
 /android
+
+# worktrees
+.worktrees
