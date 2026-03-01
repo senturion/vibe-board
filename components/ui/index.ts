@@ -1,5 +1,5 @@
 export { Card, CardHeader, CardTitle, CardContent, CardFooter } from './Card'
 export { Modal, ModalActions } from './Modal'
 export { ProgressBar, ProgressRing, ProgressSteps } from './Progress'
-export { EmptyState, LoadingState, ErrorState } from './EmptyState'
+export { EmptyState, LoadingState } from './EmptyState'
 export { Badge, StreakBadge, StatBadge, MoodBadge } from './Badge'

@@ -125,37 +125,3 @@ export function LoadingState({ message = 'Loading...', className }: LoadingState
     </div>
   )
 }
-
-interface ErrorStateProps {
-  title?: string
-  message?: string
-  retry?: () => void
-  className?: string
-}
-
-export function ErrorState({
-  title = 'Something went wrong',
-  message,
-  retry,
-  className,
-}: ErrorStateProps) {
-  return (
-    <div className={cn('flex flex-col items-center justify-center py-10 text-center', className)}>
-      <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20">
-        <span className="text-2xl">!</span>
-      </div>
-      <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-1">{title}</h3>
-      {message && (
-        <p className="text-[12px] text-[var(--text-tertiary)] max-w-xs mb-4">{message}</p>
-      )}
-      {retry && (
-        <button
-          onClick={retry}
-          className="px-4 py-2 text-[12px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-        >
-          Try Again
-        </button>
-      )}
-    </div>
-  )
-}
