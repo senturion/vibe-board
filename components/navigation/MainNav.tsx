@@ -62,42 +62,6 @@ export function MainNav({ className, compact = false }: MainNavProps) {
     </nav>
   )
 }
-
-// Smaller pill-style nav for mobile or sidebar
-export function MobileNav({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
-  const { activeView, setActiveView, isTransitioning } = useNavigation()
-
-  return (
-    <nav className={cn('flex flex-col gap-1', className)}>
-      {VIEWS.map((view) => {
-        const Icon = ICON_MAP[view.icon]
-        const isActive = activeView === view.id
-
-        return (
-          <button
-            key={view.id}
-            onClick={() => {
-              setActiveView(view.id)
-              onNavigate?.()
-            }}
-            disabled={isTransitioning}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 text-left transition-all duration-150',
-              isActive
-                ? 'bg-[var(--bg-tertiary)] text-[var(--accent)] border-l-2 border-l-[var(--accent)]'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] border-l-2 border-l-transparent',
-              isTransitioning && 'opacity-75 cursor-wait'
-            )}
-          >
-            {Icon && <Icon size={16} />}
-            <span className="text-[12px] font-medium">{view.title}</span>
-          </button>
-        )
-      })}
-    </nav>
-  )
-}
-
 // Individual nav item for custom layouts
 interface NavItemProps {
   viewId: ViewId
