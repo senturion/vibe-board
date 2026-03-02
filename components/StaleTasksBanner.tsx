@@ -113,7 +113,7 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
       {/* Expanded task list */}
       {showTasks && (
         <div className="px-4 sm:px-6 lg:px-8 pb-3">
-          <div className="border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] max-h-[240px] overflow-y-auto">
+          <div className="border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
             {staleTasks.map(task => (
               <div key={task.id} className="group flex items-center gap-3 px-3 py-2 hover:bg-[var(--bg-tertiary)] transition-colors">
                 <div className="flex-1 min-w-0">
