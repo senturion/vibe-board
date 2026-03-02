@@ -44,7 +44,7 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
   const count = staleTasks.length
 
   return (
-    <div className="border-b border-amber-400/20 bg-amber-400/5">
+    <div className="relative z-30 border-b border-amber-400/20 bg-amber-400/5">
       {/* Main banner row */}
       <div className="flex items-center gap-3 px-4 sm:px-6 lg:px-8 py-2.5">
         <AlarmClockOff size={14} className="text-amber-400 shrink-0" />
@@ -80,8 +80,8 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
             </button>
             {showSnoozeMenu && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowSnoozeMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[120px]">
+                <div className="fixed inset-0 z-40" onClick={() => setShowSnoozeMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-50 min-w-[120px]">
                   {SNOOZE_OPTIONS.map(opt => (
                     <button
                       key={opt.label}
@@ -147,8 +147,8 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
                     </button>
                     {taskMoveMenuId === task.id && (
                       <>
-                        <div className="fixed inset-0 z-10" onClick={() => setTaskMoveMenuId(null)} />
-                        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[100px]">
+                        <div className="fixed inset-0 z-40" onClick={() => setTaskMoveMenuId(null)} />
+                        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-50 min-w-[100px]">
                           <button
                             onClick={() => {
                               onMoveTask(task.id, 'backlog')
@@ -185,8 +185,8 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
                     </button>
                     {taskSnoozeMenuId === task.id && (
                       <>
-                        <div className="fixed inset-0 z-10" onClick={() => setTaskSnoozeMenuId(null)} />
-                        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 min-w-[100px]">
+                        <div className="fixed inset-0 z-40" onClick={() => setTaskSnoozeMenuId(null)} />
+                        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-50 min-w-[100px]">
                           {SNOOZE_OPTIONS.map(opt => (
                             <button
                               key={opt.label}
