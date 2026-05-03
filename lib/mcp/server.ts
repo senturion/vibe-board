@@ -5,13 +5,14 @@ import { registerTaskTools } from './tools/tasks'
 import { registerBoardTools } from './tools/boards'
 import { registerTodoTools } from './tools/todos'
 import { registerNoteTools } from './tools/notes'
+import { registerHabitTools } from './tools/habits'
 
 const deps = {
   getClient: () => createAdminClient(),
   ownerId: () => getOwnerUserId(),
 }
 
-// MCP server: ping + task tools + board tools + todo tools + note tools.
+// MCP server: ping + task tools + board tools + todo tools + note tools + habit tools.
 export const mcpHandler = createMcpHandler(
   (server) => {
     server.tool(
@@ -31,6 +32,7 @@ export const mcpHandler = createMcpHandler(
     registerBoardTools(server, deps)
     registerTodoTools(server, deps)
     registerNoteTools(server, deps)
+    registerHabitTools(server, deps)
   },
   {},
   { basePath: '/api' },
