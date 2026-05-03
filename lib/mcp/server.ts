@@ -3,13 +3,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getOwnerUserId } from './owner'
 import { registerTaskTools } from './tools/tasks'
 import { registerBoardTools } from './tools/boards'
+import { registerTodoTools } from './tools/todos'
 
 const deps = {
   getClient: () => createAdminClient(),
   ownerId: () => getOwnerUserId(),
 }
 
-// MCP server: ping + task tools + board tools.
+// MCP server: ping + task tools + board tools + todo tools.
 export const mcpHandler = createMcpHandler(
   (server) => {
     server.tool(
@@ -27,6 +28,7 @@ export const mcpHandler = createMcpHandler(
     )
     registerTaskTools(server, deps)
     registerBoardTools(server, deps)
+    registerTodoTools(server, deps)
   },
   {},
   { basePath: '/api' },
