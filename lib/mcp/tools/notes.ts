@@ -65,28 +65,41 @@ export async function appendNote(
   const owner = deps.ownerId()
   const separator = args.separator ?? '\n\n'
 
+  // notes has no unique constraint on user_id, so we cannot upsert by user_id.
+  // Mirror hooks/useNotes.ts: select existing → update by id, else insert.
   const { data: existing, error: selectError } = await supabase
     .from('notes')
-    .select('content')
+    .select('id, content')
     .eq('user_id', owner)
     .maybeSingle()
   if (selectError) throw new Error(selectError.message)
 
-  const existingContent =
-    (existing as { content?: string } | null)?.content ?? null
+  const existingRow = existing as { id: string; content: string } | null
   const newContent =
-    existingContent === null ? args.text : existingContent + separator + args.text
+    existingRow === null ? args.text : existingRow.content + separator + args.text
   const updatedAt = new Date().toISOString()
 
-  const { error: upsertError } = await supabase
-    .from('notes')
-    .upsert(
-      { user_id: owner, content: newContent, updated_at: updatedAt },
-      { onConflict: 'user_id' },
-    )
-  if (upsertError) throw new Error(upsertError.message)
+  if (existingRow) {
+    const { data: updated, error: updateError } = await supabase
+      .from('notes')
+      .update({ content: newContent, updated_at: updatedAt })
+      .eq('id', existingRow.id)
+      .eq('user_id', owner)
+      .select('content, updated_at')
+      .single()
+    if (updateError) throw new Error(updateError.message)
+    const row = updated as { content: string; updated_at: string }
+    return ok({ content: row.content, updated_at: row.updated_at })
+  }
 
-  return ok({ content: newContent, updated_at: updatedAt })
+  const { data: inserted, error: insertError } = await supabase
+    .from('notes')
+    .insert({ user_id: owner, content: newContent })
+    .select('content, updated_at')
+    .single()
+  if (insertError) throw new Error(insertError.message)
+  const row = inserted as { content: string; updated_at: string }
+  return ok({ content: row.content, updated_at: row.updated_at })
 }
 
 // ---------- registration ----------
