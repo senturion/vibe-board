@@ -68,6 +68,29 @@ You can also choose provider/model/base URL per user in the app Settings under `
 You can enter an API key there too; it stays local to your device and is sent only with AI requests.
 Server environment variables still act as defaults/fallbacks.
 
+## Claude MCP Connector
+
+This app exposes a custom MCP server at `/api/mcp` so Claude (web/desktop/iOS) can read and write your data via chat.
+
+**Required env vars:**
+
+- `MCP_BEARER_TOKEN` — long random string. Generate with `openssl rand -base64 48`.
+- `MCP_OWNER_USER_ID` — your `auth.users` UUID (Supabase Dashboard → Authentication → Users).
+
+Both must be set in `.env.local` for local dev and in the Vercel dashboard (Settings → Environment Variables) for production. Restart the dev server after adding them locally — Next.js only reads `.env.local` at startup.
+
+**Connect from Claude.ai (Pro/Team/Enterprise plan required):**
+
+Settings → Connectors → Add custom connector. URL: `https://<your-domain>/api/mcp`. Auth: Bearer token → paste `MCP_BEARER_TOKEN`. The connector auto-syncs to the desktop and iOS Claude apps under the same account.
+
+**Tools exposed (16):** `ping`, `list_tasks`, `get_task`, `create_task`, `update_task`, `complete_task`, `list_boards`, `list_todos`, `create_todo`, `get_notes`, `append_note`, `list_habits`, `get_habit_status`, `list_habit_history`, `log_habit_completion`, `create_habit`.
+
+**Rotate the token:**
+
+1. Generate a new value (`openssl rand -base64 48`), update `MCP_BEARER_TOKEN` in `.env.local` and the Vercel dashboard.
+2. Redeploy.
+3. Re-paste the new token in the Claude connector settings.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
