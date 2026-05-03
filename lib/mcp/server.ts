@@ -1,6 +1,14 @@
 import { createMcpHandler } from 'mcp-handler'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getOwnerUserId } from './owner'
+import { registerTaskTools } from './tools/tasks'
 
-// MCP server with a single ping tool. Real tools added in later tasks.
+const deps = {
+  getClient: () => createAdminClient(),
+  ownerId: () => getOwnerUserId(),
+}
+
+// MCP server: ping + task tools.
 export const mcpHandler = createMcpHandler(
   (server) => {
     server.tool(
@@ -16,6 +24,7 @@ export const mcpHandler = createMcpHandler(
         ],
       }),
     )
+    registerTaskTools(server, deps)
   },
   {},
   { basePath: '/api' },
