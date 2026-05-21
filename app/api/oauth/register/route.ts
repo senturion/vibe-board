@@ -34,7 +34,13 @@ export async function POST(request: Request) {
     if (typeof u !== 'string') {
       return err(400, 'invalid_redirect_uri', 'each redirect_uri must be a string')
     }
-    if (!u.startsWith('https://')) {
+    // RFC 8252: allow http loopback for native/CLI clients (localhost / 127.0.0.1 / [::1]).
+    const isHttps = u.startsWith('https://')
+    const isLoopback =
+      u.startsWith('http://localhost') ||
+      u.startsWith('http://127.0.0.1') ||
+      u.startsWith('http://[::1]')
+    if (!isHttps && !isLoopback) {
       return err(400, 'invalid_redirect_uri', `non-https redirect_uri: ${u}`)
     }
   }

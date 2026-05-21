@@ -72,6 +72,25 @@ describe('POST /api/oauth/register', () => {
     expect(body.error_description).toContain('http://evil.example.com/cb')
   })
 
+  it('allows http loopback redirect_uris (RFC 8252 — localhost, 127.0.0.1, [::1])', async () => {
+    vi.mocked(registerClient).mockResolvedValueOnce({
+      client_id: 'mcp_x',
+      client_name: 'cli',
+      redirect_uris: ['http://localhost:3000/cb', 'http://127.0.0.1:8080/cb', 'http://[::1]:9000/cb'],
+      grant_types: ['authorization_code', 'refresh_token'],
+      token_endpoint_auth_method: 'none',
+      client_secret_hash: null,
+      created_at: new Date().toISOString(),
+    })
+    const res = await POST(
+      postReq({
+        client_name: 'cli',
+        redirect_uris: ['http://localhost:3000/cb', 'http://127.0.0.1:8080/cb', 'http://[::1]:9000/cb'],
+      }),
+    )
+    expect(res.status).toBe(201)
+  })
+
   it('returns 400 invalid_client_metadata for malformed JSON', async () => {
     const res = await POST(postReq('this is not json'))
     expect(res.status).toBe(400)
