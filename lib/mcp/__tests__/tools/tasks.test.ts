@@ -145,9 +145,41 @@ describe('createTask', () => {
       content: [{ type: 'text', text: JSON.stringify(created) }],
     })
   })
+
+  it('normalizes subtasks: strings become {id, text, completed:false}; objects keep/synthesize id', async () => {
+    const created = { id: 'new', title: 'trip', user_id: OWNER, board_id: 'b1' }
+    const { deps: d, calls } = deps({ tasks: [created] })
+    await createTask(
+      {
+        board_id: 'b1',
+        title: 'trip',
+        subtasks: ['book flight', { text: 'pack', completed: true }, { id: 'x', text: 'go', completed: false }],
+      },
+      d,
+    )
+    const insertCall = calls.find((c) => c.method === 'insert')
+    const payload = insertCall?.args[0] as { subtasks: Array<{ id: string; text: string; completed: boolean }> }
+    expect(payload.subtasks).toHaveLength(3)
+    expect(payload.subtasks[0]).toMatchObject({ text: 'book flight', completed: false })
+    expect(payload.subtasks[0].id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(payload.subtasks[1]).toMatchObject({ text: 'pack', completed: true })
+    expect(payload.subtasks[1].id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(payload.subtasks[2]).toEqual({ id: 'x', text: 'go', completed: false })
+  })
 })
 
 describe('updateTask', () => {
+  it('patch.subtasks replaces the array with normalized items', async () => {
+    const updated = { id: 't1', title: 't', user_id: OWNER }
+    const { deps: d, calls } = deps({ tasks: [updated] })
+    await updateTask({ id: 't1', patch: { subtasks: ['a', 'b'] } }, d)
+    const updateCall = calls.find((c) => c.method === 'update')
+    const payload = updateCall?.args[0] as { subtasks: Array<{ id: string; text: string; completed: boolean }> }
+    expect(payload.subtasks).toHaveLength(2)
+    expect(payload.subtasks.map((s) => s.text)).toEqual(['a', 'b'])
+    expect(payload.subtasks.every((s) => s.completed === false)).toBe(true)
+  })
+
   it('updates by id+user_id, maps order, sets updated_at, returns row', async () => {
     const updated = { id: 't1', title: 'renamed', user_id: OWNER, order: 5 }
     const { deps: d, calls } = deps({ tasks: [updated] })

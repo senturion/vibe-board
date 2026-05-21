@@ -1,6 +1,27 @@
+import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/types'
+
+// Subtask shape matches the app's `lib/types/kanban.ts` Subtask interface.
+// Accept either a plain string (we'll synthesize id + completed:false) or the full object.
+const subtaskInputSchema = z.union([
+  z.string(),
+  z.object({
+    id: z.string().optional(),
+    text: z.string(),
+    completed: z.boolean().optional(),
+  }),
+])
+
+function normalizeSubtasks(items: z.infer<typeof subtaskInputSchema>[] | undefined) {
+  if (!items) return undefined
+  return items.map((it) =>
+    typeof it === 'string'
+      ? { id: randomUUID(), text: it, completed: false }
+      : { id: it.id ?? randomUUID(), text: it.text, completed: it.completed ?? false },
+  )
+}
 
 // Service-role calls bypass RLS; we MUST scope every query by user_id ourselves.
 export type TaskToolDeps = {
@@ -86,6 +107,8 @@ export const createTaskShape = {
   priority: z.string().optional(),
   labels: z.array(z.string()).optional(),
   due_date: z.string().optional(),
+  // Each item: plain string ("buy milk") OR { text, completed?, id? }. IDs auto-generated if missing.
+  subtasks: z.array(subtaskInputSchema).optional(),
 }
 export type CreateTaskArgs = z.infer<z.ZodObject<typeof createTaskShape>>
 
@@ -94,7 +117,12 @@ export async function createTask(
   deps: TaskToolDeps,
 ): Promise<McpResult> {
   const supabase = deps.getClient()
-  const insert = { ...args, user_id: deps.ownerId() }
+  const { subtasks, ...rest } = args
+  const insert = {
+    ...rest,
+    ...(subtasks !== undefined ? { subtasks: normalizeSubtasks(subtasks) } : {}),
+    user_id: deps.ownerId(),
+  }
   const { data, error } = await supabase
     .from('tasks')
     .insert(insert)
@@ -116,6 +144,8 @@ export const updateTaskShape = {
     labels: z.array(z.string()).optional(),
     due_date: z.string().nullable().optional(),
     order: z.number().optional(),
+    // Full replacement of the subtasks array. Same input format as create_task.
+    subtasks: z.array(subtaskInputSchema).optional(),
   }),
 }
 export type UpdateTaskArgs = z.infer<z.ZodObject<typeof updateTaskShape>>
@@ -126,8 +156,10 @@ export async function updateTask(
 ): Promise<McpResult> {
   const supabase = deps.getClient()
   // patch.order maps to the quoted "order" column — Supabase handles quoting.
+  const { subtasks, ...rest } = args.patch
   const patch: Record<string, unknown> = {
-    ...args.patch,
+    ...rest,
+    ...(subtasks !== undefined ? { subtasks: normalizeSubtasks(subtasks) } : {}),
     updated_at: new Date().toISOString(),
   }
   const { data, error } = await supabase
@@ -180,13 +212,13 @@ export function registerTaskTools(server: ServerLike, deps: TaskToolDeps) {
   )
   server.tool(
     'create_task',
-    'Create a task on a board owned by the owner. Returns the created row.',
+    'Create a task on a board owned by the owner. Supports optional subtasks (array of strings or {text, completed?, id?} objects — ids auto-generated). Returns the created row.',
     createTaskShape,
     (args) => createTask(args as CreateTaskArgs, deps),
   )
   server.tool(
     'update_task',
-    'Patch a task by id. patch.order maps to the "order" column. Returns the updated row.',
+    'Patch a task by id. patch.order maps to the "order" column. patch.subtasks fully replaces the subtasks array (same input format as create_task). Returns the updated row.',
     updateTaskShape,
     (args) => updateTask(args as UpdateTaskArgs, deps),
   )
