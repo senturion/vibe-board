@@ -44,9 +44,13 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
                      request.nextUrl.pathname.startsWith('/signup')
   // /api/mcp uses bearer-token auth, not Supabase session cookies — skip redirect.
-  const isMcp = request.nextUrl.pathname.startsWith('/api/mcp')
+  // /api/oauth/* and /.well-known/oauth-* are OAuth endpoints that handle their own auth.
+  const isMcpOrOauth =
+    request.nextUrl.pathname.startsWith('/api/mcp') ||
+    request.nextUrl.pathname.startsWith('/api/oauth/') ||
+    request.nextUrl.pathname.startsWith('/.well-known/oauth-')
 
-  if (!user && !isAuthPage && !isMcp) {
+  if (!user && !isAuthPage && !isMcpOrOauth) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
