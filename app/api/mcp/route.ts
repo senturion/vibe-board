@@ -1,15 +1,39 @@
 import { NextResponse } from 'next/server'
-import { isAuthorized } from '@/lib/mcp/auth'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { mcpHandler } from '@/lib/mcp/server'
+import { verifyAccessToken } from '@/lib/mcp/oauth/verify'
+import { findByAccessToken } from '@/lib/mcp/oauth/tokensStore'
 
-function unauthorized() {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+function originOf(r: Request): string {
+  const u = new URL(r.url)
+  return `${u.protocol}//${u.host}`
 }
 
-// Bearer-token auth guard at the route boundary — no unauthenticated request
-// reaches the MCP handler.
+function unauthorized(resourceMetadataUrl: string) {
+  return new NextResponse(JSON.stringify({ error: 'unauthorized' }), {
+    status: 401,
+    headers: {
+      'content-type': 'application/json',
+      'www-authenticate': `Bearer resource_metadata="${resourceMetadataUrl}"`,
+    },
+  })
+}
+
 async function guarded(request: Request) {
-  if (!isAuthorized(request)) return unauthorized()
+  const origin = originOf(request)
+  const expectedResource = `${origin}/api/mcp`
+  const metadataUrl = `${origin}/.well-known/oauth-protected-resource`
+
+  const header = request.headers.get('authorization')
+  if (!header || !header.startsWith('Bearer ')) return unauthorized(metadataUrl)
+  const token = header.slice(7)
+
+  const supabase = createAdminClient()
+  const auth = await verifyAccessToken(token, expectedResource, {
+    findByAccessToken: (t) => findByAccessToken(t, { getClient: () => supabase }),
+  })
+  if (!auth) return unauthorized(metadataUrl)
+
   return mcpHandler(request)
 }
 
