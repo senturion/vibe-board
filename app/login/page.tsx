@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { validateEmail } from '@/lib/validation'
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -41,7 +42,11 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/')
+      // Honor ?return_to= for OAuth re-entry. Only allow same-origin paths.
+      const returnTo = searchParams.get('return_to')
+      const safeReturnTo =
+        returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/'
+      router.push(safeReturnTo)
       router.refresh()
     }
   }
