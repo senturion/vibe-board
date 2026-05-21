@@ -550,6 +550,137 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_oauth_clients: {
+        Row: {
+          client_id: string
+          client_name: string | null
+          client_secret_hash: string | null
+          created_at: string
+          grant_types: string[]
+          redirect_uris: string[]
+          token_endpoint_auth_method: string
+        }
+        Insert: {
+          client_id: string
+          client_name?: string | null
+          client_secret_hash?: string | null
+          created_at?: string
+          grant_types?: string[]
+          redirect_uris: string[]
+          token_endpoint_auth_method?: string
+        }
+        Update: {
+          client_id?: string
+          client_name?: string | null
+          client_secret_hash?: string | null
+          created_at?: string
+          grant_types?: string[]
+          redirect_uris?: string[]
+          token_endpoint_auth_method?: string
+        }
+        Relationships: []
+      }
+      mcp_oauth_codes: {
+        Row: {
+          client_id: string
+          code: string
+          code_challenge: string
+          code_challenge_method: string
+          consumed_at: string | null
+          expires_at: string
+          redirect_uri: string
+          resource: string | null
+          scopes: string[] | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          code: string
+          code_challenge: string
+          code_challenge_method?: string
+          consumed_at?: string | null
+          expires_at: string
+          redirect_uri: string
+          resource?: string | null
+          scopes?: string[] | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          code?: string
+          code_challenge?: string
+          code_challenge_method?: string
+          consumed_at?: string | null
+          expires_at?: string
+          redirect_uri?: string
+          resource?: string | null
+          scopes?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_oauth_codes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "mcp_oauth_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_oauth_tokens: {
+        Row: {
+          access_token: string
+          client_id: string
+          created_at: string
+          expires_at: string
+          refresh_expires_at: string | null
+          refresh_token: string | null
+          resource: string | null
+          revoked_at: string | null
+          scopes: string[] | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          client_id: string
+          created_at?: string
+          expires_at: string
+          refresh_expires_at?: string | null
+          refresh_token?: string | null
+          resource?: string | null
+          revoked_at?: string | null
+          scopes?: string[] | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          refresh_expires_at?: string | null
+          refresh_token?: string | null
+          resource?: string | null
+          revoked_at?: string | null
+          scopes?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_oauth_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       milestones: {
         Row: {
           completed_at: string | null
