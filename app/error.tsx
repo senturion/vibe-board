@@ -29,18 +29,16 @@ export default function Error({ error, reset }: ErrorProps) {
           </p>
         </div>
 
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-6 p-4 bg-[var(--bg-secondary)] border border-[var(--border)] text-left overflow-auto max-h-48">
-            <p className="text-xs font-mono text-red-400 break-all">
-              {error.message}
+        <div className="mb-6 p-4 bg-[var(--bg-secondary)] border border-[var(--border)] text-left overflow-auto max-h-48">
+          <p className="text-xs font-mono text-red-400 break-all">
+            {error.message || error.name || 'Unknown error'}
+          </p>
+          {error.digest && (
+            <p className="text-xs font-mono text-[var(--text-tertiary)] mt-2">
+              Digest: {error.digest}
             </p>
-            {error.digest && (
-              <p className="text-xs font-mono text-[var(--text-tertiary)] mt-2">
-                Digest: {error.digest}
-              </p>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
