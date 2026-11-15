@@ -7,7 +7,7 @@ import { Header } from '@/components/Header'
 import { StatsDashboard } from '@/components/StatsDashboard'
 import { DataManager } from '@/components/DataManager'
 import { useBoards } from '@/hooks/useBoards'
-import { useKanban } from '@/hooks/useKanban'
+import { useKanban, useTaskHousekeeping } from '@/hooks/useKanban'
 import { useTheme } from '@/hooks/useTheme'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { useColumnColors } from '@/hooks/useColumnColors'
@@ -50,6 +50,7 @@ export default function Home() {
     deleteSubtask,
   } = useKanban(activeBoardId)
 
+  useTaskHousekeeping()
   const { isDark, setTheme, theme, mounted: themeMounted } = useTheme()
   const { colors: columnColors, setColumnColor, resetColors } = useColumnColors()
 

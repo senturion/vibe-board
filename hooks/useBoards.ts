@@ -1,113 +1,97 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { Board } from '@/lib/types'
+import { Board, KanbanTask } from '@/lib/types'
 import { Database } from '@/lib/supabase/types'
+import { notifyError } from '@/lib/notify'
+import { tasksQueryKey } from '@/hooks/useKanban'
 
 type BoardRow = Database['public']['Tables']['boards']['Row']
-type UserSettingsRow = Database['public']['Tables']['user_settings']['Row']
 
+interface BoardsState {
+  boards: Board[]
+  activeBoardId: string | null
+}
+
+export const boardsQueryKey = (userId: string | undefined) => ['boards', userId ?? 'signed-out'] as const
+
+const EMPTY: BoardsState = { boards: [], activeBoardId: null }
+
+function mapBoard(b: BoardRow): Board {
+  return {
+    id: b.id,
+    name: b.name,
+    createdAt: new Date(b.created_at).getTime(),
+    staleDaysThreshold: b.stale_days_threshold ?? undefined,
+  }
+}
+
+/**
+ * Boards and the active board, shared by every component that reads them, so
+ * switching board in one place is seen everywhere.
+ */
 export function useBoards() {
-  const [boards, setBoards] = useState<Board[]>([])
-  const [activeBoardId, setActiveBoardIdState] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const userId = user?.id
+  const queryKey = useMemo(() => boardsQueryKey(userId), [userId])
 
-  // Fetch boards from Supabase
-  useEffect(() => {
-    let isActive = true
-    const fetchBoards = async () => {
-      if (!user) {
-        if (isActive) {
-          setBoards([])
-          setActiveBoardIdState(null)
-          setLoading(false)
-        }
-        return
-      }
-
+  const query = useQuery({
+    queryKey,
+    enabled: !!user,
+    queryFn: async (): Promise<BoardsState> => {
       const { data, error } = await supabase
         .from('boards')
         .select('*')
         .order('created_at', { ascending: true })
+      if (error) throw new Error(error.message)
 
-      if (error) {
-        console.error('Error fetching boards:', error)
-        if (isActive) {
-          setError('Failed to load boards. Please try refreshing.')
-          setLoading(false)
-        }
-        return
-      }
+      let boards = ((data ?? []) as BoardRow[]).map(mapBoard)
 
-      if (isActive) setError(null)
-
-      const mappedBoards: Board[] = (data as BoardRow[]).map(b => ({
-        id: b.id,
-        name: b.name,
-        createdAt: new Date(b.created_at).getTime(),
-        staleDaysThreshold: b.stale_days_threshold ?? undefined,
-      }))
-
-      if (isActive) {
-        setBoards(mappedBoards)
-      }
-
-      // Fetch user settings to get active board
-      const { data: settingsData } = await supabase
-        .from('user_settings')
-        .select('active_board_id')
-        .single()
-
-      const settings = settingsData as UserSettingsRow | null
-      if (settings?.active_board_id && mappedBoards.some(b => b.id === settings.active_board_id)) {
-        if (isActive) {
-          setActiveBoardIdState(settings.active_board_id)
-        }
-      } else if (mappedBoards.length > 0) {
-        if (isActive) {
-          setActiveBoardIdState(mappedBoards[0].id)
-        }
-      }
-
-      // Create default board if none exist
-      if (mappedBoards.length === 0) {
-        const { data: newBoardData, error: createError } = await supabase
+      // Create a default board the first time the app is used.
+      if (boards.length === 0) {
+        const { data: created, error: createError } = await supabase
           .from('boards')
-          .insert({ user_id: user.id, name: 'My Board' })
+          .insert({ user_id: user!.id, name: 'My Board' })
           .select()
           .single()
-
-        if (createError) {
-          console.error('Error creating default board:', createError.message, createError.code)
-        }
-        const newBoard = newBoardData as BoardRow | null
-        if (!createError && newBoard) {
-          const board: Board = {
-            id: newBoard.id,
-            name: newBoard.name,
-            createdAt: new Date(newBoard.created_at).getTime(),
-          }
-          if (isActive) {
-            setBoards([board])
-            setActiveBoardIdState(newBoard.id)
-          }
-        }
+        if (createError) throw new Error(createError.message)
+        boards = [mapBoard(created as BoardRow)]
       }
 
-      if (isActive) {
-        setLoading(false)
-      }
-    }
+      const { data: settings } = await supabase
+        .from('user_settings')
+        .select('active_board_id')
+        .maybeSingle()
 
-    fetchBoards()
-    return () => {
-      isActive = false
-    }
+      const saved = settings?.active_board_id
+      // Keep a board the user switched to while this load was in flight.
+      const current = queryClient.getQueryData<BoardsState>(queryKey)?.activeBoardId
+      const activeBoardId =
+        [current, saved].find(id => id && boards.some(b => b.id === id)) ?? boards[0].id
+
+      return { boards, activeBoardId }
+    },
+  })
+
+  const { boards, activeBoardId } = query.data ?? EMPTY
+  const loading = !!user && query.isPending
+  const error = query.error ? 'Failed to load boards. Please try refreshing.' : null
+
+  const setState = useCallback((updater: (state: BoardsState) => BoardsState) => {
+    queryClient.setQueryData<BoardsState>(queryKey, prev => updater(prev ?? EMPTY))
+  }, [queryClient, queryKey])
+
+  const saveActiveBoard = useCallback(async (id: string) => {
+    if (!user) return
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({ user_id: user.id, active_board_id: id })
+    if (error) console.error('Error saving active board:', error)
   }, [user, supabase])
 
   const addBoard = useCallback(async (name: string) => {
@@ -121,91 +105,69 @@ export function useBoards() {
 
     if (error || !data) {
       console.error('Error creating board:', error)
+      notifyError('Could not create the board.')
       return ''
     }
 
-    const boardData = data as BoardRow
-    const newBoard: Board = {
-      id: boardData.id,
-      name: boardData.name,
-      createdAt: new Date(boardData.created_at).getTime(),
-    }
-
-    setBoards(prev => [...prev, newBoard])
-    setActiveBoardIdState(newBoard.id)
-
-    // Update active board in settings
-    const { error: settingsError } = await supabase
-      .from('user_settings')
-      .upsert({ user_id: user.id, active_board_id: newBoard.id })
-    if (settingsError) {
-      console.error('Error updating active board setting:', settingsError)
-    }
-
+    const newBoard = mapBoard(data as BoardRow)
+    setState(state => ({ boards: [...state.boards, newBoard], activeBoardId: newBoard.id }))
+    await saveActiveBoard(newBoard.id)
     return newBoard.id
-  }, [user, supabase])
+  }, [user, supabase, setState, saveActiveBoard])
 
   const updateBoard = useCallback(async (id: string, updates: Partial<Board>) => {
     const dbUpdates: Database['public']['Tables']['boards']['Update'] = {}
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.staleDaysThreshold !== undefined) dbUpdates.stale_days_threshold = updates.staleDaysThreshold
 
-    const { error } = await supabase
-      .from('boards')
-      .update(dbUpdates)
-      .eq('id', id)
+    const before = queryClient.getQueryData<BoardsState>(queryKey)?.boards.find(b => b.id === id)
+    setState(state => ({
+      ...state,
+      boards: state.boards.map(board => (board.id === id ? { ...board, ...updates } : board)),
+    }))
 
+    const { error } = await supabase.from('boards').update(dbUpdates).eq('id', id)
     if (error) {
       console.error('Error updating board:', error)
-      return
+      if (before) {
+        setState(state => ({
+          ...state,
+          boards: state.boards.map(board => (board.id === id ? before : board)),
+        }))
+      }
+      notifyError('Could not save the board.')
     }
-
-    setBoards(prev => prev.map(board =>
-      board.id === id ? { ...board, ...updates } : board
-    ))
-  }, [supabase])
+  }, [supabase, queryClient, queryKey, setState])
 
   const deleteBoard = useCallback(async (id: string) => {
-    if (boards.length <= 1) return
+    const state = queryClient.getQueryData<BoardsState>(queryKey) ?? EMPTY
+    if (state.boards.length <= 1) return
 
-    const { error } = await supabase
-      .from('boards')
-      .delete()
-      .eq('id', id)
-
+    const { error } = await supabase.from('boards').delete().eq('id', id)
     if (error) {
       console.error('Error deleting board:', error)
+      notifyError('Could not delete the board.')
       return
     }
 
-    setBoards(prev => prev.filter(board => board.id !== id))
+    const remaining = state.boards.filter(board => board.id !== id)
+    const nextActive = state.activeBoardId === id ? remaining[0].id : state.activeBoardId
+    setState(() => ({ boards: remaining, activeBoardId: nextActive }))
 
-    if (activeBoardId === id) {
-      const remaining = boards.filter(b => b.id !== id)
-      if (remaining.length > 0) {
-        setActiveBoardIdState(remaining[0].id)
-        if (user) {
-          await supabase
-            .from('user_settings')
-            .upsert({ user_id: user.id, active_board_id: remaining[0].id })
-        }
-      }
-    }
-  }, [boards, activeBoardId, user, supabase])
+    // The database deletes the board's tasks with it; drop them from the cache too.
+    queryClient.setQueryData<KanbanTask[]>(tasksQueryKey(userId), prev =>
+      prev?.filter(task => task.boardId !== id),
+    )
+
+    if (state.activeBoardId === id) await saveActiveBoard(remaining[0].id)
+  }, [supabase, queryClient, queryKey, userId, setState, saveActiveBoard])
 
   const switchBoard = useCallback(async (id: string) => {
-    setActiveBoardIdState(id)
-    if (user) {
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({ user_id: user.id, active_board_id: id })
-      if (error) {
-        console.error('Error switching board:', error)
-      }
-    }
-  }, [user, supabase])
+    setState(state => ({ ...state, activeBoardId: id }))
+    await saveActiveBoard(id)
+  }, [setState, saveActiveBoard])
 
-  const activeBoard = boards.find(b => b.id === activeBoardId) || boards[0] || { id: '', name: 'Loading...', createdAt: new Date().getTime() }
+  const activeBoard = boards.find(b => b.id === activeBoardId) || boards[0] || { id: '', name: 'Loading...', createdAt: 0 }
 
   return {
     boards,

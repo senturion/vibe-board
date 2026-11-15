@@ -3,6 +3,7 @@
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode } from 'react'
 import { ToastContainer, ToastData } from '@/components/Toast'
 import { generateId } from '@/lib/utils'
+import { onNotifyError } from '@/lib/notify'
 
 interface HistoryAction {
   type: string
@@ -42,8 +43,14 @@ export function UndoRedoProvider({ children }: { children: ReactNode }) {
       type: 'info',
       message,
     }
-    setToasts(prev => [...prev.slice(-2), toast])
+    // One drag can trigger several saves; do not stack the same message.
+    setToasts(prev =>
+      prev.some(t => t.type === 'info' && t.message === message) ? prev : [...prev.slice(-2), toast],
+    )
   }, [])
+
+  // Failed saves anywhere in the app surface here instead of only in the console.
+  useEffect(() => onNotifyError(showInfoToast), [showInfoToast])
 
   const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id))
