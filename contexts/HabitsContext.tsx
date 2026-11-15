@@ -261,46 +261,6 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     return newHabit.id
   }, [user, supabase, habits.length])
 
-  // Update a habit
-  const updateHabit = useCallback(async (id: string, updates: Partial<Habit>) => {
-    if (!user) return
-
-    const oldHabit = habits.find(h => h.id === id)
-
-    const dbUpdates: Database['public']['Tables']['habits']['Update'] = {}
-    if (updates.name !== undefined) dbUpdates.name = updates.name
-    if (updates.description !== undefined) dbUpdates.description = updates.description
-    if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId
-    if (updates.frequencyType !== undefined) dbUpdates.frequency_type = updates.frequencyType
-    if (updates.frequencyValue !== undefined) dbUpdates.frequency_value = updates.frequencyValue
-    if (updates.specificDays !== undefined) dbUpdates.specific_days = updates.specificDays
-    if (updates.targetCount !== undefined) dbUpdates.target_count = updates.targetCount
-    if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
-    if (updates.color !== undefined) dbUpdates.color = updates.color
-    if (updates.icon !== undefined) dbUpdates.icon = updates.icon
-    if (updates.habitType !== undefined) dbUpdates.habit_type = updates.habitType
-    if (updates.trackingMode !== undefined) dbUpdates.tracking_mode = updates.trackingMode
-
-    const { error } = await supabase
-      .from('habits')
-      .update(dbUpdates)
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error updating habit:', error)
-      return
-    }
-
-    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h))
-
-    // Migrate completions when switching from build → avoid+auto-complete
-    const wasAutoComplete = oldHabit?.habitType === 'avoid' && oldHabit?.trackingMode === 'auto-complete'
-    const becomingAutoComplete = updates.habitType === 'avoid' && updates.trackingMode === 'auto-complete'
-    if (oldHabit && !wasAutoComplete && becomingAutoComplete) {
-      await migrateCompletionsForAvoid(id, oldHabit)
-    }
-  }, [user, supabase, habits])
-
   // Invert completion records when switching to avoid+auto-complete
   const migrateCompletionsForAvoid = useCallback(async (habitId: string, habit: Habit) => {
     if (!user) return
@@ -367,6 +327,46 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
       return next
     })
   }, [user, supabase, completions])
+
+  // Update a habit
+  const updateHabit = useCallback(async (id: string, updates: Partial<Habit>) => {
+    if (!user) return
+
+    const oldHabit = habits.find(h => h.id === id)
+
+    const dbUpdates: Database['public']['Tables']['habits']['Update'] = {}
+    if (updates.name !== undefined) dbUpdates.name = updates.name
+    if (updates.description !== undefined) dbUpdates.description = updates.description
+    if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId
+    if (updates.frequencyType !== undefined) dbUpdates.frequency_type = updates.frequencyType
+    if (updates.frequencyValue !== undefined) dbUpdates.frequency_value = updates.frequencyValue
+    if (updates.specificDays !== undefined) dbUpdates.specific_days = updates.specificDays
+    if (updates.targetCount !== undefined) dbUpdates.target_count = updates.targetCount
+    if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
+    if (updates.color !== undefined) dbUpdates.color = updates.color
+    if (updates.icon !== undefined) dbUpdates.icon = updates.icon
+    if (updates.habitType !== undefined) dbUpdates.habit_type = updates.habitType
+    if (updates.trackingMode !== undefined) dbUpdates.tracking_mode = updates.trackingMode
+
+    const { error } = await supabase
+      .from('habits')
+      .update(dbUpdates)
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error updating habit:', error)
+      return
+    }
+
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h))
+
+    // Migrate completions when switching from build → avoid+auto-complete
+    const wasAutoComplete = oldHabit?.habitType === 'avoid' && oldHabit?.trackingMode === 'auto-complete'
+    const becomingAutoComplete = updates.habitType === 'avoid' && updates.trackingMode === 'auto-complete'
+    if (oldHabit && !wasAutoComplete && becomingAutoComplete) {
+      await migrateCompletionsForAvoid(id, oldHabit)
+    }
+  }, [user, supabase, habits, migrateCompletionsForAvoid])
 
   // Archive a habit
   const archiveHabit = useCallback(async (id: string) => {
@@ -476,7 +476,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
       const todayKey = formatDateKey(today)
 
       let currentStreak = 0
-      let cursor = new Date(today)
+      const cursor = new Date(today)
 
       // Check today first
       if (!slipDates.has(todayKey)) {
@@ -598,7 +598,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
 
       if (streakEndKey) {
         currentStreak = 1
-        let cursorDate = parseDateKey(streakEndKey)
+        const cursorDate = parseDateKey(streakEndKey)
         while (true) {
           cursorDate.setDate(cursorDate.getDate() - 7)
           const prevKey = formatDateKey(cursorDate)
@@ -651,7 +651,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
 
     if (streakEndKey) {
       currentStreak = 1
-      let cursorDate = parseDateKey(streakEndKey)
+      const cursorDate = parseDateKey(streakEndKey)
       while (true) {
         cursorDate.setDate(cursorDate.getDate() - 1)
         const prevKey = formatDateKey(cursorDate)

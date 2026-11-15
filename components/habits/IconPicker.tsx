@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { createElement, useMemo } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Dumbbell, Bike, Footprints, Heart, Activity,
@@ -82,5 +82,6 @@ export function HabitIcon({
 }) {
   const Icon = getIconComponent(name)
   if (!Icon) return null
-  return <Icon size={size} color={color} className={className} />
+  // createElement rather than JSX: Icon is looked up from a fixed table, not defined here.
+  return createElement(Icon, { size, color, className })
 }
