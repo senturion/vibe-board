@@ -624,7 +624,7 @@ export function useGoals() {
       priority: suggestion.priority as Priority,
       labels: [],
       subtasks: [],
-      due_date: suggestion.dueDate ? new Date(`${suggestion.dueDate}T12:00:00.000Z`).toISOString() : null,
+      due_date: suggestion.dueDate ? `${suggestion.dueDate}T00:00:00.000Z` : null,
       order: Date.now() + index,
       created_at: nowIso,
       updated_at: nowIso,

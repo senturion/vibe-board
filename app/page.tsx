@@ -108,9 +108,6 @@ export default function Home() {
     return count
   }, [filters])
 
-  const handleImport = () => {
-    // Data is already imported to localStorage, just reload
-  }
 
   // Render content based on active view
   const renderContent = () => {
@@ -291,7 +288,6 @@ export default function Home() {
       <DataManager
         isOpen={showDataManager}
         onClose={() => setShowDataManager(false)}
-        onImport={handleImport}
       />
 
       {/* Settings Panel */}

@@ -5,6 +5,8 @@ import {
   createTask,
   updateTask,
   completeTask,
+  normalizeStatus,
+  normalizeDueDate,
 } from '../../tools/tasks'
 
 const OWNER = '00000000-0000-0000-0000-000000000001'
@@ -29,6 +31,8 @@ function fakeClient(rowsByTable: Record<string, unknown[]>) {
     chain.lte = (...a: unknown[]) => record('lte', ...a)
     chain.order = (...a: unknown[]) => record('order', ...a)
     chain.limit = (...a: unknown[]) => record('limit', ...a)
+    chain.maybeSingle = () =>
+      Promise.resolve({ data: rowsByTable[table]?.[0] ?? null, error: null })
     chain.single = () =>
       Promise.resolve({ data: rowsByTable[table]?.[0] ?? null, error: null })
     chain.then = (resolve: (v: unknown) => unknown) =>
@@ -209,14 +213,14 @@ describe('updateTask', () => {
 })
 
 describe('completeTask', () => {
-  it('sets status=done, completed_at, updated_at and scopes by user_id', async () => {
-    const done = { id: 't1', user_id: OWNER, status: 'done' }
+  it('sets status=complete, completed_at, updated_at and scopes by user_id', async () => {
+    const done = { id: 't1', user_id: OWNER, status: 'complete' }
     const { deps: d, calls } = deps({ tasks: [done] })
     const result = await completeTask({ id: 't1' }, d)
 
     const updateCall = calls.find((c) => c.method === 'update')
     const payload = updateCall?.args[0] as Record<string, unknown>
-    expect(payload.status).toBe('done')
+    expect(payload.status).toBe('complete')
     expect(typeof payload.completed_at).toBe('string')
     expect(typeof payload.updated_at).toBe('string')
 
@@ -230,5 +234,76 @@ describe('completeTask', () => {
     expect(result).toEqual({
       content: [{ type: 'text', text: JSON.stringify(done) }],
     })
+  })
+})
+
+describe('status, priority and due date handling', () => {
+  it('maps common names onto real column ids', () => {
+    expect(normalizeStatus('done')).toBe('complete')
+    expect(normalizeStatus('Completed')).toBe('complete')
+    expect(normalizeStatus('in progress')).toBe('in-progress')
+    expect(normalizeStatus('in_progress')).toBe('in-progress')
+    expect(normalizeStatus('todo')).toBe('todo')
+  })
+
+  it('stores a due date as midnight UTC of the calendar day', () => {
+    expect(normalizeDueDate('2026-11-20')).toBe('2026-11-20T00:00:00.000Z')
+    expect(normalizeDueDate('2026-11-20T23:30:00-05:00')).toBe('2026-11-20T00:00:00.000Z')
+    expect(() => normalizeDueDate('next friday')).toThrow(/YYYY-MM-DD/)
+    expect(() => normalizeDueDate('2026-13-45')).toThrow(/YYYY-MM-DD/)
+  })
+
+  it('createTask writes status=complete with completed_at when given "done"', async () => {
+    const { deps: d, calls } = deps({ tasks: [{ id: 'new' }] })
+    await createTask({ board_id: 'b1', title: 'x', status: 'done', due_date: '2026-11-20' }, d)
+    const payload = calls.find((c) => c.method === 'insert')?.args[0] as Record<string, unknown>
+    expect(payload.status).toBe('complete')
+    expect(typeof payload.completed_at).toBe('string')
+    expect(payload.due_date).toBe('2026-11-20T00:00:00.000Z')
+  })
+
+  it('createTask rejects a status that is not a column of the board', async () => {
+    const { deps: d, calls } = deps({ tasks: [{ id: 'new' }], user_settings: [] })
+    await expect(
+      createTask({ board_id: 'b1', title: 'x', status: 'blocked' }, d),
+    ).rejects.toThrow(/Unknown status "blocked".*backlog, todo, in-progress, complete/)
+    expect(calls.find((c) => c.method === 'insert')).toBeUndefined()
+  })
+
+  it('createTask accepts a custom column saved for that board', async () => {
+    const { deps: d, calls } = deps({
+      tasks: [{ id: 'new' }],
+      user_settings: [
+        { app_settings: { boardCustomColumns: { b1: [{ id: 'blocked', title: 'Blocked' }] } } },
+      ],
+    })
+    await createTask({ board_id: 'b1', title: 'x', status: 'blocked' }, d)
+    const payload = calls.find((c) => c.method === 'insert')?.args[0] as Record<string, unknown>
+    expect(payload.status).toBe('blocked')
+  })
+
+  it('updateTask clears completed_at when moving a task out of complete', async () => {
+    const current = { id: 't1', board_id: 'b1', status: 'complete', completed_at: '2026-01-01T00:00:00.000Z' }
+    const { deps: d, calls } = deps({ tasks: [current] })
+    await updateTask({ id: 't1', patch: { status: 'todo' } }, d)
+    const payload = calls.find((c) => c.method === 'update')?.args[0] as Record<string, unknown>
+    expect(payload.status).toBe('todo')
+    expect(payload.completed_at).toBeNull()
+  })
+
+  it('updateTask sets completed_at when moving a task into complete', async () => {
+    const current = { id: 't1', board_id: 'b1', status: 'todo', completed_at: null }
+    const { deps: d, calls } = deps({ tasks: [current] })
+    await updateTask({ id: 't1', patch: { status: 'done' } }, d)
+    const payload = calls.find((c) => c.method === 'update')?.args[0] as Record<string, unknown>
+    expect(payload.status).toBe('complete')
+    expect(typeof payload.completed_at).toBe('string')
+  })
+
+  it('updateTask clears a due date with null', async () => {
+    const { deps: d, calls } = deps({ tasks: [{ id: 't1' }] })
+    await updateTask({ id: 't1', patch: { due_date: null } }, d)
+    const payload = calls.find((c) => c.method === 'update')?.args[0] as Record<string, unknown>
+    expect(payload.due_date).toBeNull()
   })
 })
