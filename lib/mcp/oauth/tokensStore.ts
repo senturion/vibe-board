@@ -93,14 +93,21 @@ export async function revoke(
  * conditional UPDATE filtered on `revoked_at IS NULL`) before issuing a new
  * pair, so two concurrent rotations cannot both succeed — only one wins the
  * filter, the other sees a no-op update and returns null.
+ *
+ * Pass `expectedClientId` to reject a refresh token presented by a different
+ * client than the one it was issued to.
  */
 export async function rotateFromRefresh(
   refreshToken: string,
   deps: StoreDeps,
+  expectedClientId?: string,
 ): Promise<{ old: TokenRow; fresh: TokenRow } | null> {
   const supabase = deps.getClient()
   const existing = await findByRefreshToken(refreshToken, deps)
   if (!existing) return null
+  // Checked before anything is revoked, so a caller presenting the wrong
+  // client_id cannot burn the owner's token or mint a new pair.
+  if (expectedClientId !== undefined && existing.client_id !== expectedClientId) return null
   if (existing.revoked_at) return null
   if (existing.refresh_expires_at) {
     if (Date.parse(existing.refresh_expires_at) <= Date.now()) return null

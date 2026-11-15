@@ -74,22 +74,22 @@ This app exposes a custom MCP server at `/api/mcp` so Claude (web/desktop/iOS) c
 
 **Required env vars:**
 
-- `MCP_BEARER_TOKEN` — long random string. Generate with `openssl rand -base64 48`.
-- `MCP_OWNER_USER_ID` — your `auth.users` UUID (Supabase Dashboard → Authentication → Users).
+- `MCP_OWNER_USER_ID` — your `auth.users` UUID (Supabase Dashboard → Authentication → Users). Only this user can approve a connection.
+- `SUPABASE_SERVICE_ROLE_KEY` — used server-side by the MCP tools and OAuth stores.
 
-Both must be set in `.env.local` for local dev and in the Vercel dashboard (Settings → Environment Variables) for production. Restart the dev server after adding them locally — Next.js only reads `.env.local` at startup.
+Set both in `.env.local` for local dev and in the Vercel dashboard for production.
 
-**Connect from Claude.ai (Pro/Team/Enterprise plan required):**
+**Connect from Claude.ai:**
 
-Settings → Connectors → Add custom connector. URL: `https://<your-domain>/api/mcp`. Auth: Bearer token → paste `MCP_BEARER_TOKEN`. The connector auto-syncs to the desktop and iOS Claude apps under the same account.
+Settings → Connectors → Add custom connector. URL: `https://<your-domain>/api/mcp`. Claude registers itself and sends you to a Vibe Board consent page. Sign in if asked, check that the address shown is Claude's, and choose **Allow**. Nothing is granted until you do.
 
 **Tools exposed (16):** `ping`, `list_tasks`, `get_task`, `create_task`, `update_task`, `complete_task`, `list_boards`, `list_todos`, `create_todo`, `get_notes`, `append_note`, `list_habits`, `get_habit_status`, `list_habit_history`, `log_habit_completion`, `create_habit`.
 
-**Rotate the token:**
+**Revoke access:** set `revoked_at` on the rows in `mcp_oauth_tokens` (or delete them) in the Supabase dashboard.
 
-1. Generate a new value (`openssl rand -base64 48`), update `MCP_BEARER_TOKEN` in `.env.local` and the Vercel dashboard.
-2. Redeploy.
-3. Re-paste the new token in the Claude connector settings.
+## Reminders cron
+
+`/api/notifications/cron` requires `CRON_SECRET` to be set; it returns 500 without it and 401 for any request that does not send `Authorization: Bearer <CRON_SECRET>`. Vercel Cron sends that header automatically when the variable is set.
 
 ## Learn More
 

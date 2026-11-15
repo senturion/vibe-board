@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import type { Database } from '@/lib/supabase/types'
 import { Tag, TagCategory, LABELS } from '@/lib/types'
 
 export function useTags() {
@@ -281,7 +282,7 @@ export function useTags() {
       t.id === tagId ? { ...t, ...updates } : t
     ))
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['tags']['Update'] = {}
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.color !== undefined) dbUpdates.color = updates.color
     if (updates.bgColor !== undefined) dbUpdates.bg_color = updates.bgColor

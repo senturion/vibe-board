@@ -201,7 +201,7 @@ export function useGoals() {
   const updateGoal = useCallback(async (id: string, updates: Partial<Goal>) => {
     if (!user) return
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['goals']['Update'] = {}
     if (updates.title !== undefined) dbUpdates.title = updates.title
     if (updates.description !== undefined) dbUpdates.description = updates.description
     if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId
@@ -316,7 +316,7 @@ export function useGoals() {
   const updateMilestone = useCallback(async (id: string, updates: Partial<Milestone>) => {
     if (!user) return
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['milestones']['Update'] = {}
     if (updates.title !== undefined) dbUpdates.title = updates.title
     if (updates.description !== undefined) dbUpdates.description = updates.description
     if (updates.targetDate !== undefined) dbUpdates.target_date = updates.targetDate

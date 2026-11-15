@@ -267,7 +267,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
 
     const oldHabit = habits.find(h => h.id === id)
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['habits']['Update'] = {}
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.description !== undefined) dbUpdates.description = updates.description
     if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId
@@ -855,7 +855,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
   const updateCategory = useCallback(async (id: string, updates: Partial<HabitCategory>) => {
     if (!user) return
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['habit_categories']['Update'] = {}
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.color !== undefined) dbUpdates.color = updates.color
     if (updates.icon !== undefined) dbUpdates.icon = updates.icon

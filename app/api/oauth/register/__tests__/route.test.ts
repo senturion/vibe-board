@@ -113,6 +113,22 @@ describe('POST /api/oauth/register', () => {
   })
 })
 
+describe('POST /api/oauth/register — redirect_uri host parsing', () => {
+  it.each([
+    'http://localhost.evil.com/cb',
+    'http://127.0.0.1.evil.com/cb',
+    'http://localhost@evil.com/cb',
+    'http://evil.com/cb',
+    'javascript:alert(1)',
+    'not a url',
+  ])('rejects %s', async (uri) => {
+    const res = await POST(postReq({ redirect_uris: [uri] }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toBe('invalid_redirect_uri')
+    expect(registerClient).not.toHaveBeenCalled()
+  })
+})
+
 describe('non-POST methods', () => {
   it('GET returns 405 method_not_allowed', async () => {
     const res = await GET()

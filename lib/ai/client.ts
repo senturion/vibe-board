@@ -48,11 +48,15 @@ export function resolveConfig(options: ResolveOptions): AIProviderConfig {
   const envModel = process.env.GOAL_PLANNER_MODEL || process.env.OLLAMA_MODEL || ''
 
   const rawBaseUrl = options.baseUrl || envBaseUrl || defaults.baseUrl
+  // The server's own key only ever goes to the server's own endpoint. A
+  // request that supplies a base URL must bring its own key, otherwise the
+  // env key would be sent to whatever host the caller named.
+  const fallbackKey = options.baseUrl ? '' : envKey
   return {
     provider,
     model: options.model || envModel || defaults.model,
     baseUrl: rawBaseUrl ? stripTrailingSlash(rawBaseUrl) : defaults.baseUrl,
-    apiKey: options.apiKey || envKey,
+    apiKey: options.apiKey || fallbackKey,
     timeoutMs: options.timeoutMs ?? Number(process.env.GOAL_PLANNER_TIMEOUT_MS || 20000),
   }
 }

@@ -18,6 +18,25 @@ function err(status: number, error: string, description?: string) {
   )
 }
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+/**
+ * https anywhere, or http on a loopback host only (RFC 8252, native/CLI clients).
+ * The host is parsed rather than prefix-matched, so "http://localhost.evil.com"
+ * and "http://localhost@evil.com" are rejected.
+ */
+function isAllowedRedirectUri(value: string) {
+  let parsed: URL
+  try {
+    parsed = new URL(value)
+  } catch {
+    return false
+  }
+  if (parsed.username || parsed.password || parsed.hash) return false
+  if (parsed.protocol === 'https:') return true
+  return parsed.protocol === 'http:' && LOOPBACK_HOSTS.has(parsed.hostname)
+}
+
 export async function POST(request: Request) {
   let body: Body
   try {
@@ -34,13 +53,7 @@ export async function POST(request: Request) {
     if (typeof u !== 'string') {
       return err(400, 'invalid_redirect_uri', 'each redirect_uri must be a string')
     }
-    // RFC 8252: allow http loopback for native/CLI clients (localhost / 127.0.0.1 / [::1]).
-    const isHttps = u.startsWith('https://')
-    const isLoopback =
-      u.startsWith('http://localhost') ||
-      u.startsWith('http://127.0.0.1') ||
-      u.startsWith('http://[::1]')
-    if (!isHttps && !isLoopback) {
+    if (!isAllowedRedirectUri(u)) {
       return err(400, 'invalid_redirect_uri', `non-https redirect_uri: ${u}`)
     }
   }

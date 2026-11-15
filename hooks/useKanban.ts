@@ -10,13 +10,14 @@ import { Database, Json } from '@/lib/supabase/types'
 import { haptics } from '@/lib/haptics'
 
 type TaskRow = Database['public']['Tables']['tasks']['Row']
+type TaskUpdate = Database['public']['Tables']['tasks']['Update']
 
 const DEBOUNCE_FIELDS = new Set(['title', 'description'])
 const DEBOUNCE_MS = 300
 
 export function useKanban(boardId: string = '') {
   const [tasks, setTasks] = useState<KanbanTask[]>([])
-  const pendingDbUpdates = useRef<Record<string, { updates: Record<string, unknown>, timer: ReturnType<typeof setTimeout> }>>({})
+  const pendingDbUpdates = useRef<Record<string, { updates: TaskUpdate, timer: ReturnType<typeof setTimeout> }>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
@@ -204,7 +205,7 @@ export function useKanban(boardId: string = '') {
     return newTask.id
   }, [user, boardId, supabase])
 
-  const flushDbUpdate = useCallback(async (id: string, dbUpdates: Record<string, unknown>) => {
+  const flushDbUpdate = useCallback(async (id: string, dbUpdates: TaskUpdate) => {
     dbUpdates.updated_at = new Date().toISOString()
     const { error } = await supabase
       .from('tasks')
@@ -219,13 +220,13 @@ export function useKanban(boardId: string = '') {
     if (updates.title !== undefined && !validateTaskTitle(updates.title).valid) return
     if (updates.description !== undefined && !validateTaskDescription(updates.description).valid) return
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: TaskUpdate = {}
     if (updates.title !== undefined) dbUpdates.title = updates.title
     if (updates.description !== undefined) dbUpdates.description = updates.description
     if (updates.column !== undefined) dbUpdates.status = updates.column
     if (updates.priority !== undefined) dbUpdates.priority = updates.priority
     if (updates.labels !== undefined) dbUpdates.labels = updates.labels
-    if (updates.subtasks !== undefined) dbUpdates.subtasks = updates.subtasks
+    if (updates.subtasks !== undefined) dbUpdates.subtasks = updates.subtasks as unknown as Json
     if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate ? new Date(updates.dueDate).toISOString() : null
     if (updates.order !== undefined) dbUpdates.order = updates.order
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt ? new Date(updates.completedAt).toISOString() : null

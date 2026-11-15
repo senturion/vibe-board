@@ -317,6 +317,27 @@ describe('rotateFromRefresh', () => {
     expect(result!.fresh.revoked_at).toBeNull()
   })
 
+  it('returns null and revokes nothing when the client_id does not match', async () => {
+    const seeded: TokenRow = {
+      access_token: 'at_mine',
+      refresh_token: 'rt_mine',
+      client_id: baseInput.client_id,
+      user_id: baseInput.user_id,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 3600_000).toISOString(),
+      refresh_expires_at: new Date(Date.now() + 30 * 86400_000).toISOString(),
+      resource: null,
+      scopes: null,
+      revoked_at: null,
+    }
+    const { deps: d, rows } = deps([seeded])
+
+    const result = await rotateFromRefresh('rt_mine', d, 'mcp_someone_else')
+    expect(result).toBeNull()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].revoked_at).toBeNull()
+  })
+
   it('returns null when refresh token is unknown', async () => {
     const { deps: d } = deps([])
     const result = await rotateFromRefresh('rt_missing', d)

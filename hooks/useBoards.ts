@@ -146,7 +146,7 @@ export function useBoards() {
   }, [user, supabase])
 
   const updateBoard = useCallback(async (id: string, updates: Partial<Board>) => {
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['boards']['Update'] = {}
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.staleDaysThreshold !== undefined) dbUpdates.stale_days_threshold = updates.staleDaysThreshold
 
