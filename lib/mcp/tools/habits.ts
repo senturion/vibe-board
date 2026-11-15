@@ -35,12 +35,46 @@ function dayOfWeekFromDateString(date: string): number {
   return js === 0 ? 7 : js
 }
 
-function todayUtcDate(): string {
-  const d = new Date()
-  const y = d.getUTCFullYear()
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+/** Today's date (YYYY-MM-DD) in the given IANA time zone. */
+export function todayInTimeZone(timeZone: string, now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
+function isValidTimeZone(value: unknown): value is string {
+  if (typeof value !== 'string' || !value) return false
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone: value })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * "Today" for the owner, not for the server. The server runs in UTC, where the
+ * date rolls over in the early evening in North America, so a habit logged
+ * after dinner would land on tomorrow. Uses MCP_OWNER_TIMEZONE when set, else
+ * the time zone saved with the owner's notification settings, else UTC.
+ */
+async function ownerToday(deps: HabitToolDeps): Promise<string> {
+  const fromEnv = process.env.MCP_OWNER_TIMEZONE
+  if (isValidTimeZone(fromEnv)) return todayInTimeZone(fromEnv)
+
+  const { data } = await deps
+    .getClient()
+    .from('notification_settings')
+    .select('timezone')
+    .eq('user_id', deps.ownerId())
+    .maybeSingle()
+  const saved = (data as { timezone?: string | null } | null)?.timezone
+  return todayInTimeZone(isValidTimeZone(saved) ? saved : 'UTC')
 }
 
 // ---------- list_habits ----------
@@ -135,7 +169,7 @@ export async function getHabitStatus(
 ): Promise<McpResult> {
   const supabase = deps.getClient()
   const owner = deps.ownerId()
-  const date = args.date ?? todayUtcDate()
+  const date = args.date ?? (await ownerToday(deps))
   const dow = dayOfWeekFromDateString(date)
 
   const { data: habits, error } = await supabase
@@ -240,7 +274,7 @@ export async function logHabitCompletion(
   const insert = {
     user_id: deps.ownerId(),
     habit_id: args.habit_id,
-    completion_date: args.date ?? todayUtcDate(),
+    completion_date: args.date ?? (await ownerToday(deps)),
     count: args.count ?? 1,
     note: args.note,
   }
@@ -305,7 +339,7 @@ export function registerHabitTools(server: ServerLike, deps: HabitToolDeps) {
   )
   server.tool(
     'get_habit_status',
-    'Return per-habit completion status for a given date (default = today UTC) for habits due on that date. Each entry: { habit_id, name, target_count, completions_today, done }. Due rules: daily/weekly always due; specific_days due if dayOfWeek (1=Mon..7=Sun) is in specific_days.',
+    'Return per-habit completion status for a given date (default = today in the owner’s time zone) for habits due on that date. Each entry: { habit_id, name, target_count, completions_today, done }. Due rules: daily/weekly always due; specific_days due if dayOfWeek (1=Mon..7=Sun) is in specific_days.',
     getHabitStatusShape,
     (args) => getHabitStatus(args as GetHabitStatusArgs, deps),
   )
@@ -317,7 +351,7 @@ export function registerHabitTools(server: ServerLike, deps: HabitToolDeps) {
   )
   server.tool(
     'log_habit_completion',
-    'Insert a habit_completions row. Defaults: date=today UTC, count=1. Returns the inserted row. Does NOT touch habit_streaks — the app recalculates it.',
+    'Insert a habit_completions row. Defaults: date=today in the owner’s time zone, count=1. Returns the inserted row. Does NOT touch habit_streaks — the app recalculates it.',
     logHabitCompletionShape,
     (args) => logHabitCompletion(args as LogHabitCompletionArgs, deps),
   )

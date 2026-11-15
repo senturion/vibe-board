@@ -10,6 +10,7 @@ import { NavigationProvider } from '@/contexts/NavigationContext'
 import { HabitsProvider } from '@/contexts/HabitsContext'
 import { WorkLocationProvider } from '@/contexts/WorkLocationContext'
 import { TagsProvider } from '@/contexts/TagsContext'
+import { FocusTimerProvider } from '@/hooks/useFocusTimer'
 
 /**
  * AuthProvider builds the Supabase client at the root of the app, so a
@@ -73,7 +74,9 @@ export function Providers({ children }: { children: ReactNode }) {
               <TagsProvider>
                 <HabitsProvider>
                   <UndoRedoProvider>
-                    {children}
+                    <FocusTimerProvider>
+                      {children}
+                    </FocusTimerProvider>
                   </UndoRedoProvider>
                 </HabitsProvider>
               </TagsProvider>

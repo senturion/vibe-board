@@ -91,6 +91,12 @@ Settings → Connectors → Add custom connector. URL: `https://<your-domain>/ap
 
 `/api/notifications/cron` requires `CRON_SECRET` to be set; it returns 500 without it and 401 for any request that does not send `Authorization: Bearer <CRON_SECRET>`. Vercel Cron sends that header automatically when the variable is set.
 
+Vercel's free plan only runs a cron job once a day, so `vercel.json` alone cannot send a reminder at the time you pick. To get reminders at your chosen time, run `supabase/reminders-cron.sql` once in the Supabase SQL Editor (after filling in your domain and `CRON_SECRET`). It makes Supabase call the endpoint every 15 minutes.
+
+## MCP time zone
+
+The MCP habit tools treat "today" as today in your time zone. They use `MCP_OWNER_TIMEZONE` (an IANA name such as `America/Toronto`) when set, otherwise the time zone saved with your notification settings, otherwise UTC.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

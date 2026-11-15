@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSettings } from '@/hooks/useSettings'
-import { KanbanTask, ColumnId, Priority, LabelId, Subtask } from '@/lib/types'
+import { KanbanTask, ColumnId, Priority, LabelId, Subtask, dueDateFromDb, dueDateToDb } from '@/lib/types'
 import { validateTaskTitle, validateTaskDescription } from '@/lib/validation'
 import { Database, Json } from '@/lib/supabase/types'
 import { haptics } from '@/lib/haptics'
@@ -66,7 +66,7 @@ export function useKanban(boardId: string = '') {
         priority: t.priority as Priority,
         labels: (t.labels || []) as LabelId[],
         subtasks: (t.subtasks as unknown as Subtask[]) || [],
-        dueDate: t.due_date ? new Date(t.due_date).getTime() : undefined,
+        dueDate: dueDateFromDb(t.due_date),
         order: t.order,
         createdAt: new Date(t.created_at).getTime(),
         updatedAt: t.updated_at ? new Date(t.updated_at).getTime() : new Date(t.created_at).getTime(),
@@ -227,7 +227,8 @@ export function useKanban(boardId: string = '') {
     if (updates.priority !== undefined) dbUpdates.priority = updates.priority
     if (updates.labels !== undefined) dbUpdates.labels = updates.labels
     if (updates.subtasks !== undefined) dbUpdates.subtasks = updates.subtasks as unknown as Json
-    if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate ? new Date(updates.dueDate).toISOString() : null
+    // 'in' rather than !== undefined: clearing a due date passes dueDate: undefined.
+    if ('dueDate' in updates) dbUpdates.due_date = dueDateToDb(updates.dueDate)
     if (updates.order !== undefined) dbUpdates.order = updates.order
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt ? new Date(updates.completedAt).toISOString() : null
     if (updates.archivedAt !== undefined) dbUpdates.archived_at = updates.archivedAt ? new Date(updates.archivedAt).toISOString() : null

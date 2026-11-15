@@ -103,6 +103,26 @@ export function createColumnId(title: string, existingIds: Iterable<string>): Co
   return candidate
 }
 
+// Due dates are calendar dates, not instants. The database column is a
+// timestamp, so the date is stored as midnight UTC of that day and read back
+// as local midnight of the same calendar day. Reading the UTC date part also
+// repairs rows written at other times of day (older rows, the goal planner).
+
+/** Database timestamp → local-midnight ms for the calendar day it names. */
+export function dueDateFromDb(value: string | null | undefined): number | undefined {
+  if (!value) return undefined
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return undefined
+  return new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()).getTime()
+}
+
+/** Local-midnight ms → database timestamp (midnight UTC of the same calendar day). */
+export function dueDateToDb(value: number | null | undefined): string | null {
+  if (!value) return null
+  const local = new Date(value)
+  return new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate())).toISOString()
+}
+
 // Helper to check if a date is overdue
 export function isOverdue(dueDate: number): boolean {
   const now = new Date()

@@ -11,7 +11,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { isHabitActiveToday, formatDateKey } from '@/lib/types'
 
 function getCacheKey() {
-  const today = new Date().toISOString().split('T')[0]
+  const today = formatDateKey()
   return `vibe-insights-${today}`
 }
 

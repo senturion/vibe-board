@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair, Sparkles, Loader2, MessageCircle } from 'lucide-react'
-import { KanbanTask, Priority, PRIORITIES, COLUMNS, KanbanColumn, isOverdue, isDueSoon } from '@/lib/types'
+import { KanbanTask, Priority, PRIORITIES, COLUMNS, KanbanColumn, isOverdue, isDueSoon, formatDateKey, parseDateKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { useSettings } from '@/hooks/useSettings'
@@ -411,9 +411,9 @@ export function CardDetailModal({
                   <div className="absolute left-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] shadow-xl shadow-black/30 z-20 p-3">
                     <input
                       type="date"
-                      value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
+                      value={task.dueDate ? formatDateKey(new Date(task.dueDate)) : ''}
                       onChange={(e) => {
-                        const date = e.target.value ? new Date(e.target.value).getTime() : undefined
+                        const date = e.target.value ? parseDateKey(e.target.value).getTime() : undefined
                         onUpdate(task.id, { dueDate: date })
                         setShowDueDatePicker(false)
                       }}

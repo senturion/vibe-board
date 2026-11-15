@@ -4,6 +4,7 @@ import {
   getHabitStatus,
   listHabitHistory,
   logHabitCompletion,
+  todayInTimeZone,
   createHabit,
 } from '../../tools/habits'
 
@@ -332,6 +333,53 @@ describe('listHabitHistory', () => {
     expect(result).toEqual({
       content: [{ type: 'text', text: JSON.stringify(completions) }],
     })
+  })
+})
+
+describe('owner time zone', () => {
+  it('todayInTimeZone gives the local calendar day, not the UTC one', () => {
+    // 01:30 UTC on 1 May is still the evening of 30 April in Toronto.
+    const now = new Date('2026-05-01T01:30:00Z')
+    expect(todayInTimeZone('America/Toronto', now)).toBe('2026-04-30')
+    expect(todayInTimeZone('UTC', now)).toBe('2026-05-01')
+  })
+
+  it('logHabitCompletion uses the time zone saved in notification settings', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-01T01:30:00Z'))
+    try {
+      const { deps: d, calls } = deps({
+        notification_settings: [{ timezone: 'America/Toronto' }],
+        habit_completions: [{ id: 'comp1' }],
+      })
+      await logHabitCompletion({ habit_id: 'h1' }, d)
+      const payload = calls.find(
+        (c) => c.table === 'habit_completions' && c.method === 'insert',
+      )?.args[0] as Record<string, unknown>
+      expect(payload.completion_date).toBe('2026-04-30')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('MCP_OWNER_TIMEZONE takes precedence', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-01T01:30:00Z'))
+    process.env.MCP_OWNER_TIMEZONE = 'Asia/Tokyo'
+    try {
+      const { deps: d, calls } = deps({
+        notification_settings: [{ timezone: 'America/Toronto' }],
+        habit_completions: [{ id: 'comp1' }],
+      })
+      await logHabitCompletion({ habit_id: 'h1' }, d)
+      const payload = calls.find(
+        (c) => c.table === 'habit_completions' && c.method === 'insert',
+      )?.args[0] as Record<string, unknown>
+      expect(payload.completion_date).toBe('2026-05-01')
+    } finally {
+      delete process.env.MCP_OWNER_TIMEZONE
+      vi.useRealTimers()
+    }
   })
 })
 

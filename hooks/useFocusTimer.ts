@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { createContext, createElement, useCallback, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -10,7 +10,37 @@ import {
   DEFAULT_FOCUS_SETTINGS,
 } from '@/lib/types'
 
-export function useFocusTimer() {
+const STORAGE_KEY = 'vibe-focus-timer'
+
+/** What is needed to pick a running timer back up after a reload. */
+interface PersistedTimer {
+  isRunning: boolean
+  isPaused: boolean
+  /** Wall-clock time the session ends, when running and not paused. */
+  endsAt: number | null
+  /** Seconds left, when paused. */
+  remaining: number
+  sessionType: SessionType
+  sessionsCompleted: number
+  sessionId: string | null
+  startedAt: number
+  linkedTaskId?: string
+  linkedGoalId?: string
+}
+
+function readPersistedTimer(): PersistedTimer | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as PersistedTimer
+    if (!parsed || typeof parsed !== 'object' || !parsed.isRunning) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function useFocusTimerState() {
   const [settings, setSettings] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS)
   const [sessions, setSessions] = useState<FocusSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,6 +57,13 @@ export function useFocusTimer() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(0)
+  // The timer is driven by the wall clock, not by counting ticks: browsers
+  // throttle timers in background tabs, so a tick counter runs slow.
+  const endsAtRef = useRef<number | null>(null)
+  const timeRemainingRef = useRef(timeRemaining)
+  const isRunningRef = useRef(false)
+  const completingRef = useRef(false)
+  const [restored, setRestored] = useState(false)
   const { user } = useAuth()
   const supabase = createClient()
 
@@ -81,7 +118,9 @@ export function useFocusTimer() {
           soundVolume: settingsData.sound_volume,
         }
         setSettings(mappedSettings)
-        setTimeRemaining(mappedSettings.workDuration * 60)
+        if (!isRunningRef.current) {
+          setTimeRemaining(mappedSettings.workDuration * 60)
+        }
       }
 
       const mappedSessions: FocusSession[] = (sessionsData || []).map(s => ({
@@ -122,10 +161,15 @@ export function useFocusTimer() {
   }, [settings])
 
   // Start timer
-  const start = useCallback(async () => {
+  // sessionType/seconds let the caller start the *next* session right after
+  // queuing its state updates, before this callback has been re-created.
+  const startSession = useCallback(async (sessionType: SessionType = currentSessionType, seconds: number = timeRemainingRef.current) => {
     if (!user) return
 
     startTimeRef.current = Date.now()
+    endsAtRef.current = Date.now() + seconds * 1000
+    completingRef.current = false
+    isRunningRef.current = true
     setIsRunning(true)
     setIsPaused(false)
 
@@ -134,8 +178,8 @@ export function useFocusTimer() {
       .from('focus_sessions')
       .insert({
         user_id: user.id,
-        session_type: currentSessionType,
-        planned_duration: getDuration(currentSessionType),
+        session_type: sessionType,
+        planned_duration: getDuration(sessionType),
         task_id: linkedTaskId || null,
         goal_id: linkedGoalId || null,
       })
@@ -161,6 +205,9 @@ export function useFocusTimer() {
     }
   }, [user, supabase, currentSessionType, getDuration, linkedTaskId, linkedGoalId])
 
+  // Public start takes no arguments, so it is safe to pass straight to onClick.
+  const start = useCallback(() => startSession(), [startSession])
+
   // Handle session complete
   const handleSessionComplete = useCallback(async () => {
     if (timerRef.current) {
@@ -180,7 +227,8 @@ export function useFocusTimer() {
 
     // Update session in database
     if (currentSessionId && user) {
-      const endTime = Date.now()
+      // If the page was closed when the session ran out, it ended at endsAt, not now.
+      const endTime = Math.min(Date.now(), endsAtRef.current ?? Date.now())
       const actualDuration = Math.round((endTime - startTimeRef.current) / 60000)
 
       await supabase
@@ -188,7 +236,7 @@ export function useFocusTimer() {
         .update({
           is_completed: true,
           actual_duration: actualDuration,
-          ended_at: new Date().toISOString(),
+          ended_at: new Date(endTime).toISOString(),
         })
         .eq('id', currentSessionId)
 
@@ -200,68 +248,70 @@ export function useFocusTimer() {
     }
 
     // Determine next session
+    endsAtRef.current = null
+    let nextType: SessionType = 'work'
     if (currentSessionType === 'work') {
       const newCompleted = sessionsCompleted + 1
       setSessionsCompleted(newCompleted)
+      nextType = newCompleted % settings.sessionsUntilLongBreak === 0 ? 'long_break' : 'short_break'
+    }
+    const nextSeconds = getDuration(nextType) * 60
+    setCurrentSessionType(nextType)
+    setTimeRemaining(nextSeconds)
 
-      if (newCompleted % settings.sessionsUntilLongBreak === 0) {
-        setCurrentSessionType('long_break')
-        setTimeRemaining(settings.longBreakDuration * 60)
-      } else {
-        setCurrentSessionType('short_break')
-        setTimeRemaining(settings.shortBreakDuration * 60)
-      }
-
-      if (settings.autoStartBreaks) {
-        start()
-      } else {
-        setIsRunning(false)
-        setCurrentSessionId(null)
-      }
+    const autoStart = nextType === 'work' ? settings.autoStartWork : settings.autoStartBreaks
+    if (autoStart) {
+      startSession(nextType, nextSeconds)
     } else {
-      setCurrentSessionType('work')
-      setTimeRemaining(settings.workDuration * 60)
+      isRunningRef.current = false
+      setIsRunning(false)
+      setCurrentSessionId(null)
+    }
+  }, [currentSessionId, currentSessionType, sessionsCompleted, settings, user, supabase, startSession, getDuration])
 
-      if (settings.autoStartWork) {
-        start()
-      } else {
-        setIsRunning(false)
-        setCurrentSessionId(null)
+  useEffect(() => {
+    timeRemainingRef.current = timeRemaining
+  }, [timeRemaining])
+
+  // Timer tick: recompute from the wall clock each time, so a throttled or
+  // sleeping tab catches up as soon as it runs again.
+  useEffect(() => {
+    if (!isRunning || isPaused) return
+
+    const tick = () => {
+      if (endsAtRef.current === null) return
+      const remaining = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000))
+      setTimeRemaining(remaining)
+      if (remaining <= 0 && !completingRef.current) {
+        completingRef.current = true
+        handleSessionComplete()
       }
     }
-  }, [currentSessionId, currentSessionType, sessionsCompleted, settings, user, supabase, start])
 
-  // Timer tick
-  useEffect(() => {
-    if (isRunning && !isPaused && timeRemaining > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            handleSessionComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
+    tick()
+    timerRef.current = setInterval(tick, 250)
+    document.addEventListener('visibilitychange', tick)
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
+      if (timerRef.current) clearInterval(timerRef.current)
+      document.removeEventListener('visibilitychange', tick)
     }
-  }, [handleSessionComplete, isRunning, isPaused, timeRemaining])
+  }, [handleSessionComplete, isRunning, isPaused])
 
-  // Pause timer
+  // Pause timer: freeze the remaining time and drop the deadline.
   const pause = useCallback(() => {
-    setIsPaused(true)
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
+    if (endsAtRef.current !== null) {
+      const remaining = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000))
+      timeRemainingRef.current = remaining
+      setTimeRemaining(remaining)
     }
+    endsAtRef.current = null
+    setIsPaused(true)
   }, [])
 
-  // Resume timer
+  // Resume timer: set a new deadline from the frozen remaining time.
   const resume = useCallback(() => {
+    endsAtRef.current = Date.now() + timeRemainingRef.current * 1000
     setIsPaused(false)
   }, [])
 
@@ -292,6 +342,8 @@ export function useFocusTimer() {
       ))
     }
 
+    endsAtRef.current = null
+    isRunningRef.current = false
     setIsRunning(false)
     setIsPaused(false)
     setCurrentSessionId(null)
@@ -299,8 +351,10 @@ export function useFocusTimer() {
   }, [currentSessionId, currentSessionType, getDuration, user, supabase])
 
   // Skip to next session
-  const skip = useCallback(() => {
-    stop()
+  const skip = useCallback(async () => {
+    // stop() resets the countdown for the current session type once its save
+    // finishes, so wait for it before setting up the next session.
+    await stop()
 
     if (currentSessionType === 'work') {
       const newCompleted = sessionsCompleted + 1
@@ -338,7 +392,12 @@ export function useFocusTimer() {
 
     // Update time remaining if not running
     if (!isRunning) {
-      setTimeRemaining(getDuration(currentSessionType) * 60)
+      const minutes = currentSessionType === 'work'
+        ? updatedSettings.workDuration
+        : currentSessionType === 'short_break'
+          ? updatedSettings.shortBreakDuration
+          : updatedSettings.longBreakDuration
+      setTimeRemaining(minutes * 60)
     }
 
     await supabase
@@ -354,7 +413,7 @@ export function useFocusTimer() {
         sound_enabled: updatedSettings.soundEnabled,
         sound_volume: updatedSettings.soundVolume,
       })
-  }, [user, supabase, settings, isRunning, currentSessionType, getDuration])
+  }, [user, supabase, settings, isRunning, currentSessionType])
 
   // Link to task
   const linkToTask = useCallback((taskId: string) => {
@@ -397,6 +456,56 @@ export function useFocusTimer() {
     return sessions.filter(s => s.taskId === taskId)
   }, [sessions])
 
+  // Pick a running timer back up after a reload.
+  useEffect(() => {
+    const saved = readPersistedTimer()
+    if (saved) {
+      startTimeRef.current = saved.startedAt
+      endsAtRef.current = saved.isPaused ? null : saved.endsAt
+      timeRemainingRef.current = saved.remaining
+      isRunningRef.current = true
+      // Restoring from storage after mount is the one place state has to be
+      // set from an effect: localStorage does not exist during prerender.
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setCurrentSessionType(saved.sessionType)
+      setSessionsCompleted(saved.sessionsCompleted)
+      setCurrentSessionId(saved.sessionId)
+      setLinkedTaskId(saved.linkedTaskId)
+      setLinkedGoalId(saved.linkedGoalId)
+      setTimeRemaining(saved.remaining)
+      setIsPaused(saved.isPaused)
+      setIsRunning(true)
+    }
+    setRestored(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [])
+
+  // Save the timer whenever it changes, so a reload can restore it.
+  useEffect(() => {
+    if (!restored) return
+    try {
+      if (!isRunning) {
+        localStorage.removeItem(STORAGE_KEY)
+        return
+      }
+      const snapshot: PersistedTimer = {
+        isRunning,
+        isPaused,
+        endsAt: endsAtRef.current,
+        remaining: timeRemainingRef.current,
+        sessionType: currentSessionType,
+        sessionsCompleted,
+        sessionId: currentSessionId,
+        startedAt: startTimeRef.current,
+        linkedTaskId,
+        linkedGoalId,
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
+    } catch {
+      // Storage can be unavailable (private mode); the timer still works without it.
+    }
+  }, [restored, isRunning, isPaused, currentSessionType, sessionsCompleted, currentSessionId, linkedTaskId, linkedGoalId])
+
   return {
     // Timer state
     isRunning,
@@ -431,4 +540,20 @@ export function useFocusTimer() {
     getWeeklyFocusTime,
     getSessionsByTask,
   }
+}
+
+type FocusTimer = ReturnType<typeof useFocusTimerState>
+
+const FocusTimerContext = createContext<FocusTimer | null>(null)
+
+/** Holds the one focus timer for the app, so every view shows the same countdown. */
+export function FocusTimerProvider({ children }: { children: ReactNode }) {
+  const timer = useFocusTimerState()
+  return createElement(FocusTimerContext.Provider, { value: timer }, children)
+}
+
+export function useFocusTimer(): FocusTimer {
+  const timer = useContext(FocusTimerContext)
+  if (!timer) throw new Error('useFocusTimer must be used within a FocusTimerProvider')
+  return timer
 }

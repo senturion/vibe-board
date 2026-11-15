@@ -3,7 +3,7 @@
 import { useKanban } from './useKanban'
 import { useGoals } from './useGoals'
 import { useBoards } from './useBoards'
-import { isOverdue, isDueSoon, formatDateKey } from '@/lib/types'
+import { isOverdue, isDueSoon, formatDateKey, parseDateKey } from '@/lib/types'
 
 interface Deadline {
   id: string
@@ -41,7 +41,7 @@ export function useDeadlines() {
   // Add goals with target dates
   goals.forEach(goal => {
     if (goal.targetDate && goal.status === 'active') {
-      const dueDateMs = new Date(goal.targetDate).getTime()
+      const dueDateMs = parseDateKey(goal.targetDate).getTime()
       const status = getDeadlineStatus(dueDateMs)
       deadlines.push({
         id: goal.id,
@@ -58,7 +58,7 @@ export function useDeadlines() {
   // Add milestones with target dates
   milestones.forEach(milestone => {
     if (milestone.targetDate && !milestone.isCompleted) {
-      const dueDateMs = new Date(milestone.targetDate).getTime()
+      const dueDateMs = parseDateKey(milestone.targetDate).getTime()
       const status = getDeadlineStatus(dueDateMs)
       deadlines.push({
         id: milestone.id,
