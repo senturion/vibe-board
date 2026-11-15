@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import type { Database } from '@/lib/supabase/types'
 import {
   Routine,
   RoutineItem,
@@ -176,7 +177,7 @@ export function useRoutines() {
   const updateRoutine = useCallback(async (id: string, updates: Partial<Routine>) => {
     if (!user) return
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['routines']['Update'] = {}
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.description !== undefined) dbUpdates.description = updates.description
     if (updates.daysOfWeek !== undefined) dbUpdates.days_of_week = updates.daysOfWeek
@@ -255,7 +256,7 @@ export function useRoutines() {
   const updateRoutineItem = useCallback(async (id: string, updates: Partial<RoutineItem>) => {
     if (!user) return
 
-    const dbUpdates: Record<string, unknown> = {}
+    const dbUpdates: Database['public']['Tables']['routine_items']['Update'] = {}
     if (updates.title !== undefined) dbUpdates.title = updates.title
     if (updates.targetTime !== undefined) dbUpdates.target_time = updates.targetTime ? formatInterval(updates.targetTime) : null
 

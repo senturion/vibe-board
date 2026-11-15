@@ -11,7 +11,11 @@ const WINDOW_MINUTES = 15
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
   const authHeader = request.headers.get('authorization')
-  if (secret && authHeader !== `Bearer ${secret}`) {
+  // Fail closed: without CRON_SECRET anyone could trigger this endpoint.
+  if (!secret) {
+    return NextResponse.json({ error: 'CRON_SECRET is not set' }, { status: 500 })
+  }
+  if (authHeader !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

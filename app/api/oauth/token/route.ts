@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       return err(400, 'invalid_request', 'missing required parameter')
     }
 
-    const result = await rotateFromRefresh(refreshToken, deps)
+    const result = await rotateFromRefresh(refreshToken, deps, clientId)
     if (!result) {
       return err(
         400,

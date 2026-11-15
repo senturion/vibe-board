@@ -41,11 +41,12 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Redirect unauthenticated users to login
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-                     request.nextUrl.pathname.startsWith('/signup')
+  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
   // /api/mcp uses bearer-token auth, not Supabase session cookies — skip redirect.
   // /api/oauth/* and /.well-known/oauth-* are OAuth endpoints that handle their own auth.
+  // /api/notifications/cron is called by the scheduler with CRON_SECRET, never a session.
   const isMcpOrOauth =
+    request.nextUrl.pathname.startsWith('/api/notifications/cron') ||
     request.nextUrl.pathname.startsWith('/api/mcp') ||
     request.nextUrl.pathname.startsWith('/api/oauth/') ||
     request.nextUrl.pathname.startsWith('/.well-known/oauth-')

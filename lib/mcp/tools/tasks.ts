@@ -157,7 +157,7 @@ export async function updateTask(
   const supabase = deps.getClient()
   // patch.order maps to the quoted "order" column — Supabase handles quoting.
   const { subtasks, ...rest } = args.patch
-  const patch: Record<string, unknown> = {
+  const patch: Database['public']['Tables']['tasks']['Update'] = {
     ...rest,
     ...(subtasks !== undefined ? { subtasks: normalizeSubtasks(subtasks) } : {}),
     updated_at: new Date().toISOString(),
