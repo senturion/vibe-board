@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -15,6 +16,7 @@ import {
   normalizeColumnTitle,
 } from '@/lib/types'
 import type { Json } from '@/lib/supabase/types'
+import { notifyError } from '@/lib/notify'
 
 export interface AppSettings {
   // General
@@ -232,134 +234,124 @@ function toCloudSettings(settings: AppSettings): Json {
   return cloudSettings as Json
 }
 
+export const settingsQueryKey = (userId: string | undefined) => ['settings', userId ?? 'signed-out'] as const
+
+// The copy saved on this device, shown instantly while the cloud copy loads.
+// Parsed once per distinct stored string so the snapshot stays referentially stable.
+let cachedRaw: string | null = null
+let cachedLocal: AppSettings = DEFAULT_SETTINGS
+
+function readLocalSettings(): AppSettings {
+  let raw: string | null = null
+  try {
+    raw = localStorage.getItem(SETTINGS_KEY)
+  } catch {
+    return DEFAULT_SETTINGS
+  }
+  if (raw === cachedRaw) return cachedLocal
+  cachedRaw = raw
+  try {
+    cachedLocal = raw ? normalizeSettings(JSON.parse(raw) as unknown) : DEFAULT_SETTINGS
+  } catch {
+    cachedLocal = DEFAULT_SETTINGS
+  }
+  return cachedLocal
+}
+
+function writeLocalSettings(settings: AppSettings) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+  } catch {
+    // Storage can be unavailable (private mode); the in-memory copy still works.
+  }
+}
+
+const subscribeToNothing = () => () => {}
+const getServerSettings = () => DEFAULT_SETTINGS
+
+/**
+ * App settings, shared by every component that reads them: one fetch per
+ * session, and a change made anywhere is seen everywhere.
+ */
 export function useSettings() {
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
-  const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const queryKey = settingsQueryKey(user?.id)
 
-  // Load settings from localStorage first, then sync with Supabase
-  useEffect(() => {
-    let isActive = true
+  // Safe to read during render: on the server and during hydration this
+  // returns the defaults, then switches to the device copy.
+  const localSettings = useSyncExternalStore(subscribeToNothing, readLocalSettings, getServerSettings)
 
-    const loadSettings = async () => {
-      let localSettings = DEFAULT_SETTINGS
+  const query = useQuery({
+    queryKey,
+    enabled: !!user,
+    queryFn: async (): Promise<AppSettings> => {
+      const local = readLocalSettings()
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('app_settings')
+        .eq('user_id', user!.id)
+        .maybeSingle()
 
-      // Load from localStorage for instant access
-      const stored = localStorage.getItem(SETTINGS_KEY)
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as unknown
-          localSettings = normalizeSettings(parsed)
-          if (isActive) {
-            setSettings(localSettings)
-          }
-        } catch {
-          // Invalid JSON, use defaults
+      if (error) throw new Error(error.message)
+      if (!data?.app_settings) return local
+
+      const cloudSettings = normalizeSettings(data.app_settings)
+      const merged = {
+        ...cloudSettings,
+        // Keep API key local to this device.
+        aiApiKey: local.aiApiKey || cloudSettings.aiApiKey,
+      }
+      writeLocalSettings(merged)
+      return merged
+    },
+  })
+
+  const settings = query.data ?? localSettings
+  const loading = !!user && query.isPending
+
+  const save = useCallback((next: AppSettings) => {
+    queryClient.setQueryData(queryKey, next)
+    writeLocalSettings(next)
+
+    if (!user) return
+    supabase
+      .from('user_settings')
+      .upsert({ user_id: user.id, app_settings: toCloudSettings(next) }, { onConflict: 'user_id' })
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error saving settings:', error)
+          notifyError('Could not save settings. They are kept on this device only for now.')
         }
-      }
+      })
+    // queryKey is derived from user.id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, supabase, user])
 
-      // If user is logged in, fetch from Supabase
-      if (user) {
-        const { data, error } = await supabase
-          .from('user_settings')
-          .select('app_settings')
-          .eq('user_id', user.id)
-          .single()
-
-        if (!error && data?.app_settings && isActive) {
-          const cloudSettings = normalizeSettings(data.app_settings)
-          const mergedSettings = {
-            ...cloudSettings,
-            // Keep API key local to this device.
-            aiApiKey: localSettings.aiApiKey || cloudSettings.aiApiKey,
-          }
-          setSettings(mergedSettings)
-          localStorage.setItem(SETTINGS_KEY, JSON.stringify(mergedSettings))
-        }
-      }
-
-      if (isActive) {
-        setLoading(false)
-      }
-    }
-
-    loadSettings()
-    return () => {
-      isActive = false
-    }
-  }, [user, supabase])
+  const current = useCallback(
+    () => queryClient.getQueryData<AppSettings>(queryKey) ?? readLocalSettings(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryClient, user],
+  )
 
   // Update a single setting
   const updateSetting = useCallback(<K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K]
   ) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, [key]: value }
-
-      // Save to localStorage immediately
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings))
-
-      // Sync to Supabase if logged in
-      if (user) {
-        supabase
-          .from('user_settings')
-          .upsert({
-            user_id: user.id,
-            app_settings: toCloudSettings(newSettings),
-          }, { onConflict: 'user_id' })
-          .then(({ error }) => {
-            if (error) console.error('Error saving settings:', error)
-          })
-      }
-
-      return newSettings
-    })
-  }, [user, supabase])
+    save({ ...current(), [key]: value })
+  }, [save, current])
 
   // Update multiple settings at once
   const updateSettings = useCallback((updates: Partial<AppSettings>) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, ...updates }
-
-      // Save to localStorage immediately
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings))
-
-      // Sync to Supabase if logged in
-      if (user) {
-        supabase
-          .from('user_settings')
-          .upsert({
-            user_id: user.id,
-            app_settings: toCloudSettings(newSettings),
-          }, { onConflict: 'user_id' })
-          .then(({ error }) => {
-            if (error) console.error('Error saving settings:', error)
-          })
-      }
-
-      return newSettings
-    })
-  }, [user, supabase])
+    save({ ...current(), ...updates })
+  }, [save, current])
 
   // Reset all settings to defaults
   const resetSettings = useCallback(() => {
-    setSettings(DEFAULT_SETTINGS)
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(DEFAULT_SETTINGS))
-
-    if (user) {
-      supabase
-        .from('user_settings')
-        .upsert({
-          user_id: user.id,
-          app_settings: toCloudSettings(DEFAULT_SETTINGS),
-        }, { onConflict: 'user_id' })
-        .then(({ error }) => {
-          if (error) console.error('Error resetting settings:', error)
-        })
-    }
-  }, [user, supabase])
+    save(DEFAULT_SETTINGS)
+  }, [save])
 
   return {
     settings,

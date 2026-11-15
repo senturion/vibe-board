@@ -1,13 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSettings } from '@/hooks/useSettings'
 import { KanbanTask, ColumnId, Priority, LabelId, Subtask, dueDateFromDb, dueDateToDb } from '@/lib/types'
 import { validateTaskTitle, validateTaskDescription } from '@/lib/validation'
 import { Database, Json } from '@/lib/supabase/types'
+import { useSettings } from '@/hooks/useSettings'
 import { haptics } from '@/lib/haptics'
+import { notifyError } from '@/lib/notify'
 
 type TaskRow = Database['public']['Tables']['tasks']['Row']
 type TaskUpdate = Database['public']['Tables']['tasks']['Update']
@@ -15,151 +17,112 @@ type TaskUpdate = Database['public']['Tables']['tasks']['Update']
 const DEBOUNCE_FIELDS = new Set(['title', 'description'])
 const DEBOUNCE_MS = 300
 
+export const tasksQueryKey = (userId: string | undefined) => ['tasks', userId ?? 'signed-out'] as const
+
+// Supabase returns at most 1000 rows per request, so read in pages.
+const PAGE_SIZE = 1000
+
+function mapTask(t: TaskRow): KanbanTask {
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description || undefined,
+    column: t.status as ColumnId,
+    priority: t.priority as Priority,
+    labels: (t.labels || []) as LabelId[],
+    subtasks: (t.subtasks as unknown as Subtask[]) || [],
+    dueDate: dueDateFromDb(t.due_date),
+    order: t.order,
+    createdAt: new Date(t.created_at).getTime(),
+    updatedAt: t.updated_at ? new Date(t.updated_at).getTime() : new Date(t.created_at).getTime(),
+    completedAt: t.completed_at ? new Date(t.completed_at).getTime() : undefined,
+    archivedAt: t.archived_at ? new Date(t.archived_at).getTime() : undefined,
+    snoozedUntil: t.snoozed_until ? new Date(t.snoozed_until).getTime() : undefined,
+    boardId: t.board_id,
+  }
+}
+
+const NO_TASKS: KanbanTask[] = []
+
+/**
+ * Tasks for one board, or for every board when no boardId is given.
+ *
+ * All tasks live in one shared cache, loaded once. Every component that calls
+ * this hook reads that same copy, so a change made on the board shows up in
+ * the sidebar, the stats and the focus view at once. Changes are applied to
+ * the cache straight away and undone, with a message, if the save fails.
+ */
 export function useKanban(boardId: string = '') {
-  const [tasks, setTasks] = useState<KanbanTask[]>([])
   const pendingDbUpdates = useRef<Record<string, { updates: TaskUpdate, timer: ReturnType<typeof setTimeout> }>>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
   const supabase = createClient()
-  const { settings, loading: settingsLoading } = useSettings()
+  const queryClient = useQueryClient()
+  const userId = user?.id
+  const queryKey = useMemo(() => tasksQueryKey(userId), [userId])
 
-  // Fetch tasks from Supabase
-  useEffect(() => {
-    let isActive = true
-    const fetchTasks = async () => {
-      if (!user) {
-        if (isActive) {
-          setTasks([])
-          setLoading(false)
-        }
-        return
+  const query = useQuery({
+    queryKey,
+    enabled: !!user,
+    queryFn: async (): Promise<KanbanTask[]> => {
+      const rows: TaskRow[] = []
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*')
+          .order('order', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1)
+        if (error) throw new Error(error.message)
+        rows.push(...((data ?? []) as TaskRow[]))
+        if (!data || data.length < PAGE_SIZE) break
       }
+      return rows.map(mapTask)
+    },
+  })
 
-      let query = supabase
-        .from('tasks')
-        .select('*')
-        .order('order', { ascending: true })
+  const allTasks = query.data ?? NO_TASKS
+  const tasks = useMemo(
+    () => (boardId ? allTasks.filter(task => task.boardId === boardId) : allTasks),
+    [allTasks, boardId],
+  )
+  const loading = !!user && query.isPending
+  const error = query.error ? 'Failed to load tasks. Please try refreshing.' : null
 
-      if (boardId) {
-        query = query.eq('board_id', boardId)
-      }
+  /** The latest tasks, read from the cache so callbacks never act on a stale list. */
+  const currentTasks = useCallback(
+    () => queryClient.getQueryData<KanbanTask[]>(queryKey) ?? NO_TASKS,
+    [queryClient, queryKey],
+  )
 
-      const { data, error } = await query
+  const setTasks = useCallback((updater: (tasks: KanbanTask[]) => KanbanTask[]) => {
+    queryClient.setQueryData<KanbanTask[]>(queryKey, prev => updater(prev ?? NO_TASKS))
+  }, [queryClient, queryKey])
 
-      if (error) {
-        console.error('Error fetching tasks:', error)
-        if (isActive) {
-          setError('Failed to load tasks. Please try refreshing.')
-          setLoading(false)
-        }
-        return
-      }
+  /**
+   * Apply a change to the cache now, then save it. If the save fails, put the
+   * task(s) back the way they were, tell the user, and reload from the server.
+   */
+  const applyAndSave = useCallback(async (
+    ids: string[],
+    change: (task: KanbanTask) => KanbanTask,
+    save: () => PromiseLike<{ error: { message: string } | null }>,
+    failureMessage: string,
+  ): Promise<boolean> => {
+    // A load in flight would overwrite the change with older data.
+    await queryClient.cancelQueries({ queryKey })
+    const idSet = new Set(ids)
+    const before = currentTasks().filter(task => idSet.has(task.id))
+    setTasks(prev => prev.map(task => (idSet.has(task.id) ? change(task) : task)))
 
-      if (isActive) setError(null)
+    const { error } = await save()
+    if (!error) return true
 
-      const mappedTasks: KanbanTask[] = (data as TaskRow[]).map(t => ({
-        id: t.id,
-        title: t.title,
-        description: t.description || undefined,
-        column: t.status as ColumnId,
-        priority: t.priority as Priority,
-        labels: (t.labels || []) as LabelId[],
-        subtasks: (t.subtasks as unknown as Subtask[]) || [],
-        dueDate: dueDateFromDb(t.due_date),
-        order: t.order,
-        createdAt: new Date(t.created_at).getTime(),
-        updatedAt: t.updated_at ? new Date(t.updated_at).getTime() : new Date(t.created_at).getTime(),
-        completedAt: t.completed_at ? new Date(t.completed_at).getTime() : undefined,
-        archivedAt: t.archived_at ? new Date(t.archived_at).getTime() : undefined,
-        snoozedUntil: t.snoozed_until ? new Date(t.snoozed_until).getTime() : undefined,
-        boardId: t.board_id,
-      }))
-
-      if (isActive) {
-        setTasks(mappedTasks)
-        setLoading(false)
-      }
-    }
-
-    fetchTasks()
-    return () => {
-      isActive = false
-    }
-  }, [user, boardId, supabase])
-
-  useEffect(() => {
-    if (!user || settingsLoading) return
-    const missingCompletedAt = tasks.filter(task =>
-      task.column === 'complete' &&
-      !task.completedAt
-    )
-
-    if (missingCompletedAt.length === 0) return
-
-    const now = Date.now()
-    const ids = missingCompletedAt.map(task => task.id)
-
-    const run = async () => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() })
-        .in('id', ids)
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('Error backfilling completed_at:', error.message, error.details, error.code)
-        return
-      }
-
-      setTasks(prev => prev.map(task =>
-        task.column === 'complete' && !task.completedAt
-          ? { ...task, completedAt: now, updatedAt: now }
-          : task
-      ))
-    }
-
-    run()
-  }, [tasks, user, supabase, settingsLoading])
-
-  useEffect(() => {
-    if (!user || settingsLoading) return
-    if (!settings.autoArchiveCompleted) return
-
-    const now = Date.now()
-    const thresholdMs = settings.archiveAfterDays * 86400000
-    const cutoff = now - thresholdMs
-
-    const eligible = tasks.filter(task => {
-      if (task.column !== 'complete' || task.archivedAt) return false
-      const completionTime = task.completedAt ?? task.updatedAt ?? task.createdAt
-      return completionTime <= cutoff
-    })
-
-    if (eligible.length === 0) return
-
-    const ids = eligible.map(task => task.id)
-    const run = async () => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ archived_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() })
-        .in('id', ids)
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('Error auto-archiving tasks:', error.message, error.details, error.code)
-        return
-      }
-
-      setTasks(prev => prev.map(task =>
-        ids.includes(task.id)
-          ? { ...task, archivedAt: now, updatedAt: now }
-          : task
-      ))
-    }
-
-    run()
-  }, [tasks, settings, settingsLoading, supabase, user])
+    console.error(failureMessage, error.message)
+    const original = new Map(before.map(task => [task.id, task]))
+    setTasks(prev => prev.map(task => original.get(task.id) ?? task))
+    notifyError(failureMessage)
+    queryClient.invalidateQueries({ queryKey })
+    return false
+  }, [queryClient, queryKey, currentTasks, setTasks])
 
   const addTask = useCallback(async (title: string, column: ColumnId = 'todo', priority: Priority = 'medium') => {
     if (!user || !boardId) return ''
@@ -185,6 +148,7 @@ export function useKanban(boardId: string = '') {
 
     if (error) {
       console.error('Error creating task:', error.message, error.code, error.details)
+      notifyError('Could not add the task. Please try again.')
       return ''
     }
 
@@ -203,7 +167,7 @@ export function useKanban(boardId: string = '') {
 
     setTasks(prev => [...prev, newTask])
     return newTask.id
-  }, [user, boardId, supabase])
+  }, [user, boardId, supabase, setTasks])
 
   const flushDbUpdate = useCallback(async (id: string, dbUpdates: TaskUpdate) => {
     dbUpdates.updated_at = new Date().toISOString()
@@ -213,8 +177,10 @@ export function useKanban(boardId: string = '') {
       .eq('id', id)
     if (error) {
       console.error('Error updating task:', error)
+      notifyError('Could not save your change to the task.')
+      queryClient.invalidateQueries({ queryKey })
     }
-  }, [supabase])
+  }, [supabase, queryClient, queryKey])
 
   const updateTask = useCallback(async (id: string, updates: Partial<KanbanTask>) => {
     if (updates.title !== undefined && !validateTaskTitle(updates.title).valid) return
@@ -235,6 +201,7 @@ export function useKanban(boardId: string = '') {
     if (updates.snoozedUntil !== undefined) dbUpdates.snoozed_until = updates.snoozedUntil ? new Date(updates.snoozedUntil).toISOString() : null
 
     // Optimistic local update
+    await queryClient.cancelQueries({ queryKey })
     const updatedAt = Date.now()
     setTasks(prev => prev.map(task =>
       task.id === id ? { ...task, ...updates, updatedAt } : task
@@ -266,14 +233,18 @@ export function useKanban(boardId: string = '') {
         clearTimeout(pending.timer)
         Object.assign(pending.updates, dbUpdates)
         delete pendingDbUpdates.current[id]
-        flushDbUpdate(id, pending.updates)
+        await flushDbUpdate(id, pending.updates)
       } else {
-        flushDbUpdate(id, dbUpdates)
+        await flushDbUpdate(id, dbUpdates)
       }
     }
-  }, [supabase, flushDbUpdate])
+  }, [flushDbUpdate, queryClient, queryKey, setTasks])
 
   const deleteTask = useCallback(async (id: string) => {
+    await queryClient.cancelQueries({ queryKey })
+    const removed = currentTasks().find(task => task.id === id)
+    setTasks(prev => prev.filter(task => task.id !== id))
+
     const { error } = await supabase
       .from('tasks')
       .delete()
@@ -281,52 +252,38 @@ export function useKanban(boardId: string = '') {
 
     if (error) {
       console.error('Error deleting task:', error)
-      return
+      if (removed) setTasks(prev => (prev.some(task => task.id === id) ? prev : [...prev, removed]))
+      notifyError('Could not delete the task.')
+      queryClient.invalidateQueries({ queryKey })
     }
-
-    setTasks(prev => prev.filter(task => task.id !== id))
-  }, [supabase])
+  }, [supabase, queryClient, queryKey, currentTasks, setTasks])
 
   const archiveTask = useCallback(async (id: string) => {
     const now = Date.now()
     const archivedAt = new Date(now).toISOString()
-    const { error } = await supabase
-      .from('tasks')
-      .update({ archived_at: archivedAt, updated_at: archivedAt })
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error archiving task:', error)
-      return
-    }
-
-    setTasks(prev => prev.map(task =>
-      task.id === id ? { ...task, archivedAt: now, updatedAt: now } : task
-    ))
-  }, [supabase])
+    await applyAndSave(
+      [id],
+      task => ({ ...task, archivedAt: now, updatedAt: now }),
+      () => supabase.from('tasks').update({ archived_at: archivedAt, updated_at: archivedAt }).eq('id', id),
+      'Could not archive the task.',
+    )
+  }, [supabase, applyAndSave])
 
   const restoreTask = useCallback(async (id: string) => {
     const now = Date.now()
-    const { error } = await supabase
-      .from('tasks')
-      .update({ archived_at: null, updated_at: new Date(now).toISOString() })
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error restoring task:', error)
-      return
-    }
-
-    setTasks(prev => prev.map(task =>
-      task.id === id ? { ...task, archivedAt: undefined, updatedAt: now } : task
-    ))
-  }, [supabase])
+    await applyAndSave(
+      [id],
+      task => ({ ...task, archivedAt: undefined, updatedAt: now }),
+      () => supabase.from('tasks').update({ archived_at: null, updated_at: new Date(now).toISOString() }).eq('id', id),
+      'Could not restore the task.',
+    )
+  }, [supabase, applyAndSave])
 
   const moveTask = useCallback(async (taskId: string, toColumn: ColumnId, newOrder?: number) => {
     if (!user) return
     const now = Date.now()
     const order = Math.floor(newOrder ?? now)
-    const task = tasks.find(t => t.id === taskId)
+    const task = currentTasks().find(t => t.id === taskId)
 
     // Set completedAt when moving to complete, clear it when moving away
     const completedAt = toColumn === 'complete'
@@ -338,38 +295,44 @@ export function useKanban(boardId: string = '') {
       haptics.success()
     }
 
-    const { error } = await supabase
-      .from('tasks')
-      .update({
-        status: toColumn,
-        order,
-        completed_at: completedAt ? new Date(completedAt).toISOString() : null,
-        updated_at: new Date(now).toISOString(),
-      })
-      .eq('id', taskId)
-      .eq('user_id', user.id)
+    await applyAndSave(
+      [taskId],
+      t => ({ ...t, column: toColumn, order, completedAt: completedAt || undefined, updatedAt: now }),
+      () => supabase
+        .from('tasks')
+        .update({
+          status: toColumn,
+          order,
+          completed_at: completedAt ? new Date(completedAt).toISOString() : null,
+          updated_at: new Date(now).toISOString(),
+        })
+        .eq('id', taskId)
+        .eq('user_id', user.id),
+      'Could not move the task.',
+    )
+  }, [supabase, user, currentTasks, applyAndSave])
 
-    if (error) {
-      console.error('Error moving task:', error.message, error.details, error.code)
-      return
-    }
-
-    setTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? {
-            ...t,
-            column: toColumn,
-            order,
-            completedAt: completedAt || undefined,
-            updatedAt: now,
-          }
-        : t
-    ))
-  }, [supabase, tasks, user])
+  /** Replace a task's subtasks or labels in the cache and in the database. */
+  const saveTaskFields = useCallback(async (
+    taskId: string,
+    fields: { subtasks?: Subtask[]; labels?: LabelId[] },
+    failureMessage: string,
+  ) => {
+    const now = Date.now()
+    const dbFields: TaskUpdate = { updated_at: new Date(now).toISOString() }
+    if (fields.subtasks) dbFields.subtasks = fields.subtasks as unknown as Json
+    if (fields.labels) dbFields.labels = fields.labels
+    await applyAndSave(
+      [taskId],
+      task => ({ ...task, ...fields, updatedAt: now }),
+      () => supabase.from('tasks').update(dbFields).eq('id', taskId),
+      failureMessage,
+    )
+  }, [supabase, applyAndSave])
 
   // Subtask operations
   const addSubtask = useCallback(async (taskId: string, text: string) => {
-    const task = tasks.find(t => t.id === taskId)
+    const task = currentTasks().find(t => t.id === taskId)
     if (!task) return
 
     const subtask: Subtask = {
@@ -377,104 +340,38 @@ export function useKanban(boardId: string = '') {
       text,
       completed: false,
     }
-    const newSubtasks = [...(task.subtasks || []), subtask]
-
-    const now = Date.now()
-    const { error } = await supabase
-      .from('tasks')
-      .update({ subtasks: newSubtasks as unknown as Json, updated_at: new Date(now).toISOString() })
-      .eq('id', taskId)
-
-    if (error) {
-      console.error('Error adding subtask:', error)
-      return
-    }
-
-    setTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, subtasks: newSubtasks, updatedAt: now }
-        : t
-    ))
-  }, [tasks, supabase])
+    await saveTaskFields(taskId, { subtasks: [...(task.subtasks || []), subtask] }, 'Could not add the subtask.')
+  }, [currentTasks, saveTaskFields])
 
   const toggleSubtask = useCallback(async (taskId: string, subtaskId: string) => {
-    const task = tasks.find(t => t.id === taskId)
+    const task = currentTasks().find(t => t.id === taskId)
     if (!task) return
 
-    const newSubtasks = (task.subtasks || []).map(st =>
+    const subtasks = (task.subtasks || []).map(st =>
       st.id === subtaskId ? { ...st, completed: !st.completed } : st
     )
-
-    const now = Date.now()
-    const { error } = await supabase
-      .from('tasks')
-      .update({ subtasks: newSubtasks as unknown as Json, updated_at: new Date(now).toISOString() })
-      .eq('id', taskId)
-
-    if (error) {
-      console.error('Error toggling subtask:', error)
-      return
-    }
-
-    setTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, subtasks: newSubtasks, updatedAt: now }
-        : t
-    ))
-  }, [tasks, supabase])
+    await saveTaskFields(taskId, { subtasks }, 'Could not update the subtask.')
+  }, [currentTasks, saveTaskFields])
 
   const deleteSubtask = useCallback(async (taskId: string, subtaskId: string) => {
-    const task = tasks.find(t => t.id === taskId)
+    const task = currentTasks().find(t => t.id === taskId)
     if (!task) return
 
-    const newSubtasks = (task.subtasks || []).filter(st => st.id !== subtaskId)
-
-    const now = Date.now()
-    const { error } = await supabase
-      .from('tasks')
-      .update({ subtasks: newSubtasks as unknown as Json, updated_at: new Date(now).toISOString() })
-      .eq('id', taskId)
-
-    if (error) {
-      console.error('Error deleting subtask:', error)
-      return
-    }
-
-    setTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, subtasks: newSubtasks, updatedAt: now }
-        : t
-    ))
-  }, [tasks, supabase])
+    const subtasks = (task.subtasks || []).filter(st => st.id !== subtaskId)
+    await saveTaskFields(taskId, { subtasks }, 'Could not delete the subtask.')
+  }, [currentTasks, saveTaskFields])
 
   // Label operations
   const toggleLabel = useCallback(async (taskId: string, labelId: LabelId) => {
-    const task = tasks.find(t => t.id === taskId)
+    const task = currentTasks().find(t => t.id === taskId)
     if (!task) return
 
-    const labels = task.labels || []
-    const hasLabel = labels.includes(labelId)
-    const newLabels = hasLabel
-      ? labels.filter(l => l !== labelId)
-      : [...labels, labelId]
-
-    const now = Date.now()
-    const { error } = await supabase
-      .from('tasks')
-      .update({ labels: newLabels, updated_at: new Date(now).toISOString() })
-      .eq('id', taskId)
-
-    if (error) {
-      console.error('Error toggling label:', error)
-      return
-    }
-
-    setTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, labels: newLabels, updatedAt: now }
-        : t
-    ))
-  }, [tasks, supabase])
+    const existing = task.labels || []
+    const labels = existing.includes(labelId)
+      ? existing.filter(l => l !== labelId)
+      : [...existing, labelId]
+    await saveTaskFields(taskId, { labels }, 'Could not update the label.')
+  }, [currentTasks, saveTaskFields])
 
   // Search tasks
   const searchTasks = useCallback((query: string) => {
@@ -507,12 +404,13 @@ export function useKanban(boardId: string = '') {
 
   // Flush pending debounced updates on unmount
   useEffect(() => {
+    const pending = pendingDbUpdates.current
     return () => {
-      for (const [id, pending] of Object.entries(pendingDbUpdates.current)) {
-        clearTimeout(pending.timer)
-        flushDbUpdate(id, pending.updates)
+      for (const [id, entry] of Object.entries(pending)) {
+        clearTimeout(entry.timer)
+        flushDbUpdate(id, entry.updates)
+        delete pending[id]
       }
-      pendingDbUpdates.current = {}
     }
   }, [flushDbUpdate])
 
@@ -535,4 +433,73 @@ export function useKanban(boardId: string = '') {
     getArchivedTasks,
     getTaskById,
   }
+}
+
+/**
+ * Upkeep that should happen once per session, not once per component that
+ * reads tasks: stamp completed tasks that have no completion time, and
+ * archive old completed tasks when that setting is on. Mount it in one place.
+ */
+export function useTaskHousekeeping() {
+  const { user } = useAuth()
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+  const { settings, loading: settingsLoading } = useSettings()
+  const { tasks } = useKanban()
+  const userId = user?.id
+  const autoArchive = settings.autoArchiveCompleted
+  const archiveAfterDays = settings.archiveAfterDays
+
+  useEffect(() => {
+    if (!userId || settingsLoading || tasks.length === 0) return
+
+    const now = Date.now()
+    const nowIso = new Date(now).toISOString()
+    const queryKey = tasksQueryKey(userId)
+    const patchCache = (ids: string[], patch: Partial<KanbanTask>) => {
+      const idSet = new Set(ids)
+      queryClient.setQueryData<KanbanTask[]>(queryKey, prev =>
+        (prev ?? []).map(task => (idSet.has(task.id) ? { ...task, ...patch, updatedAt: now } : task)),
+      )
+    }
+
+    const missingCompletedAt = tasks
+      .filter(task => task.column === 'complete' && !task.completedAt)
+      .map(task => task.id)
+
+    const cutoff = now - archiveAfterDays * 86400000
+    const toArchive = autoArchive
+      ? tasks
+          .filter(task => {
+            if (task.column !== 'complete' || task.archivedAt) return false
+            const completionTime = task.completedAt ?? task.updatedAt ?? task.createdAt
+            return completionTime <= cutoff
+          })
+          .map(task => task.id)
+      : []
+
+    if (missingCompletedAt.length > 0) {
+      supabase
+        .from('tasks')
+        .update({ completed_at: nowIso, updated_at: nowIso })
+        .in('id', missingCompletedAt)
+        .eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) console.error('Error backfilling completed_at:', error.message)
+          else patchCache(missingCompletedAt, { completedAt: now })
+        })
+    }
+
+    if (toArchive.length > 0) {
+      supabase
+        .from('tasks')
+        .update({ archived_at: nowIso, updated_at: nowIso })
+        .in('id', toArchive)
+        .eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) console.error('Error auto-archiving tasks:', error.message)
+          else patchCache(toArchive, { archivedAt: now })
+        })
+    }
+  }, [tasks, userId, supabase, queryClient, settingsLoading, autoArchive, archiveAfterDays])
 }
