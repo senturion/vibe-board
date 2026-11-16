@@ -30,38 +30,6 @@ export function ClarifyDrawer({ isOpen, onClose, task, onSubtasksGenerated }: Cl
   const inputRef = useRef<HTMLInputElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // Fetch questions on open
-  const fetchQuestions = useCallback(async () => {
-    setPhase('loading-questions')
-    setError(null)
-    try {
-      const res = await fetch('/api/tasks/clarify-questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-        }),
-      })
-      if (!res.ok) throw new Error('Failed to load questions')
-      const data = await res.json()
-      const q: string[] = data.questions || []
-      if (q.length === 0) {
-        // No questions needed — skip to generation
-        generateSubtasks([])
-      } else {
-        setQuestions(q)
-        setCurrentIdx(0)
-        setClarifications([])
-        setPhase('answering')
-      }
-    } catch {
-      setError('Could not load clarifying questions.')
-      setPhase('loading-questions')
-    }
-  }, [task.title, task.description, task.priority])
-
   const generateSubtasks = useCallback(async (finalClarifications: Clarification[]) => {
     setPhase('generating')
     setError(null)
@@ -93,6 +61,38 @@ export function ClarifyDrawer({ isOpen, onClose, task, onSubtasksGenerated }: Cl
       setError('Could not generate subtasks.')
     }
   }, [task.title, task.description, task.subtasks, task.priority, onSubtasksGenerated, onClose])
+
+  // Fetch questions on open
+  const fetchQuestions = useCallback(async () => {
+    setPhase('loading-questions')
+    setError(null)
+    try {
+      const res = await fetch('/api/tasks/clarify-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to load questions')
+      const data = await res.json()
+      const q: string[] = data.questions || []
+      if (q.length === 0) {
+        // No questions needed — skip to generation
+        generateSubtasks([])
+      } else {
+        setQuestions(q)
+        setCurrentIdx(0)
+        setClarifications([])
+        setPhase('answering')
+      }
+    } catch {
+      setError('Could not load clarifying questions.')
+      setPhase('loading-questions')
+    }
+  }, [task.title, task.description, task.priority, generateSubtasks])
 
   useEffect(() => {
     if (isOpen) {

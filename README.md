@@ -1,113 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vibe Board
 
-## Getting Started
+A personal productivity app: a kanban board with habits, goals, routines, a journal and a focus timer, plus an MCP server so Claude can read and update it from chat.
 
-First, run the development server:
+It is built for one person. There is no signup page, and the MCP server only ever acts for a single configured owner.
+
+## Stack
+
+- Next.js 16 (App Router) and React 19, deployed on Vercel
+- Supabase for the database and sign-in, with row-level security on every table
+- TanStack Query for tasks, boards and settings
+- Tailwind CSS 4
+- Installable as a PWA; an iOS shell can be built with Capacitor
+
+## Running it locally
+
+```bash
+npm install
+```
+
+Create `.env.local` with at least the two Supabase values (see the table below), then:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 and sign in with a user that exists in your Supabase project.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server (frees port 3000 first) |
+| `npm run build` | Production build |
+| `npm test` | Run the test suite once |
+| `npm run lint` | Lint |
+| `npm run cap:sync` | Build the static export and sync it to the iOS project |
 
-## Goal Planner LLM Providers
+CI runs lint, typecheck, tests and build on every pull request and on `main`.
 
-The Goal Task Planner supports multiple backends via environment variables:
+## Environment variables
 
-`GOAL_PLANNER_PROVIDER=rules|openai|openai-compatible|ollama`
+| Variable | Needed for | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Everything | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Everything | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | MCP server, reminders | Server only. Never expose it to the browser |
+| `MCP_OWNER_USER_ID` | MCP server | Your `auth.users` UUID. Only this user can approve a connection |
+| `MCP_OWNER_TIMEZONE` | MCP server (optional) | IANA name such as `America/Toronto`. Decides what "today" means for habit tools |
+| `CRON_SECRET` | Reminders | The reminders endpoint refuses to run without it |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Reminders | Web push keys |
+| `GOAL_PLANNER_PROVIDER`, `GOAL_PLANNER_MODEL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `GOAL_PLANNER_TIMEOUT_MS` | AI features (optional) | Server-side defaults; see below |
 
-`rules` keeps deterministic in-app templates (default fallback).
+Set them in `.env.local` for local work and in the Vercel dashboard for production. A change in Vercel takes effect on the next deployment.
 
-### OpenAI
+## Database
 
-```bash
-GOAL_PLANNER_PROVIDER=openai
-OPENAI_API_KEY=your_key
-GOAL_PLANNER_MODEL=gpt-4.1-mini
-# optional
-OPENAI_BASE_URL=https://api.openai.com/v1
-```
+`supabase-schema.sql` creates the tables and their row-level security policies. Later changes live in `supabase/migrations/` and are applied by running each file in the Supabase SQL Editor:
 
-### OpenAI-Compatible APIs (vLLM, LM Studio, etc.)
+- `2026-05-04-mcp-oauth.sql` adds the tables the MCP sign-in flow uses.
+- `2026-11-15-indexes.sql` adds indexes. It changes no data and is safe to run more than once.
 
-```bash
-GOAL_PLANNER_PROVIDER=openai-compatible
-GOAL_PLANNER_API_URL=http://localhost:1234/v1
-GOAL_PLANNER_MODEL=your-model-name
-# optional (only if your endpoint requires auth)
-GOAL_PLANNER_API_KEY=your_key
-```
+Turn off new signups in Supabase (Authentication → Sign In / Up). The app has no signup page, but the Supabase API would still accept one.
 
-### Ollama
+## Claude MCP connector
 
-```bash
-GOAL_PLANNER_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-GOAL_PLANNER_MODEL=llama3.1
-```
+The app serves an MCP server at `/api/mcp` with 16 tools covering tasks, boards, todos, notes and habits.
 
-Optional tuning:
+To connect from Claude: Settings → Connectors → Add custom connector, with the URL `https://<your-domain>/api/mcp`. Claude registers itself and sends you to a Vibe Board consent page. Sign in if asked, check that the address shown is Claude's, and choose **Allow**. Nothing is granted until you do.
 
-```bash
-GOAL_PLANNER_TIMEOUT_MS=20000
-```
+To revoke access, set `revoked_at` on the rows in `mcp_oauth_tokens` (or delete them) in the Supabase dashboard.
 
-If provider calls fail, the app automatically falls back to rules-based suggestions.
+Task tools accept a column id as the status (`backlog`, `todo`, `in-progress`, `complete`, or a custom column of that board) and map common names such as `done` onto them. Due dates are `YYYY-MM-DD`.
 
-You can also choose provider/model/base URL per user in the app Settings under `AI`.
-You can enter an API key there too; it stays local to your device and is sent only with AI requests.
-Server environment variables still act as defaults/fallbacks.
+## Reminders
 
-## Claude MCP Connector
+`/api/notifications/cron` sends the daily reminder push. It returns 500 if `CRON_SECRET` is not set and 401 unless the request carries `Authorization: Bearer <CRON_SECRET>`.
 
-This app exposes a custom MCP server at `/api/mcp` so Claude (web/desktop/iOS) can read and write your data via chat.
+Vercel's free plan runs a cron job only once a day, so `vercel.json` alone cannot send a reminder at the time you pick. To get reminders at your chosen time, run `supabase/reminders-cron.sql` once in the Supabase SQL Editor after filling in your domain and `CRON_SECRET`. It makes Supabase call the endpoint every 15 minutes. Do not commit a copy with the real secret in it.
 
-**Required env vars:**
+## AI features
 
-- `MCP_OWNER_USER_ID` — your `auth.users` UUID (Supabase Dashboard → Authentication → Users). Only this user can approve a connection.
-- `SUPABASE_SERVICE_ROLE_KEY` — used server-side by the MCP tools and OAuth stores.
+Subtask generation, clarifying questions, the goal planner, journal prompts and insights can use an LLM. Choose the provider, model, base URL and API key in the app under Settings → AI. The API key is kept on your device and sent only with AI requests; it is never saved to the database.
 
-Set both in `.env.local` for local dev and in the Vercel dashboard for production.
+The server environment variables above act as defaults. A server API key is only ever sent to the server's own configured endpoint, never to a base URL supplied by the browser. With the provider set to `rules`, the goal planner uses built-in templates and needs no LLM.
 
-**Connect from Claude.ai:**
+## Backups
 
-Settings → Connectors → Add custom connector. URL: `https://<your-domain>/api/mcp`. Claude registers itself and sends you to a Vibe Board consent page. Sign in if asked, check that the address shown is Claude's, and choose **Allow**. Nothing is granted until you do.
+The database icon in the board header downloads everything you have in the app as one JSON file. Restoring from that file is not built yet.
 
-**Tools exposed (16):** `ping`, `list_tasks`, `get_task`, `create_task`, `update_task`, `complete_task`, `list_boards`, `list_todos`, `create_todo`, `get_notes`, `append_note`, `list_habits`, `get_habit_status`, `list_habit_history`, `log_habit_completion`, `create_habit`.
+## Project layout
 
-**Revoke access:** set `revoked_at` on the rows in `mcp_oauth_tokens` (or delete them) in the Supabase dashboard.
-
-## Reminders cron
-
-`/api/notifications/cron` requires `CRON_SECRET` to be set; it returns 500 without it and 401 for any request that does not send `Authorization: Bearer <CRON_SECRET>`. Vercel Cron sends that header automatically when the variable is set.
-
-Vercel's free plan only runs a cron job once a day, so `vercel.json` alone cannot send a reminder at the time you pick. To get reminders at your chosen time, run `supabase/reminders-cron.sql` once in the Supabase SQL Editor (after filling in your domain and `CRON_SECRET`). It makes Supabase call the endpoint every 15 minutes.
-
-## MCP time zone
-
-The MCP habit tools treat "today" as today in your time zone. They use `MCP_OWNER_TIMEZONE` (an IANA name such as `America/Toronto`) when set, otherwise the time zone saved with your notification settings, otherwise UTC.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Path | Contents |
+| --- | --- |
+| `app/` | Pages and API routes (`api/mcp`, `api/oauth`, `api/notifications`, AI routes) |
+| `components/` | UI, grouped by feature |
+| `hooks/`, `contexts/` | Data access and shared state |
+| `lib/mcp/` | MCP tools and the OAuth stores |
+| `lib/ai/` | LLM provider clients |
+| `supabase/` | Migrations and the reminders schedule |

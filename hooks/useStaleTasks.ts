@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useEffect, useState } from 'react'
 import { KanbanTask, Board } from '@/lib/types'
 
 const DEFAULT_STALE_DAYS = 7
@@ -31,8 +31,15 @@ export function useStaleTasks(
     return map
   }, [boards])
 
+  // "Now" is state, refreshed every few minutes, so the list stays a pure
+  // function of its inputs and still catches tasks going stale while the app is open.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 5 * 60 * 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   const staleTasks = useMemo(() => {
-    const now = Date.now()
     return tasks
       .filter(task => {
         if (task.column === 'backlog' || task.column === 'complete') return false
@@ -49,7 +56,7 @@ export function useStaleTasks(
         return (now - lastTouched) > thresholdMs
       })
       .sort((a, b) => (a.updatedAt ?? a.createdAt) - (b.updatedAt ?? b.createdAt))
-  }, [tasks, boardThresholdMap])
+  }, [tasks, boardThresholdMap, now])
 
   const staleTaskIds = useMemo(() => new Set(staleTasks.map(t => t.id)), [staleTasks])
 

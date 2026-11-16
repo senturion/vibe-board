@@ -290,7 +290,7 @@ export function CardDetailModal({
             {task.column === 'complete' && (task.completedAt || task.updatedAt) && (
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                 <Check size={12} className="text-[var(--success)]" />
-                Completed {new Date(task.completedAt || task.updatedAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                Completed {new Date((task.completedAt || task.updatedAt)!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
             )}
 

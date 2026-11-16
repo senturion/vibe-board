@@ -48,6 +48,8 @@ export default function Error({ error, reset }: ErrorProps) {
             <RefreshCw size={16} />
             Try again
           </button>
+          {/* A full page load on purpose: after a crash, client-side navigation would keep the broken state. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/"
             className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors"
