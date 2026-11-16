@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings, LogOut, SlidersHorizontal, Columns3 } from 'lucide-react'
+import { Search, ChevronDown, Plus, Trash2, Check, X, Edit2, BarChart3, Database, Settings, LogOut, SlidersHorizontal, Columns3, AlarmClockOff } from 'lucide-react'
 import { Board } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { FilterSort, FilterState, SortState } from './FilterSort'
@@ -18,6 +18,10 @@ interface HeaderProps {
   onOpenSearch: () => void
   onOpenStats: () => void
   onOpenDataManager: () => void
+  /** Number of stale tasks across boards; shown as a small count when above zero. */
+  staleCount?: number
+  staleExpanded?: boolean
+  onToggleStale?: () => void
   onOpenSettings: () => void
   filters: FilterState
   sort: SortState
@@ -36,6 +40,9 @@ export function Header({
   onOpenSearch,
   onOpenStats,
   onOpenDataManager,
+  staleCount = 0,
+  staleExpanded = false,
+  onToggleStale,
   onOpenSettings,
   filters,
   sort,
@@ -95,7 +102,7 @@ export function Header({
 
   return (
     <>
-      <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-4 border-b border-[var(--border-subtle)] theme-transition">
+      <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-2.5 border-b border-[var(--border-subtle)] theme-transition">
       {/* Left: Section Title & Board Selector */}
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <div className="flex items-center gap-2">
@@ -276,6 +283,24 @@ export function Header({
 
       {/* Right: Controls */}
       <div className="flex items-center gap-2">
+        {staleCount > 0 && onToggleStale && (
+          <button
+            onClick={onToggleStale}
+            aria-expanded={staleExpanded}
+            aria-label={`${staleCount} stale task${staleCount === 1 ? '' : 's'}: ${staleExpanded ? 'hide' : 'show'}`}
+            title="Tasks that haven't been touched in a while"
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-2.5 sm:py-1.5 text-[12px] border transition-colors',
+              staleExpanded
+                ? 'text-amber-500 border-amber-400/60 bg-amber-400/10'
+                : 'text-amber-500 border-amber-400/30 hover:border-amber-400/60'
+            )}
+          >
+            <AlarmClockOff size={14} />
+            <span className="font-medium">{staleCount}</span>
+            <span className="hidden md:inline">stale</span>
+          </button>
+        )}
         <div className="relative sm:hidden">
           <button
             onClick={() => setShowMobileControls((prev) => !prev)}

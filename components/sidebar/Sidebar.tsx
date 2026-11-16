@@ -30,20 +30,22 @@ interface SidebarWidgetConfig {
   defaultOrder: number
 }
 
+// The defaults lead with things you act on (timer, habits, quick tasks,
+// goals). Everything else is available from "Configure widgets".
 const SIDEBAR_WIDGETS: SidebarWidgetConfig[] = [
-  { id: 'weather', title: 'Weather', component: WeatherWidget, defaultVisible: true, defaultOrder: 0 },
-  { id: 'quote', title: 'Daily Quote', component: QuoteWidget, defaultVisible: true, defaultOrder: 1 },
-  { id: 'workLocation', title: 'Work Location', component: WorkLocationWidget, defaultVisible: true, defaultOrder: 2 },
-  { id: 'focus', title: 'Focus Timer', component: FocusMiniWidget, defaultVisible: true, defaultOrder: 3 },
-  { id: 'habits', title: "Today's Habits", component: HabitsMiniWidget, defaultVisible: true, defaultOrder: 4 },
-  { id: 'goals', title: 'Goals', component: GoalsMiniWidget, defaultVisible: true, defaultOrder: 5 },
-  { id: 'deadlines', title: 'Upcoming Deadlines', component: DeadlinesMiniWidget, defaultVisible: false, defaultOrder: 6 },
-  { id: 'stale', title: 'Stale Tasks', component: StaleMiniWidget, defaultVisible: true, defaultOrder: 7 },
-  { id: 'streaks', title: 'Habit Streaks', component: StreaksMiniWidget, defaultVisible: false, defaultOrder: 8 },
-  { id: 'activity', title: 'Recent Activity', component: ActivityMiniWidget, defaultVisible: false, defaultOrder: 9 },
-  { id: 'tasks', title: 'Quick Tasks', component: () => <div className="max-h-[200px] overflow-y-auto"><TodoList compact /></div>, defaultVisible: true, defaultOrder: 10 },
-  { id: 'notes', title: 'Quick Notes', component: () => <div className="max-h-[250px] overflow-y-auto"><Notes compact /></div>, defaultVisible: false, defaultOrder: 11 },
-  { id: 'insights', title: 'AI Insights', component: InsightsMiniWidget, defaultVisible: true, defaultOrder: 12 },
+  { id: 'focus', title: 'Focus Timer', component: FocusMiniWidget, defaultVisible: true, defaultOrder: 0 },
+  { id: 'habits', title: "Today's Habits", component: HabitsMiniWidget, defaultVisible: true, defaultOrder: 1 },
+  { id: 'tasks', title: 'Quick Tasks', component: () => <div className="max-h-[200px] overflow-y-auto"><TodoList compact /></div>, defaultVisible: true, defaultOrder: 2 },
+  { id: 'goals', title: 'Goals', component: GoalsMiniWidget, defaultVisible: true, defaultOrder: 3 },
+  { id: 'deadlines', title: 'Upcoming Deadlines', component: DeadlinesMiniWidget, defaultVisible: false, defaultOrder: 4 },
+  { id: 'stale', title: 'Stale Tasks', component: StaleMiniWidget, defaultVisible: false, defaultOrder: 5 },
+  { id: 'streaks', title: 'Habit Streaks', component: StreaksMiniWidget, defaultVisible: false, defaultOrder: 6 },
+  { id: 'activity', title: 'Recent Activity', component: ActivityMiniWidget, defaultVisible: false, defaultOrder: 7 },
+  { id: 'notes', title: 'Quick Notes', component: () => <div className="max-h-[250px] overflow-y-auto"><Notes compact /></div>, defaultVisible: false, defaultOrder: 8 },
+  { id: 'insights', title: 'AI Insights', component: InsightsMiniWidget, defaultVisible: false, defaultOrder: 9 },
+  { id: 'workLocation', title: 'Work Location', component: WorkLocationWidget, defaultVisible: false, defaultOrder: 10 },
+  { id: 'weather', title: 'Weather', component: WeatherWidget, defaultVisible: false, defaultOrder: 11 },
+  { id: 'quote', title: 'Daily Quote', component: QuoteWidget, defaultVisible: false, defaultOrder: 12 },
 ]
 
 interface SectionProps {
@@ -190,6 +192,9 @@ function WidgetSettingsModal({
 
 // Storage key for sidebar widget configuration
 const SIDEBAR_WIDGETS_KEY = 'vibe-sidebar-widgets-v2'
+// Whether the sidebar is open. Closed unless the user opened it, so the
+// board gets the full width by default.
+const SIDEBAR_OPEN_KEY = 'vibe-sidebar-open'
 
 // Widget order item type
 interface WidgetOrderItem {
@@ -209,7 +214,7 @@ function storeWidgetOrder(order: WidgetOrderItem[]) {
 }
 
 export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [widgetOrder, setWidgetOrder] = useState<WidgetOrderItem[]>(DEFAULT_WIDGET_ORDER)
   const [isHydrated, setIsHydrated] = useState(false)
@@ -231,6 +236,7 @@ export function Sidebar() {
           ]
           setWidgetOrder(merged)
         }
+        setIsOpen(localStorage.getItem(SIDEBAR_OPEN_KEY) === 'true')
       } catch (e) {
         console.error('Error loading sidebar widgets:', e)
       }
@@ -239,6 +245,18 @@ export function Sidebar() {
 
     return () => clearTimeout(hydrateTimeout)
   }, [])
+
+  const toggleOpen = () => {
+    setIsOpen(prev => {
+      const next = !prev
+      try {
+        localStorage.setItem(SIDEBAR_OPEN_KEY, String(next))
+      } catch {
+        // Storage unavailable: the choice just won't be remembered.
+      }
+      return next
+    })
+  }
 
   const toggleWidget = (id: SidebarWidgetId) => {
     setWidgetOrder(prev => {
@@ -276,8 +294,10 @@ export function Sidebar() {
   return (
     <>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="hidden lg:block fixed right-8 top-3 p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors z-30"
+        onClick={toggleOpen}
+        aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
+        aria-expanded={isOpen}
+        className="hidden lg:block fixed right-8 top-2 p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors z-30"
         title={isOpen ? 'Close sidebar' : 'Open sidebar'}
       >
         {isOpen ? <PanelRightClose size={20} /> : <PanelRight size={20} />}

@@ -49,8 +49,12 @@ export function StaleTasksBanner({ staleTasks, boards, onSnooze, onSnoozeAll, on
       <div className="flex items-center gap-3 px-4 sm:px-6 lg:px-8 py-2.5">
         <AlarmClockOff size={14} className="text-amber-400 shrink-0" />
         <p className="text-[12px] text-[var(--text-primary)] flex-1">
-          You have <span className="text-amber-400 font-medium">{count} task{count === 1 ? '' : 's'}</span> that
-          {count === 1 ? " hasn't" : " haven't"} been touched in a while
+          {/* The full sentence wraps to five lines on a phone, so it is shortened there. */}
+          <span className="hidden sm:inline">You have </span>
+          <span className="text-amber-400 font-medium">{count} stale task{count === 1 ? '' : 's'}</span>
+          <span className="hidden sm:inline">
+            {' '}that {count === 1 ? "hasn't" : "haven't"} been touched in a while
+          </span>
         </p>
 
         <div className="flex items-center gap-1.5 shrink-0">
