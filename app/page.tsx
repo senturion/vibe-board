@@ -78,7 +78,8 @@ export default function Home() {
   // Stale tasks banner — fetch all tasks across boards for staleness check
   const { tasks: allTasks, moveTask: moveAnyTask, updateTask: updateAnyTask } = useKanban()
   const { staleTasks: allStaleTasks, snoozeTask, snoozeAll } = useStaleTasks(allTasks, boards, updateAnyTask)
-  const [staleBannerDismissed, setStaleBannerDismissed] = useState(false)
+  // Stale tasks show as a small count on the board header; the full list opens on demand.
+  const [staleExpanded, setStaleExpanded] = useState(false)
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
 
   const [searchOpen, setSearchOpen] = useState(false)
@@ -194,7 +195,25 @@ export default function Home() {
               onFilterChange={setFilters}
               onSortChange={setSort}
               activeFilterCount={activeFilterCount}
+              staleCount={allStaleTasks.length}
+              staleExpanded={staleExpanded}
+              onToggleStale={() => setStaleExpanded(prev => !prev)}
             />
+            {staleExpanded && allStaleTasks.length > 0 && (
+              <StaleTasksBanner
+                staleTasks={allStaleTasks}
+                boards={boards}
+                onSnooze={snoozeTask}
+                onSnoozeAll={snoozeAll}
+                onDismiss={() => setStaleExpanded(false)}
+                onViewTask={(task) => {
+                  if (task.boardId) switchBoard(task.boardId)
+                  setActiveView('board')
+                  setOpenTaskId(task.id)
+                }}
+                onMoveTask={(taskId, column) => moveAnyTask(taskId, column)}
+              />
+            )}
             {/* Board Area */}
             <div className="flex-1 overflow-hidden sm:overflow-auto">
               <ErrorBoundary section="Board">
@@ -223,7 +242,7 @@ export default function Home() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden min-h-0 pb-[60px] lg:pb-0">
         {/* Header with Navigation */}
-        <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-[var(--border-subtle)] theme-transition">
+        <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-2.5 border-b border-[var(--border-subtle)] theme-transition">
           {/* Left: Logo & Navigation */}
           <div className="flex items-center gap-4 sm:gap-6">
             <h1 className="font-display text-xl tracking-tight text-[var(--text-primary)]">
@@ -235,23 +254,6 @@ export default function Home() {
 
           <div />
         </header>
-
-        {/* Stale Tasks Banner */}
-        {!staleBannerDismissed && allStaleTasks.length > 0 && (
-          <StaleTasksBanner
-            staleTasks={allStaleTasks}
-            boards={boards}
-            onSnooze={snoozeTask}
-            onSnoozeAll={snoozeAll}
-            onDismiss={() => setStaleBannerDismissed(true)}
-            onViewTask={(task) => {
-              if (task.boardId) switchBoard(task.boardId)
-              setActiveView('board')
-              setOpenTaskId(task.id)
-            }}
-            onMoveTask={(taskId, column) => moveAnyTask(taskId, column)}
-          />
-        )}
 
         {/* Focus Bar — visible on all views except focus when a task is focused */}
         {focusedTask && activeView !== 'focus' && (

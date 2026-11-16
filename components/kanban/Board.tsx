@@ -265,6 +265,8 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
     const container = lanesRef.current
     if (!container) return
     container.addEventListener('scroll', handleScroll, { passive: true })
+    // Sync once up front, so the highlighted lane tab matches the lane on screen.
+    handleScroll()
     return () => {
       container.removeEventListener('scroll', handleScroll)
       if (scrollRafRef.current !== null) {
@@ -424,19 +426,6 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
         </button>
       </div>
 
-      <div className="hidden lg:flex items-center justify-end px-4 sm:px-6 lg:px-8 pt-3">
-        <button
-          onClick={() => setAddingColumn(true)}
-          disabled={!boardId}
-          className="px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <span className="inline-flex items-center gap-1">
-            <Plus size={11} />
-            Add Column
-          </span>
-        </button>
-      </div>
-
       {addingColumn && (
         <div className="px-4 sm:px-6 lg:px-8 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/80 backdrop-blur-sm">
           <div className="max-w-xl flex items-center gap-2">
@@ -486,7 +475,7 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
       >
         <div
           ref={lanesRef}
-          className="flex gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 min-h-full overflow-x-auto overscroll-x-contain snap-x snap-mandatory sm:snap-none scroll-px-4 sm:scroll-px-0 touch-pan-x sm:touch-auto"
+          className="flex gap-4 sm:gap-6 p-4 sm:p-6 lg:px-8 lg:pt-5 lg:pb-8 min-h-full overflow-x-auto overscroll-x-contain snap-x snap-mandatory sm:snap-none scroll-px-4 sm:scroll-px-0 touch-pan-x sm:touch-auto"
         >
           {columns.map((column, index) => (
             <ErrorBoundary key={column.id} section={column.title}>
@@ -512,6 +501,15 @@ export function Board({ boardId = 'default', searchOpen, onSearchClose, filters,
               />
             </ErrorBoundary>
           ))}
+          {/* Add column sits at the end of the lanes, so it costs no vertical space. */}
+          <button
+            onClick={() => setAddingColumn(true)}
+            disabled={!boardId}
+            className="hidden lg:inline-flex shrink-0 self-start items-center gap-1 mt-1 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] border border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--text-tertiary)] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            <Plus size={11} />
+            Add Column
+          </button>
         </div>
 
         <DragOverlay>

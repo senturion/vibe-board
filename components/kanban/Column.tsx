@@ -76,8 +76,8 @@ export const Column = memo(function Column({
       style={{ animationDelay: `${index * 0.1}s`, opacity: 0 }}
     >
       {/* Editorial Column Header */}
-      <div className="mb-6 px-1 group">
-        <div className="flex items-start justify-between gap-2 mb-1">
+      <div className="mb-4 px-1 group">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
           <div className="min-w-0 flex-1">
             {isRenaming && isCustom ? (
               <div className="flex items-center gap-1">
@@ -113,9 +113,21 @@ export const Column = memo(function Column({
                 </button>
               </div>
             ) : (
-              <h3 className="font-display text-2xl text-[var(--text-primary)] tracking-tight italic truncate">
-                {title}
-              </h3>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <h3 className="font-display text-2xl text-[var(--text-primary)] tracking-tight italic truncate">
+                  {title}
+                </h3>
+                <span
+                  className="shrink-0 text-xs font-medium px-2 py-0.5"
+                  style={{
+                    color: accentColor,
+                    backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
+                  }}
+                  aria-label={`${tasks.length} task${tasks.length === 1 ? '' : 's'}`}
+                >
+                  {tasks.length}
+                </span>
+              </div>
             )}
           </div>
 
@@ -155,17 +167,6 @@ export const Column = memo(function Column({
               </>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-3 mb-1">
-          <span
-            className="text-xs font-medium px-2 py-0.5"
-            style={{
-              color: accentColor,
-              backgroundColor: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
-            }}
-          >
-            {tasks.length}
-          </span>
         </div>
         {/* Color bar - clickable */}
         <div className="relative">
