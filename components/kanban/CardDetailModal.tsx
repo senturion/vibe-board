@@ -63,7 +63,7 @@ export function CardDetailModal({
   const { settings } = useSettings()
   const aiConfigured = settings.aiProvider !== 'rules'
 
-  const titleRef = useRef<HTMLTextAreaElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const subtaskInputRef = useRef<HTMLInputElement>(null)
 
   // Load task tags
@@ -93,7 +93,10 @@ export function CardDetailModal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
-      titleRef.current?.focus()
+      // Focus the dialog, not the title field: keyboard users land inside it
+      // and Escape works, but opening a task does not start an edit or raise
+      // the on-screen keyboard on a phone.
+      dialogRef.current?.focus()
     } else {
       document.body.style.overflow = ''
     }
@@ -207,10 +210,12 @@ export function CardDetailModal({
 
       {/* Modal */}
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={`Task details: ${task.title}`}
-        className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[85vh] bg-[var(--bg-secondary)] border border-[var(--border)] shadow-2xl shadow-black/50 z-50 flex flex-col animate-fade-up overflow-hidden"
+        className="outline-none fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[85vh] bg-[var(--bg-secondary)] border border-[var(--border)] shadow-2xl shadow-black/50 z-50 flex flex-col animate-fade-up overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-[var(--border-subtle)]">
@@ -219,7 +224,7 @@ export function CardDetailModal({
               Task Details
             </p>
             <textarea
-              ref={titleRef}
+              aria-label="Task title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={handleTitleBlur}
@@ -231,8 +236,11 @@ export function CardDetailModal({
               }}
               placeholder="Task title..."
               rows={1}
-              className="w-full bg-transparent font-display text-2xl text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none leading-tight"
-              style={{ minHeight: '2rem' }}
+              className="w-full bg-transparent font-display text-2xl text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] border-b border-transparent focus:border-[var(--text-tertiary)] resize-none leading-tight"
+              // Inline, because the global focus ring in globals.css outranks utility
+              // classes. The underline above is this field's focus indicator; the
+              // accent-coloured ring read as a validation error.
+              style={{ minHeight: '2rem', outline: 'none' }}
             />
           </div>
           <button
@@ -438,6 +446,7 @@ export function CardDetailModal({
             {/* Created date */}
             <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
               <Calendar size={12} />
+              Created{' '}
               {new Date(task.createdAt).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -621,7 +630,7 @@ export function CardDetailModal({
             onClick={onClose}
             className="px-6 py-2 text-[11px] uppercase tracking-[0.1em] font-medium bg-[var(--accent)] text-[var(--bg-primary)] hover:bg-[var(--accent-muted)] transition-colors"
           >
-            Done
+            Close
           </button>
         </div>
       </div>
