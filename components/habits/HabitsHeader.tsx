@@ -43,7 +43,7 @@ export function HabitsHeader({
           <div className="relative sm:hidden">
             <button
               onClick={() => setShowMobileViewMenu(!showMobileViewMenu)}
-              className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)]"
+              className="px-3 py-3 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)]"
             >
               View: {viewMode === 'today' ? 'Today' : viewMode === 'all' ? 'All' : viewMode === 'calendar' ? 'Calendar' : 'Analytics'}
             </button>
@@ -126,7 +126,7 @@ export function HabitsHeader({
                 prev.setDate(prev.getDate() - 1)
                 setLogDateKey(formatDateKey(prev))
               }}
-              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              className="tap-target p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
               aria-label="Previous day"
             >
               <ChevronLeft size={16} />
@@ -140,7 +140,7 @@ export function HabitsHeader({
                 next.setDate(next.getDate() + 1)
                 setLogDateKey(formatDateKey(next))
               }}
-              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              className="tap-target p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
               aria-label="Next day"
             >
               <ChevronRight size={16} />
@@ -150,7 +150,7 @@ export function HabitsHeader({
 
         <button
           onClick={onNewHabit}
-          className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[var(--accent)] text-[var(--bg-primary)] text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
+          className="flex items-center gap-2 px-3.5 py-3.5 sm:py-2 sm:px-4 bg-[var(--accent)] text-[var(--bg-primary)] text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
         >
           <Plus size={14} />
           <span className="hidden sm:inline">New Habit</span>
@@ -167,7 +167,7 @@ export function HabitsHeader({
                 prev.setDate(prev.getDate() - 1)
                 setLogDateKey(formatDateKey(prev))
               }}
-              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              className="tap-target p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
               aria-label="Previous day"
             >
               <ChevronLeft size={16} />
@@ -181,7 +181,7 @@ export function HabitsHeader({
                 next.setDate(next.getDate() + 1)
                 setLogDateKey(formatDateKey(next))
               }}
-              className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
+              className="tap-target p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] transition-colors"
               aria-label="Next day"
             >
               <ChevronRight size={16} />

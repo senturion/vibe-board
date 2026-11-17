@@ -196,7 +196,8 @@ export function JournalPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={goToPreviousDay}
-            className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+            aria-label="Previous day"
+            className="tap-target p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
@@ -220,7 +221,8 @@ export function JournalPage() {
           <button
             onClick={goToNextDay}
             disabled={isToday}
-            className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Next day"
+            className="tap-target p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronRight size={16} />
           </button>
@@ -419,8 +421,9 @@ export function JournalPage() {
                 <button
                   onClick={handlePrompt}
                   disabled={promptLoading}
-                  className="p-2 border border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 transition-colors"
+                  className="tap-target p-2 border border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 transition-colors"
                   title="Get a writing prompt"
+                  aria-label="Get a writing prompt"
                 >
                   {promptLoading ? (
                     <Loader2 size={14} className="animate-spin" />

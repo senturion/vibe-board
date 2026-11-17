@@ -106,7 +106,7 @@ export function GoalsPage() {
           <div className="relative sm:hidden">
             <button
               onClick={() => setShowMobileFilterMenu((prev) => !prev)}
-              className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)]"
+              className="px-3 py-3 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)]"
             >
               Filter: {filterStatus === 'all' ? 'All' : filterStatus}
             </button>
@@ -187,7 +187,7 @@ export function GoalsPage() {
             setEditingGoal(undefined)
             setShowEditor(true)
           }}
-          className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[var(--accent)] text-[var(--bg-primary)] text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
+          className="flex items-center gap-2 px-3.5 py-3.5 sm:py-2 sm:px-4 bg-[var(--accent)] text-[var(--bg-primary)] text-[10px] sm:text-[11px] uppercase tracking-[0.1em] font-medium hover:bg-[var(--accent-muted)] transition-colors"
         >
           <Plus size={14} />
           <span className="hidden sm:inline">New Goal</span>

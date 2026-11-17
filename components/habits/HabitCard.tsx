@@ -190,7 +190,7 @@ export function HabitCard({
         <button
           onClick={onToggle}
           className={cn(
-            'flex-shrink-0 w-7 h-7 border-2 flex items-center justify-center transition-all mt-0.5',
+            'tap-target flex-shrink-0 w-7 h-7 border-2 flex items-center justify-center transition-all mt-0.5',
             isSlip
               ? 'border-amber-400 bg-amber-400'
               : completionStatus.completed
@@ -302,7 +302,8 @@ export function HabitCard({
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-all"
+            aria-label="Habit actions"
+            className="tap-target p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-all"
           >
             <MoreHorizontal size={16} />
           </button>

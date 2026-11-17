@@ -114,7 +114,7 @@ export function Header({
         <div className="relative">
           <button
             onClick={() => setShowBoardMenu(!showBoardMenu)}
-            className="flex items-center gap-2 px-2.5 py-1.5 sm:px-3 text-[13px] sm:text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+            className="flex items-center gap-2 px-2.5 py-2.5 sm:py-1.5 sm:px-3 text-[13px] sm:text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
           >
             <span className="max-w-[50vw] sm:max-w-[150px] truncate">{activeBoard?.name || 'Loading...'}</span>
             <ChevronDown size={14} className={cn(

@@ -170,7 +170,8 @@ export function GoalCard({
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-all"
+              aria-label="Goal actions"
+              className="tap-target p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-all"
             >
               <MoreHorizontal size={16} />
             </button>

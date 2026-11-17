@@ -845,3 +845,50 @@ button:not(:disabled),
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   Phone and touch adjustments
+   ===================================================== */
+
+/* Nothing smaller than 12px on a phone. The design uses 8-11px labels in
+   several hundred places; this raises them all at once on narrow screens. */
+@media (max-width: 639px) {
+  .text-\[8px\],
+  .text-\[9px\],
+  .text-\[10px\],
+  .text-\[11px\] {
+    font-size: 12px;
+  }
+}
+
+/* Controls that only appear on mouse hover are invisible on a touch screen
+   but still respond to taps. Show them where there is no hover. */
+@media (hover: none) {
+  .group-hover\:opacity-100,
+  .sm\:group-hover\:opacity-100 {
+    opacity: 1;
+  }
+
+  /* For hover-only shortcuts that are too easy to hit by accident on touch,
+     such as a card's delete button. The action stays available elsewhere. */
+  .touch-hidden {
+    display: none;
+  }
+}
+
+/* Gives a small control a tap area of at least 44px on touch screens without
+   changing how it looks or its layout. Use it only where the nearest other
+   control is further away than the added area. */
+@layer components {
+  @media (pointer: coarse) {
+    .tap-target {
+      position: relative;
+    }
+
+    .tap-target::before {
+      content: '';
+      position: absolute;
+      inset: min(0px, calc((100% - 44px) / 2));
+    }
+  }
+}
