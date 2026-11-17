@@ -15,6 +15,8 @@ import { FilterState, SortState } from '@/components/FilterSort'
 import { SettingsPanel } from '@/components/settings'
 import { useNavigation } from '@/contexts/NavigationContext'
 import { MainNav } from '@/components/navigation/MainNav'
+import { AppActions } from '@/components/navigation/AppActions'
+import { cn } from '@/lib/utils'
 import { BottomTabBar } from '@/components/navigation/BottomTabBar'
 import { HabitsPage } from '@/components/habits/HabitsPage'
 import { GoalsPage } from '@/components/goals/GoalsPage'
@@ -259,7 +261,14 @@ export default function Home() {
             <MainNav className="hidden lg:flex" />
           </div>
 
-          <div />
+          {/* App-wide actions. On phones these live in the board's Controls
+              menu and the tab bar's More menu instead. On large screens, leave
+              room for the sidebar's fixed toggle button where it is shown. */}
+          <AppActions
+            className={cn('hidden sm:flex', activeView !== 'today' && 'lg:mr-12')}
+            onOpenSettings={() => setShowSettings(true)}
+            onOpenDataManager={() => setShowDataManager(true)}
+          />
         </header>
 
         {/* Focus Bar — visible on all views except focus when a task is focused */}

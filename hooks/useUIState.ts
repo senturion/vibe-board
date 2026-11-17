@@ -18,10 +18,14 @@ const SYNC_DEBOUNCE_MS = 1000
 
 export function useUIState() {
   const [state, setState] = useState<UserUIState>(DEFAULT_UI_STATE)
-  const [loading, setLoading] = useState(true)
+  // Which user's cloud state has been loaded. Tracking the user (rather than a
+  // plain flag) means loading is true again after sign-in, until that user's
+  // saved state has arrived; a flag set false before sign-in would stay false.
+  const [cloudLoadedFor, setCloudLoadedFor] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
 
   const { user } = useAuth()
+  const loading = user ? cloudLoadedFor !== user.id : false
   const supabase = createClient()
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingUpdateRef = useRef<Partial<UserUIState> | null>(null)
@@ -46,12 +50,7 @@ export function useUIState() {
   useEffect(() => {
     let isActive = true
     const loadFromCloud = async () => {
-      if (!user) {
-        if (isActive) {
-          setLoading(false)
-        }
-        return
-      }
+      if (!user) return
 
       const { data, error } = await supabase
         .from('user_ui_state')
@@ -82,7 +81,7 @@ export function useUIState() {
       }
 
       if (isActive) {
-        setLoading(false)
+        setCloudLoadedFor(user.id)
       }
     }
 

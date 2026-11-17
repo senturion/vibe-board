@@ -416,34 +416,6 @@ export function Header({
           <BarChart3 size={14} />
         </button>
 
-        {/* Data Manager */}
-        <button
-          onClick={onOpenDataManager}
-          className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
-          title="Export/Import data"
-        >
-          <Database size={14} />
-        </button>
-
-        {/* Settings */}
-        <button
-          onClick={onOpenSettings}
-          className="p-2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
-          title="Settings"
-        >
-          <Settings size={14} />
-        </button>
-
-        {/* Sign Out */}
-        {user && (
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className="p-2 text-[var(--text-tertiary)] hover:text-red-400 border border-[var(--border)] hover:border-red-400/50 transition-colors"
-            title={`Sign out (${user.email})`}
-          >
-            <LogOut size={14} />
-          </button>
-        )}
       </div>
       </div>
       </header>
