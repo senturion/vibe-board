@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { KanbanTask, ColumnId, isOverdue, isDueSoon } from '@/lib/types'
+import { KanbanTask, ColumnId, taskDueStatus } from '@/lib/types'
 import { FilterState, SortState } from '@/components/FilterSort'
 
 const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 } as const
@@ -41,9 +41,9 @@ function applyFilters(tasks: KanbanTask[], filters: FilterState, taskTagMap: Rec
   if (filters.dueDate !== 'all') {
     result = result.filter(task => {
       if (filters.dueDate === 'overdue') {
-        return task.dueDate && isOverdue(task.dueDate)
+        return taskDueStatus(task) === 'overdue'
       } else if (filters.dueDate === 'due-soon') {
-        return task.dueDate && isDueSoon(task.dueDate) && !isOverdue(task.dueDate)
+        return taskDueStatus(task) === 'soon'
       } else if (filters.dueDate === 'no-date') {
         return !task.dueDate
       }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Flag, Archive, Trash2, Plus, Check, Calendar, Tag, Clock, Crosshair, Sparkles, Loader2, MessageCircle } from 'lucide-react'
-import { KanbanTask, Priority, PRIORITIES, COLUMNS, KanbanColumn, isOverdue, isDueSoon, formatDateKey, parseDateKey } from '@/lib/types'
+import { KanbanTask, Priority, PRIORITIES, COLUMNS, KanbanColumn, taskDueStatus, formatDateKey, parseDateKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useTagsContext } from '@/contexts/TagsContext'
 import { useSettings } from '@/hooks/useSettings'
@@ -400,8 +400,8 @@ export function CardDetailModal({
                 aria-label={task.dueDate ? `Due date: ${new Date(task.dueDate).toLocaleDateString()}` : 'Set due date'}
                 className={cn(
                   'flex items-center gap-2 px-3 py-2.5 sm:py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors',
-                  task.dueDate && isOverdue(task.dueDate) ? 'text-red-400 border-red-400/30' : undefined,
-                  task.dueDate && isDueSoon(task.dueDate) && !isOverdue(task.dueDate) ? 'text-amber-400 border-amber-400/30' : undefined,
+                  taskDueStatus(task) === 'overdue' ? 'text-red-400 border-red-400/30' : undefined,
+                  taskDueStatus(task) === 'soon' ? 'text-amber-400 border-amber-400/30' : undefined,
                   !task.dueDate ? 'text-[var(--text-secondary)]' : undefined
                 )}
               >

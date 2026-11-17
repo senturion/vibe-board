@@ -3,6 +3,7 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { playBell } from '@/lib/bell'
 import {
   FocusSettings,
   FocusSession,
@@ -216,13 +217,7 @@ function useFocusTimerState() {
 
     // Play sound if enabled
     if (settings.soundEnabled) {
-      try {
-        const audio = new Audio('/sounds/bell.mp3')
-        audio.volume = settings.soundVolume / 100
-        audio.play().catch(() => {})
-      } catch {
-        // Ignore audio errors
-      }
+      playBell(settings.soundVolume)
     }
 
     // Update session in database

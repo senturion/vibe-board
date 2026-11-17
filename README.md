@@ -10,7 +10,7 @@ It is built for one person. There is no signup page, and the MCP server only eve
 - Supabase for the database and sign-in, with row-level security on every table
 - TanStack Query for tasks, boards and settings
 - Tailwind CSS 4
-- Installable as a PWA; an iOS shell can be built with Capacitor
+- Installable as a PWA (service worker built by Serwist from `app/sw.ts`); an iOS shell can be built with Capacitor
 
 ## Running it locally
 
@@ -86,7 +86,7 @@ The server environment variables above act as defaults. A server API key is only
 
 ## Backups
 
-The database icon in the board header downloads everything you have in the app as one JSON file. Restoring from that file is not built yet.
+The database icon in the top bar opens Backup & Restore. Export downloads everything you have in the app as one JSON file. Restore reads such a file back into your account: rows that still exist are replaced with the backup's version, missing rows are added, and nothing is deleted. Every restored row is assigned to the signed-in account.
 
 ## Project layout
 

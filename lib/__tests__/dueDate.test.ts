@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dueDateFromDb, dueDateToDb, formatDateKey } from '../types'
+import { dueDateFromDb, dueDateToDb, formatDateKey, taskDueStatus } from '../types'
 
 describe('due dates are calendar dates', () => {
   it('reads the calendar day regardless of the stored time of day', () => {
@@ -25,5 +25,22 @@ describe('due dates are calendar dates', () => {
     expect(dueDateFromDb(null)).toBeUndefined()
     expect(dueDateFromDb('not a date')).toBeUndefined()
     expect(dueDateToDb(undefined)).toBeNull()
+  })
+})
+
+describe('taskDueStatus', () => {
+  const day = 24 * 60 * 60 * 1000
+  const midnight = new Date(new Date().setHours(0, 0, 0, 0)).getTime()
+
+  it('flags open tasks that are overdue or due within two days', () => {
+    expect(taskDueStatus({ column: 'todo', dueDate: midnight - day })).toBe('overdue')
+    expect(taskDueStatus({ column: 'todo', dueDate: midnight + day })).toBe('soon')
+    expect(taskDueStatus({ column: 'todo', dueDate: midnight + 10 * day })).toBeNull()
+    expect(taskDueStatus({ column: 'todo' })).toBeNull()
+  })
+
+  it('never flags a finished task', () => {
+    expect(taskDueStatus({ column: 'complete', dueDate: midnight - 5 * day })).toBeNull()
+    expect(taskDueStatus({ column: 'complete', dueDate: midnight + day })).toBeNull()
   })
 })

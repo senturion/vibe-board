@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { X, Download, FileJson, Check, AlertCircle } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { X, Download, FileJson, Check, AlertCircle, Upload } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { buildExport } from '@/lib/exportData'
+import { buildExport, type ExportFile } from '@/lib/exportData'
+import { backupCounts, parseBackup, restoreBackup } from '@/lib/restoreData'
+import { useAuth } from '@/contexts/AuthContext'
 import { formatDateKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +18,48 @@ export function DataManager({ isOpen, onClose }: DataManagerProps) {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [exporting, setExporting] = useState(false)
+  const { user } = useAuth()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  // A backup that has been read and checked, waiting for the user to confirm.
+  const [pendingRestore, setPendingRestore] = useState<{ name: string; file: ExportFile } | null>(null)
+  const [restoring, setRestoring] = useState<string | null>(null)
+
+  const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const chosen = e.target.files?.[0]
+    e.target.value = ''
+    if (!chosen) return
+    setStatus('idle')
+    try {
+      const file = parseBackup(JSON.parse(await chosen.text()))
+      if (backupCounts(file).length === 0) throw new Error('This backup is empty.')
+      setPendingRestore({ name: chosen.name, file })
+    } catch (error) {
+      setStatus('error')
+      setMessage(error instanceof SyntaxError ? 'That file is not valid JSON.' : error instanceof Error ? error.message : 'Could not read the file.')
+    }
+  }
+
+  const handleRestore = async () => {
+    if (!pendingRestore || !user) return
+    setRestoring('starting')
+    setStatus('idle')
+    try {
+      const written = await restoreBackup(createClient(), pendingRestore.file, user.id, table =>
+        setRestoring(table.replace(/_/g, ' ')),
+      )
+      const total = written.reduce((sum, t) => sum + t.rows, 0)
+      setStatus('success')
+      setMessage(`Restored ${total} records. Reloading…`)
+      setPendingRestore(null)
+      // Every section keeps its own copy of the data; a reload picks up the restored rows everywhere.
+      setTimeout(() => window.location.reload(), 1200)
+    } catch (error) {
+      setStatus('error')
+      setMessage(error instanceof Error ? error.message : 'Restore failed.')
+    } finally {
+      setRestoring(null)
+    }
+  }
 
   const handleExport = async () => {
     setExporting(true)
@@ -63,7 +107,7 @@ export function DataManager({ isOpen, onClose }: DataManagerProps) {
               Data Management
             </p>
             <h2 className="font-display text-xl text-[var(--text-primary)] tracking-tight italic">
-              Backup
+              Backup & Restore
             </h2>
           </div>
           <button
@@ -115,9 +159,62 @@ export function DataManager({ isOpen, onClose }: DataManagerProps) {
             </div>
           </div>
 
-          <p className="text-[11px] text-[var(--text-tertiary)] text-center">
-            Restoring from a backup is not available in the app yet.
-          </p>
+          {/* Restore */}
+          <div className="p-5 bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-[var(--bg-secondary)] text-[var(--text-tertiary)]">
+                <Upload size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-[13px] font-medium text-[var(--text-primary)] mb-1">
+                  Restore from Backup
+                </h3>
+                {!pendingRestore ? (
+                  <>
+                    <p className="text-[12px] text-[var(--text-tertiary)] mb-4">
+                      Adds everything from a backup file back into your account. Items that still exist are replaced with the backup&apos;s version; nothing is deleted.
+                    </p>
+                    <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleFileChosen} className="hidden" aria-label="Choose a backup file" />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={!!restoring}
+                      className="flex items-center gap-2 px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
+                    >
+                      <Upload size={14} />
+                      Choose Backup File
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[12px] text-[var(--text-secondary)] mb-2 break-words">
+                      {pendingRestore.name}, saved {new Date(pendingRestore.file.exportedAt).toLocaleString()}:
+                    </p>
+                    <ul className="text-[12px] text-[var(--text-secondary)] mb-4 grid grid-cols-2 gap-x-4">
+                      {backupCounts(pendingRestore.file).map(({ table, rows }) => (
+                        <li key={table}>{rows} {table.replace(/_/g, ' ')}</li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={handleRestore}
+                        disabled={!!restoring}
+                        className="px-4 py-2 text-[11px] uppercase tracking-[0.1em] bg-[var(--accent)] text-[var(--bg-primary)] hover:bg-[var(--accent-muted)] disabled:opacity-50 transition-colors"
+                      >
+                        {restoring ? `Restoring ${restoring}…` : 'Restore'}
+                      </button>
+                      <button
+                        onClick={() => setPendingRestore(null)}
+                        disabled={!!restoring}
+                        className="px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] disabled:opacity-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </>

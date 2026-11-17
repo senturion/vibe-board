@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import withPWA from "@ducanh2912/next-pwa";
+import withSerwistInit from "@serwist/next";
 
 const isCapacitorBuild = process.env.BUILD_TARGET === 'capacitor';
 
@@ -13,19 +13,14 @@ const nextConfig: NextConfig = {
   }),
 };
 
-// Disable PWA for Capacitor builds (native shell handles this)
-const config = isCapacitorBuild
-  ? nextConfig
-  : withPWA({
-      dest: "public",
-      cacheOnFrontEndNav: true,
-      aggressiveFrontEndNavCaching: true,
-      reloadOnOnline: true,
-      disable: process.env.NODE_ENV === "development",
-      workboxOptions: {
-        disableDevLogs: true,
-        importScripts: ["push-sw.js"],
-      },
-    })(nextConfig);
+// Service worker (offline caching and reminder notifications), built from
+// app/sw.ts. Not used in Capacitor builds, where the native shell handles this.
+const withSerwist = withSerwistInit({
+  swSrc: "app/sw.ts",
+  swDest: "public/sw.js",
+  cacheOnNavigation: true,
+  reloadOnOnline: true,
+  disable: process.env.NODE_ENV === "development",
+});
 
-export default config;
+export default isCapacitorBuild ? nextConfig : withSerwist(nextConfig);

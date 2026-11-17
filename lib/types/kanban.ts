@@ -123,6 +123,17 @@ export function dueDateToDb(value: number | null | undefined): string | null {
   return new Date(Date.UTC(local.getFullYear(), local.getMonth(), local.getDate())).toISOString()
 }
 
+/**
+ * Whether a task's due date needs attention: 'overdue', 'soon' (within two
+ * days), or null. Finished tasks never do, whatever their date says.
+ */
+export function taskDueStatus(task: Pick<KanbanTask, 'dueDate' | 'column'>): 'overdue' | 'soon' | null {
+  if (!task.dueDate || task.column === 'complete') return null
+  if (isOverdue(task.dueDate)) return 'overdue'
+  if (isDueSoon(task.dueDate)) return 'soon'
+  return null
+}
+
 // Helper to check if a date is overdue
 export function isOverdue(dueDate: number): boolean {
   const now = new Date()
