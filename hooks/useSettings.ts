@@ -21,7 +21,8 @@ import { notifyError } from '@/lib/notify'
 export interface AppSettings {
   // General
   theme: 'light' | 'dark'
-  defaultView: ViewId
+  /** The view the app opens on. Replaces defaultView, which nothing read. */
+  startView: ViewId
   weekStartsOn: 'monday' | 'sunday'
 
   // Board/Kanban
@@ -76,7 +77,7 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   // General
   theme: 'dark',
-  defaultView: 'board',
+  startView: 'today',
   weekStartsOn: 'monday',
 
   // Board/Kanban

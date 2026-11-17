@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react'
 import { ViewId } from '@/lib/types'
 import { useUIStateContext } from './UIStateContext'
+import { useSettings } from '@/hooks/useSettings'
 
 interface NavigationContextType {
   activeView: ViewId
@@ -13,7 +14,7 @@ interface NavigationContextType {
 }
 
 const NavigationContext = createContext<NavigationContextType>({
-  activeView: 'board',
+  activeView: 'today',
   previousView: null,
   setActiveView: () => {},
   goBack: () => {},
@@ -46,10 +47,20 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   }, [previousView, setActiveView])
 
-  // Handle legacy view IDs - redirect to board
+  // Each time the app loads, open on the start view from settings (Today
+  // unless changed), rather than wherever the last session ended.
+  const { settings, loading: settingsLoading } = useSettings()
+  const openedStartView = useRef(false)
+  useEffect(() => {
+    if (openedStartView.current || !isHydrated || settingsLoading) return
+    openedStartView.current = true
+    if (settings.startView !== activeView) setUIActiveView(settings.startView)
+  }, [isHydrated, settingsLoading, settings.startView, activeView, setUIActiveView])
+
+  // Handle legacy view IDs
   useEffect(() => {
     if (isHydrated && ((activeView as string) === 'calendar' || (activeView as string) === 'dashboard')) {
-      setUIActiveView('board')
+      setUIActiveView('today')
     }
   }, [isHydrated, activeView, setUIActiveView])
 

@@ -1,11 +1,12 @@
 'use client'
 
-import { LayoutDashboard, Columns3, Target, Flag, BookOpen, ListChecks, Timer, Activity } from 'lucide-react'
+import { Sun, LayoutDashboard, Columns3, Target, Flag, BookOpen, ListChecks, Timer, Activity } from 'lucide-react'
 import { useNavigation } from '@/contexts/NavigationContext'
 import { ViewId, VIEWS } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  Sun,
   LayoutDashboard,
   Columns3,
   Target,

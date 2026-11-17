@@ -22,6 +22,7 @@ import { RoutinesPage } from '@/components/routines/RoutinesPage'
 import { JournalPage } from '@/components/journal/JournalPage'
 import { FocusPage, FocusBar, StopFocusPrompt } from '@/components/focus'
 import { ActivityLog } from '@/components/activity/ActivityLog'
+import { TodayPage } from '@/components/today/TodayPage'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthGuard } from '@/components/AuthGuard'
 import { useStaleTasks } from '@/hooks/useStaleTasks'
@@ -114,6 +115,12 @@ export default function Home() {
   // Render content based on active view
   const renderContent = () => {
     switch (activeView) {
+      case 'today':
+        return (
+          <ErrorBoundary section="Today">
+            <TodayPage onFocusTask={focusOnTask} />
+          </ErrorBoundary>
+        )
       case 'habits':
         return (
           <ErrorBoundary section="Habits">
@@ -275,10 +282,12 @@ export default function Home() {
 
       <BottomTabBar onOpenSettings={() => setShowSettings(true)} />
 
-      {/* Sidebar */}
-      <ErrorBoundary section="Sidebar">
-        <Sidebar />
-      </ErrorBoundary>
+      {/* Sidebar: not on Today, which already shows the same things */}
+      {activeView !== 'today' && (
+        <ErrorBoundary section="Sidebar">
+          <Sidebar />
+        </ErrorBoundary>
+      )}
 
       {/* Stats Dashboard */}
       <StatsDashboard

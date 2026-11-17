@@ -62,10 +62,11 @@ export function GeneralSection({ expanded, onToggle, settings, updateSetting, cu
 
           {/* Default View */}
           <div>
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">Default View</p>
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] mb-2">Open the app on</p>
             <select
-              value={settings.defaultView}
-              onChange={(e) => updateSetting('defaultView', e.target.value as typeof settings.defaultView)}
+              aria-label="Open the app on"
+              value={settings.startView}
+              onChange={(e) => updateSetting('startView', e.target.value as typeof settings.startView)}
               className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
             >
               {VIEWS.map(view => (
