@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Search as SearchIcon, X, Clock } from 'lucide-react'
-import { KanbanTask, LABELS, COLUMNS, KanbanColumn, isOverdue, isDueSoon } from '@/lib/types'
+import { KanbanTask, LABELS, COLUMNS, KanbanColumn, taskDueStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface SearchProps {
@@ -124,8 +124,9 @@ export function Search({ isOpen, onClose, onSearch, onSelectTask, columns = COLU
                 const taskLabels = LABELS.filter(l => (task.labels || []).includes(l.id))
                 const priorityColor = PRIORITY_COLORS[task.priority || 'medium']
                 const hasDueDate = !!task.dueDate
-                const overdue = hasDueDate && isOverdue(task.dueDate!)
-                const dueSoon = hasDueDate && !overdue && isDueSoon(task.dueDate!)
+                const dueStatus = taskDueStatus(task)
+                const overdue = dueStatus === 'overdue'
+                const dueSoon = dueStatus === 'soon'
 
                 return (
                   <button

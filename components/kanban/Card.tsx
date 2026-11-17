@@ -4,7 +4,7 @@ import { memo, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Flag, Clock, Crosshair, ChevronDown } from 'lucide-react'
-import { KanbanTask, Priority, PRIORITIES, LABELS, isOverdue, isDueSoon } from '@/lib/types'
+import { KanbanTask, Priority, PRIORITIES, LABELS, taskDueStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useKanbanActions } from '@/contexts/KanbanActionsContext'
 import { useSettings } from '@/hooks/useSettings'
@@ -59,8 +59,9 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
   const hasDueDate = !!task.dueDate
   // A finished task is not overdue, whatever its date says.
   const isComplete = task.column === 'complete'
-  const overdue = hasDueDate && !isComplete && isOverdue(task.dueDate!)
-  const dueSoon = hasDueDate && !isComplete && !overdue && isDueSoon(task.dueDate!)
+  const dueStatus = taskDueStatus(task)
+  const overdue = dueStatus === 'overdue'
+  const dueSoon = dueStatus === 'soon'
 
   const handleClick = (e: React.MouseEvent) => {
     // Only open modal if not dragging and not clicking on a button

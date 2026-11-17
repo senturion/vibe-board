@@ -1,11 +1,12 @@
 'use client'
 
-import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useCallback, useEffect, useRef, useState, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSettings } from '@/hooks/useSettings'
 import { Database } from '@/lib/supabase/types'
 import { haptics } from '@/lib/haptics'
+import { notifyError } from '@/lib/notify'
 import {
   Habit,
   HabitCategory,
@@ -57,6 +58,7 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
   const [completions, setCompletions] = useState<HabitCompletion[]>([])
   const [streaks, setStreaks] = useState<Map<string, HabitStreak>>(new Map())
   const [loading, setLoading] = useState(true)
+  const habitSavesInFlight = useRef(new Set<string>())
   const { user } = useAuth()
   const { settings } = useSettings()
   const supabase = createClient()
@@ -731,84 +733,92 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
   // Toggle habit completion
   const toggleHabit = useCallback(async (habitId: string, date: Date = new Date()) => {
     if (!user) return
+    // One save per habit at a time: a second tap while the first is saving
+    // would act on a completion that does not have its real id yet.
+    if (habitSavesInFlight.current.has(habitId)) return
+    habitSavesInFlight.current.add(habitId)
+    try {
+      const dateKey = formatDateKey(date)
+      const habit = habits.find(h => h.id === habitId)
+      if (!habit) return
 
-    const dateKey = formatDateKey(date)
-    const habit = habits.find(h => h.id === habitId)
-    if (!habit) return
 
+      // Check current completion status using latest state
+      const todayCompletions = completions.filter(
+        c => c.habitId === habitId && c.completionDate === dateKey
+      )
+      const currentCount = todayCompletions.reduce((sum, c) => sum + c.count, 0)
 
-    // Check current completion status using latest state
-    const todayCompletions = completions.filter(
-      c => c.habitId === habitId && c.completionDate === dateKey
-    )
-    const currentCount = todayCompletions.reduce((sum, c) => sum + c.count, 0)
+      // Changes show at once and are undone, with a message, if the save fails.
+      if (currentCount >= habit.targetCount) {
+        // Already complete: remove today's completions
+        const removedIds = new Set(todayCompletions.map(c => c.id))
+        const nextCompletions = completions.filter(c => !removedIds.has(c.id))
+        setCompletions(prev => prev.filter(c => !removedIds.has(c.id)))
 
-    if (currentCount >= habit.targetCount) {
-      // Already complete, remove today's completions
-      const todayCompletionIds = todayCompletions.map(c => c.id)
+        const { error } = await supabase
+          .from('habit_completions')
+          .delete()
+          .in('id', [...removedIds])
 
-      const { error } = await supabase
-        .from('habit_completions')
-        .delete()
-        .in('id', todayCompletionIds)
+        if (error) {
+          console.error('Error removing completion:', error)
+          setCompletions(prev => [...prev.filter(c => !removedIds.has(c.id)), ...todayCompletions])
+          notifyError(`Could not update ${habit.name}.`)
+          return
+        }
 
-      if (error) {
-        console.error('Error removing completion:', error)
-        return
-      }
-
-      // Use functional update to ensure we work with latest state
-      let nextCompletions: HabitCompletion[] = []
-      setCompletions(prev => {
-        nextCompletions = prev.filter(c => !todayCompletionIds.includes(c.id))
-        return nextCompletions
-      })
-
-      // Update streak after state is set
-      await updateStreak(habitId, { completionsOverride: nextCompletions })
-    } else {
-      // Add completion
-      const { data, error } = await supabase
-        .from('habit_completions')
-        .insert({
-          user_id: user.id,
-          habit_id: habitId,
-          completion_date: dateKey,
-          count: 1,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error adding completion:', error)
-        return
-      }
-
-      const newCompletion: HabitCompletion = {
-        id: data.id,
-        habitId: data.habit_id,
-        completionDate: data.completion_date,
-        count: data.count,
-        completedAt: new Date(data.completed_at).getTime(),
-      }
-
-      // Use functional update to ensure we work with latest state
-      let nextCompletions: HabitCompletion[] = []
-      setCompletions(prev => {
-        nextCompletions = [...prev, newCompletion]
-        return nextCompletions
-      })
-
-      // Haptic feedback on habit completion
-      const newCount = currentCount + 1
-      if (newCount >= habit.targetCount) {
-        haptics.success()
+        await updateStreak(habitId, { completionsOverride: nextCompletions })
       } else {
-        haptics.light()
-      }
+        // Add a completion, shown straight away under a temporary id
+        const tempId = `pending-${crypto.randomUUID()}`
+        const pending: HabitCompletion = {
+          id: tempId,
+          habitId,
+          completionDate: dateKey,
+          count: 1,
+          completedAt: Date.now(),
+        }
+        setCompletions(prev => [...prev, pending])
 
-      // Update streak after state is set
-      await updateStreak(habitId, { completionsOverride: nextCompletions })
+        const newCount = currentCount + 1
+        if (newCount >= habit.targetCount) {
+          haptics.success()
+        } else {
+          haptics.light()
+        }
+
+        const { data, error } = await supabase
+          .from('habit_completions')
+          .insert({
+            user_id: user.id,
+            habit_id: habitId,
+            completion_date: dateKey,
+            count: 1,
+          })
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error adding completion:', error)
+          setCompletions(prev => prev.filter(c => c.id !== tempId))
+          notifyError(`Could not update ${habit.name}.`)
+          return
+        }
+
+        const saved: HabitCompletion = {
+          id: data.id,
+          habitId: data.habit_id,
+          completionDate: data.completion_date,
+          count: data.count,
+          completedAt: new Date(data.completed_at).getTime(),
+        }
+        setCompletions(prev => prev.map(c => (c.id === tempId ? saved : c)))
+
+        await updateStreak(habitId, { completionsOverride: [...completions, saved] })
+      }
+    } finally {
+      habitSavesInFlight.current.delete(habitId)
     }
   }, [user, supabase, habits, completions, updateStreak])
 
