@@ -1,20 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { LayoutDashboard, Target, Flag, BookOpen, MoreHorizontal, ListChecks, Timer, Activity, Settings, X } from 'lucide-react'
+import { Sun, Columns3, Target, Flag, BookOpen, MoreHorizontal, ListChecks, Timer, Activity, Settings, X } from 'lucide-react'
 import { useNavigation } from '@/contexts/NavigationContext'
 import { ViewId } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const PRIMARY_TABS: { id: ViewId | 'more'; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
-  { id: 'board', icon: LayoutDashboard, label: 'Home' },
+  { id: 'today', icon: Sun, label: 'Today' },
+  { id: 'board', icon: Columns3, label: 'Board' },
   { id: 'habits', icon: Target, label: 'Habits' },
-  { id: 'goals', icon: Flag, label: 'Goals' },
   { id: 'journal', icon: BookOpen, label: 'Journal' },
   { id: 'more', icon: MoreHorizontal, label: 'More' },
 ]
 
 const MORE_ITEMS: { id: ViewId; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
+  { id: 'goals', icon: Flag, label: 'Goals' },
   { id: 'routines', icon: ListChecks, label: 'Routines' },
   { id: 'focus', icon: Timer, label: 'Focus' },
   { id: 'activity', icon: Activity, label: 'Activity' },

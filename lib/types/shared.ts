@@ -2,10 +2,11 @@
 // NAVIGATION
 // =====================================================
 
-export type ViewId = 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus' | 'activity'
+export type ViewId = 'today' | 'board' | 'habits' | 'goals' | 'journal' | 'routines' | 'focus' | 'activity'
 
 export const VIEWS: { id: ViewId; title: string; icon: string }[] = [
-  { id: 'board', title: 'Home', icon: 'LayoutDashboard' },
+  { id: 'today', title: 'Today', icon: 'Sun' },
+  { id: 'board', title: 'Board', icon: 'Columns3' },
   { id: 'habits', title: 'Habits', icon: 'Target' },
   { id: 'goals', title: 'Goals', icon: 'Flag' },
   { id: 'routines', title: 'Routines', icon: 'ListChecks' },
@@ -140,7 +141,7 @@ export interface UserUIState {
 }
 
 export const DEFAULT_UI_STATE: UserUIState = {
-  activeView: 'board',
+  activeView: 'today',
   widgetStates: {},
   sectionViewModes: {
     habits: 'list',
