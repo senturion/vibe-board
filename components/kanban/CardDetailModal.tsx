@@ -246,7 +246,7 @@ export function CardDetailModal({
           <button
             onClick={onClose}
             aria-label="Close task details"
-            className="p-2 -m-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+            className="tap-target p-2 -m-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           >
             <X size={20} />
           </button>
@@ -263,7 +263,7 @@ export function CardDetailModal({
                 aria-haspopup="listbox"
                 aria-expanded={showPriorityMenu}
                 aria-label={`Priority: ${task.priority || 'medium'}`}
-                className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+                className="flex items-center gap-2 px-3 py-2.5 sm:py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
                 style={{ color: priorityColor }}
               >
                 <Flag size={12} fill={task.priority === 'urgent' || task.priority === 'high' ? priorityColor : 'none'} />
@@ -309,7 +309,7 @@ export function CardDetailModal({
                 aria-haspopup="listbox"
                 aria-expanded={showColumnMenu}
                 aria-label={`Status: ${currentColumn?.title || task.column}`}
-                className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+                className="flex items-center gap-2 px-3 py-2.5 sm:py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
               >
                 {currentColumn?.title || task.column}
               </button>
@@ -346,7 +346,7 @@ export function CardDetailModal({
                   onClose()
                 }}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border transition-colors',
+                  'flex items-center gap-2 px-3 py-2.5 sm:py-1.5 text-[11px] uppercase tracking-[0.1em] border transition-colors',
                   focusedTaskId === task.id
                     ? 'text-[var(--accent)] border-[var(--accent)] bg-[var(--accent-glow)]'
                     : 'text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--text-tertiary)]'
@@ -364,7 +364,7 @@ export function CardDetailModal({
                 aria-haspopup="true"
                 aria-expanded={showLabelsMenu}
                 aria-label={`Tags${taskTagIds.length > 0 ? `: ${taskTagIds.length} selected` : ''}`}
-                className="flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+                className="flex items-center gap-2 px-3 py-2.5 sm:py-1.5 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
               >
                 <Tag size={12} />
                 Tags
@@ -399,7 +399,7 @@ export function CardDetailModal({
                 aria-expanded={showDueDatePicker}
                 aria-label={task.dueDate ? `Due date: ${new Date(task.dueDate).toLocaleDateString()}` : 'Set due date'}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors',
+                  'flex items-center gap-2 px-3 py-2.5 sm:py-1.5 text-[11px] uppercase tracking-[0.1em] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors',
                   task.dueDate && isOverdue(task.dueDate) ? 'text-red-400 border-red-400/30' : undefined,
                   task.dueDate && isDueSoon(task.dueDate) && !isOverdue(task.dueDate) ? 'text-amber-400 border-amber-400/30' : undefined,
                   !task.dueDate ? 'text-[var(--text-secondary)]' : undefined
@@ -594,7 +594,7 @@ export function CardDetailModal({
                 onClick={handleAddSubtask}
                 disabled={!newSubtask.trim()}
                 aria-label="Add subtask"
-                className="p-2 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
+                className="tap-target p-2 text-[var(--text-tertiary)] hover:text-[var(--accent)] disabled:opacity-40 transition-colors"
               >
                 <Plus size={16} />
               </button>
@@ -610,7 +610,7 @@ export function CardDetailModal({
                 onArchive(task.id)
                 onClose()
               }}
-              className="flex items-center gap-2 px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
+              className="flex items-center gap-2 px-4 py-3 sm:py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
             >
               <Archive size={14} />
               Archive
@@ -620,7 +620,7 @@ export function CardDetailModal({
                 onDelete(task.id)
                 onClose()
               }}
-              className="flex items-center gap-2 px-4 py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] hover:text-red-400 border border-transparent hover:border-red-400/30 transition-colors"
+              className="flex items-center gap-2 px-4 py-3 sm:py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)] hover:text-red-400 border border-transparent hover:border-red-400/30 transition-colors"
             >
               <Trash2 size={14} />
               Delete
@@ -628,7 +628,7 @@ export function CardDetailModal({
           </div>
           <button
             onClick={onClose}
-            className="px-6 py-2 text-[11px] uppercase tracking-[0.1em] font-medium bg-[var(--accent)] text-[var(--bg-primary)] hover:bg-[var(--accent-muted)] transition-colors"
+            className="px-6 py-3 sm:py-2 text-[11px] uppercase tracking-[0.1em] font-medium bg-[var(--accent)] text-[var(--bg-primary)] hover:bg-[var(--accent-muted)] transition-colors"
           >
             Close
           </button>

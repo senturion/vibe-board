@@ -130,7 +130,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
                 onDelete(task.id)
               }}
               aria-label={`Delete ${task.title}`}
-              className="opacity-0 group-hover:opacity-100 p-1 -m-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
+              className="touch-hidden opacity-0 group-hover:opacity-100 p-1 -m-1 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
             >
               <Trash2 size={11} />
             </button>
@@ -190,7 +190,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
               onDelete(task.id)
             }}
             aria-label={`Delete ${task.title}`}
-            className="opacity-0 group-hover:opacity-100 p-1.5 -m-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
+            className="touch-hidden opacity-0 group-hover:opacity-100 p-1.5 -m-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-all duration-150"
           >
             <Trash2 size={13} />
           </button>
@@ -278,7 +278,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
               aria-haspopup="listbox"
               aria-expanded={showPriorityMenu}
               aria-label={`Priority: ${task.priority || 'medium'}`}
-              className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] hover:opacity-80 transition-opacity"
+              className="tap-target flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] hover:opacity-80 transition-opacity"
               style={{ color: priorityColor }}
             >
               <Flag size={10} fill={task.priority === 'urgent' || task.priority === 'high' ? priorityColor : 'none'} />
@@ -337,7 +337,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
                 className={cn(
-                  'p-1 transition-colors',
+                  'tap-target p-1 transition-colors',
                   focusedTaskId === task.id
                     ? 'text-[var(--accent)]'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--accent)]'

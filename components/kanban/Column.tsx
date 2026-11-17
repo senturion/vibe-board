@@ -135,7 +135,7 @@ export const Column = memo(function Column({
             <button
               onClick={onMoveLeft}
               disabled={!canMoveLeft}
-              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-3.5 sm:p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed"
               aria-label={`Move ${title} left`}
             >
               <ChevronLeft size={12} />
@@ -143,7 +143,7 @@ export const Column = memo(function Column({
             <button
               onClick={onMoveRight}
               disabled={!canMoveRight}
-              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-3.5 sm:p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed"
               aria-label={`Move ${title} right`}
             >
               <ChevronRight size={12} />
@@ -152,14 +152,14 @@ export const Column = memo(function Column({
               <>
                 <button
                   onClick={handleStartRename}
-                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                  className="p-3.5 sm:p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
                   aria-label={`Rename ${title}`}
                 >
                   <Edit2 size={11} />
                 </button>
                 <button
                   onClick={() => { void onDelete?.() }}
-                  className="p-1 text-[var(--text-tertiary)] hover:text-red-400"
+                  className="p-3.5 sm:p-1 text-[var(--text-tertiary)] hover:text-red-400"
                   aria-label={`Delete ${title}`}
                 >
                   <Trash2 size={11} />
@@ -172,7 +172,7 @@ export const Column = memo(function Column({
         <div className="relative">
           <button
             onClick={() => setShowColorPicker(!showColorPicker)}
-            className="h-0.5 w-12 block hover:h-1 transition-all duration-150 cursor-pointer"
+            className="tap-target h-0.5 w-12 block hover:h-1 transition-all duration-150 cursor-pointer"
             style={{ backgroundColor: accentColor }}
             aria-label={`Change ${title} column color`}
             aria-haspopup="listbox"
