@@ -3,7 +3,7 @@
 import { memo, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Flag, ListChecks, Clock, Crosshair, ChevronDown } from 'lucide-react'
+import { Trash2, Flag, Clock, Crosshair, ChevronDown } from 'lucide-react'
 import { KanbanTask, Priority, PRIORITIES, LABELS, isOverdue, isDueSoon } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useKanbanActions } from '@/contexts/KanbanActionsContext'
@@ -57,8 +57,10 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
   const taskLabels = LABELS.filter(l => labels.includes(l.id))
   const hasLabels = taskLabels.length > 0
   const hasDueDate = !!task.dueDate
-  const overdue = hasDueDate && isOverdue(task.dueDate!)
-  const dueSoon = hasDueDate && !overdue && isDueSoon(task.dueDate!)
+  // A finished task is not overdue, whatever its date says.
+  const isComplete = task.column === 'complete'
+  const overdue = hasDueDate && !isComplete && isOverdue(task.dueDate!)
+  const dueSoon = hasDueDate && !isComplete && !overdue && isDueSoon(task.dueDate!)
 
   const handleClick = (e: React.MouseEvent) => {
     // Only open modal if not dragging and not clicking on a button
@@ -181,20 +183,6 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
                 ))}
               </div>
             )}
-            {hasSubtasks && (
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                  <span>Subtask Progress</span>
-                  <span>{completedSubtasks}/{subtasks.length}</span>
-                </div>
-                <div className="mt-1 h-1 w-full bg-[var(--border-subtle)] overflow-hidden">
-                  <div
-                    className="h-full bg-[var(--accent)] transition-all duration-300"
-                    style={{ width: `${subtaskProgress}%` }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
           <button
             onClick={(e) => {
@@ -220,11 +208,17 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
               }}
               onPointerDown={(e) => e.stopPropagation()}
               aria-expanded={showSubtasks}
-              aria-label={`${showSubtasks ? 'Hide' : 'Show'} subtasks`}
-              className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              aria-label={`${showSubtasks ? 'Hide' : 'Show'} subtasks, ${completedSubtasks} of ${subtasks.length} complete`}
+              className="w-full flex items-center gap-2 py-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
-              <ChevronDown size={12} className={cn('transition-transform duration-200', showSubtasks && 'rotate-180')} />
-              Subtasks
+              <ChevronDown size={12} className={cn('shrink-0 transition-transform duration-200', showSubtasks && 'rotate-180')} />
+              <span className="flex-1 h-1 bg-[var(--border-subtle)] overflow-hidden" aria-hidden="true">
+                <span
+                  className="block h-full bg-[var(--accent)] transition-all duration-300"
+                  style={{ width: `${subtaskProgress}%` }}
+                />
+              </span>
+              <span className="shrink-0 tabular-nums">{completedSubtasks}/{subtasks.length}</span>
             </button>
             {showSubtasks && (
               <div className="mt-2 space-y-1.5">
@@ -333,7 +327,7 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
             )}
           </div>
 
-          {/* Right side: Subtasks count and date */}
+          {/* Right side: focus button and due date (only when one is set) */}
           <div className="flex items-center gap-3">
             {!task.archivedAt && onFocusTask && (
               <button
@@ -353,12 +347,6 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
                 <Crosshair size={12} />
               </button>
             )}
-            {hasSubtasks && (
-              <span className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
-                <ListChecks size={11} />
-                {completedSubtasks}/{subtasks.length} subtasks
-              </span>
-            )}
             {hasDueDate && (
               <span
                 className={cn(
@@ -369,19 +357,12 @@ export const Card = memo(function Card({ task, compact = false, accentColor, foc
                 )}
               >
                 <Clock size={10} />
+                <span className="sr-only">{overdue ? 'Overdue, due ' : 'Due '}</span>
                 {new Date(task.dueDate!).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
                 })}
               </span>
-            )}
-            {!hasDueDate && (
-              <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-                {new Date(task.createdAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </p>
             )}
           </div>
         </div>
