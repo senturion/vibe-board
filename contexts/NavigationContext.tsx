@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useCallback, ReactNode, useEffect,
 import { ViewId } from '@/lib/types'
 import { useUIStateContext } from './UIStateContext'
 import { useSettings } from '@/hooks/useSettings'
+import { useAuth } from './AuthContext'
 
 interface NavigationContextType {
   activeView: ViewId
@@ -26,7 +27,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   // Use cloud-synced UI state
-  const { activeView, setActiveView: setUIActiveView, isHydrated } = useUIStateContext()
+  const { activeView, setActiveView: setUIActiveView, isHydrated, loading: uiStateLoading } = useUIStateContext()
 
   const setActiveView = useCallback((view: ViewId) => {
     if (view === activeView) return
@@ -49,13 +50,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   // Each time the app loads, open on the start view from settings (Today
   // unless changed), rather than wherever the last session ended.
+  const { user } = useAuth()
   const { settings, loading: settingsLoading } = useSettings()
   const openedStartView = useRef(false)
   useEffect(() => {
-    if (openedStartView.current || !isHydrated || settingsLoading) return
+    // Wait for the saved UI state from the cloud as well as local storage:
+    // it arrives later and would otherwise replace the start view.
+    // Before sign-in both report "not loading" with nothing loaded, so also wait for a user.
+    if (openedStartView.current || !user || !isHydrated || uiStateLoading || settingsLoading) return
     openedStartView.current = true
     if (settings.startView !== activeView) setUIActiveView(settings.startView)
-  }, [isHydrated, settingsLoading, settings.startView, activeView, setUIActiveView])
+  }, [user, isHydrated, uiStateLoading, settingsLoading, settings.startView, activeView, setUIActiveView])
 
   // Handle legacy view IDs
   useEffect(() => {
