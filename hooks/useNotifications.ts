@@ -21,6 +21,9 @@ export function useNotifications() {
   const [pushSupported, setPushSupported] = useState(false)
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [pushEnabled, setPushEnabled] = useState(false)
+  // The last thing that went wrong, in words, shown in Settings. Failures used
+  // to go only to the developer console, so the screen gave no reason.
+  const [pushError, setPushError] = useState<string | null>(null)
 
   const ensureServiceWorker = useCallback(async () => {
     if (!('serviceWorker' in navigator)) {
@@ -218,6 +221,7 @@ export function useNotifications() {
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     if (!publicKey) {
       console.error('Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY')
+      setPushError('The app was built without NEXT_PUBLIC_VAPID_PUBLIC_KEY. Add it in Vercel and redeploy.')
       return false
     }
 
@@ -231,6 +235,7 @@ export function useNotifications() {
     const json = subscription.toJSON()
     if (!json.keys?.p256dh || !json.keys?.auth) {
       console.error('Invalid push subscription keys')
+      setPushError('The browser returned a push subscription without keys.')
       return false
     }
 
@@ -247,6 +252,7 @@ export function useNotifications() {
 
     if (error) {
       console.error('Error saving push subscription:', error)
+      setPushError(`Could not save this device's subscription: ${error.message}`)
       return false
     }
 
@@ -275,11 +281,65 @@ export function useNotifications() {
     setPushEnabled(false)
   }, [pushSupported, user, supabase])
 
+  /**
+   * Asks for permission and subscribes this device, reporting any failure in
+   * pushError. Always asks the browser rather than trusting the last-known
+   * permission, which can be stale.
+   */
+  const enablePush = useCallback(async () => {
+    setPushError(null)
+    if (!pushSupported || !('Notification' in window)) {
+      setPushError('This browser does not support web notifications here.')
+      return false
+    }
+    try {
+      const result = await window.Notification.requestPermission()
+      setPermission(result)
+      if (result !== 'granted') {
+        setPushError(
+          result === 'denied'
+            ? 'The browser answered "denied". Notifications are blocked for this site in the browser or system settings.'
+            : 'No permission was given. The browser closed the request without an answer.',
+        )
+        return false
+      }
+      return await subscribeToPush()
+    } catch (error) {
+      console.error('Error enabling push:', error)
+      setPushError(`Could not enable push: ${error instanceof Error ? error.message : String(error)}`)
+      return false
+    }
+  }, [pushSupported, subscribeToPush])
+
+  /** Sends a test notification to this account's devices; returns a result to show. */
+  const sendTest = useCallback(async (): Promise<{ ok: boolean; message: string }> => {
+    try {
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'VibeBoard', body: 'Test notification delivered.', url: '/?from=notification' }),
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        return { ok: false, message: body.error ? `Server: ${body.error}` : `Server returned ${response.status}` }
+      }
+      if (body.failed > 0 && body.sent === 0) {
+        return { ok: false, message: `The push service rejected all ${body.failed} device(s). Press Disable, then Enable Push.` }
+      }
+      return { ok: true, message: `Sent to ${body.sent} device${body.sent === 1 ? '' : 's'}${body.failed ? `, ${body.failed} failed` : ''}.` }
+    } catch (error) {
+      return { ok: false, message: `Could not reach the server: ${error instanceof Error ? error.message : String(error)}` }
+    }
+  }, [])
+
   return {
     settings,
     loading,
     pushSupported,
     pushEnabled,
+    pushError,
+    enablePush,
+    sendTest,
     permission,
     timezone,
     saveSettings,
