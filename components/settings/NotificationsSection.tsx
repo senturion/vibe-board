@@ -154,8 +154,15 @@ export function NotificationsSection({
             )}
           </div>
 
-          {permission === 'denied' && (
-            <p className="text-[10px] text-[var(--text-tertiary)]">Push is blocked in your browser settings.</p>
+          {!pushSupported && (
+            <p className="text-[10px] text-[var(--text-tertiary)]">
+              This browser can&apos;t receive notifications here. On iPhone or iPad, add Vibe Board to your Home Screen (Share, then Add to Home Screen) and open it from there.
+            </p>
+          )}
+          {pushSupported && permission === 'denied' && (
+            <p className="text-[10px] text-[var(--text-tertiary)]">
+              Push is blocked for this site. Allow notifications for it in your browser or system settings, then come back to this page.
+            </p>
           )}
         </div>
       )}

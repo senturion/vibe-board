@@ -75,11 +75,26 @@ export function useNotifications() {
     return 'UTC'
   }, [])
 
+  // Safari on iPhone and iPad has no Notification object at all unless the
+  // site is opened from the Home Screen, so every use must check for it.
+  // Reading Notification.permission without the check threw and took the
+  // whole app down on iOS.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
     setPushSupported(supported)
-    setPermission(Notification.permission || 'default')
+    if (!supported) return
+
+    // Re-read on focus too: permission changed in the browser or system
+    // settings while the page was open would otherwise not show until reload.
+    const readPermission = () => setPermission(window.Notification.permission || 'default')
+    readPermission()
+    window.addEventListener('focus', readPermission)
+    document.addEventListener('visibilitychange', readPermission)
+    return () => {
+      window.removeEventListener('focus', readPermission)
+      document.removeEventListener('visibilitychange', readPermission)
+    }
   }, [])
 
   useEffect(() => {
@@ -192,8 +207,8 @@ export function useNotifications() {
   }, [user, supabase, settings, timezone])
 
   const requestPermission = useCallback(async () => {
-    if (!pushSupported) return 'default'
-    const result = await Notification.requestPermission()
+    if (!pushSupported || !('Notification' in window)) return 'default'
+    const result = await window.Notification.requestPermission()
     setPermission(result)
     return result
   }, [pushSupported])
