@@ -37,7 +37,7 @@ export function SettingsPanel({
     loading: notificationsLoading,
     pushSupported, pushEnabled, permission, timezone,
     saveSettings: saveNotificationSettings,
-    requestPermission, subscribeToPush, unsubscribeFromPush,
+    pushError, enablePush, sendTest, unsubscribeFromPush,
   } = useNotifications()
   const [expandedSection, setExpandedSection] = useState<SettingsSection | null>('general')
 
@@ -82,8 +82,9 @@ export function SettingsPanel({
               expanded={expandedSection === 'notifications'} onToggle={toggleSection}
               notificationSettings={notificationSettings} notificationsLoading={notificationsLoading}
               pushSupported={pushSupported} pushEnabled={pushEnabled} permission={permission} timezone={timezone}
-              saveNotificationSettings={saveNotificationSettings} requestPermission={requestPermission}
-              subscribeToPush={subscribeToPush} unsubscribeFromPush={unsubscribeFromPush}
+              saveNotificationSettings={saveNotificationSettings}
+              pushError={pushError} enablePush={enablePush} sendTest={sendTest}
+              unsubscribeFromPush={unsubscribeFromPush}
             />
             <WorkLocationSection expanded={expandedSection === 'workLocation'} onToggle={toggleSection} {...sectionProps} />
             <HabitsSection expanded={expandedSection === 'habits'} onToggle={toggleSection} {...sectionProps} />

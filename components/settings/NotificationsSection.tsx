@@ -23,17 +23,19 @@ interface NotificationsSectionProps {
   permission: NotificationPermission | 'default'
   timezone: string
   saveNotificationSettings: (updates: Record<string, unknown>) => void
-  requestPermission: () => Promise<NotificationPermission>
-  subscribeToPush: () => Promise<boolean | void>
+  pushError: string | null
+  enablePush: () => Promise<boolean>
+  sendTest: () => Promise<{ ok: boolean; message: string }>
   unsubscribeFromPush: () => Promise<boolean | void>
 }
 
 export function NotificationsSection({
   expanded, onToggle, notificationSettings, notificationsLoading,
   pushSupported, pushEnabled, permission, timezone,
-  saveNotificationSettings, requestPermission, subscribeToPush, unsubscribeFromPush,
+  saveNotificationSettings, pushError, enablePush, sendTest, unsubscribeFromPush,
 }: NotificationsSectionProps) {
-  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [enabling, setEnabling] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   return (
     <div className="border-b border-[var(--border-subtle)]">
@@ -115,51 +117,60 @@ export function NotificationsSection({
             </span>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
-                const result = await requestPermission()
-                if (result === 'granted') await subscribeToPush()
-              }}
-              disabled={!pushSupported || permission === 'denied'}
-              className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Enable Push
-            </button>
+          <div className="flex flex-wrap gap-2">
+            {!pushEnabled && (
+              <button
+                onClick={async () => {
+                  setTestResult(null)
+                  setEnabling(true)
+                  await enablePush()
+                  setEnabling(false)
+                }}
+                disabled={!pushSupported || enabling}
+                className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {enabling ? 'Enabling…' : 'Enable Push'}
+              </button>
+            )}
             {pushEnabled && (
               <button onClick={unsubscribeFromPush} className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
                 Disable
               </button>
             )}
-            {pushEnabled && (
+            {pushSupported && (
               <button
                 onClick={async () => {
-                  setTestStatus('sending')
-                  try {
-                    const response = await fetch('/api/notifications/test', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ title: 'VibeBoard', body: 'Test notification delivered.', url: '/?from=notification' }),
-                    })
-                    setTestStatus(response.ok ? 'sent' : 'error')
-                  } catch {
-                    setTestStatus('error')
-                  }
-                  setTimeout(() => setTestStatus('idle'), 2000)
+                  setTestResult({ ok: true, message: 'Sending…' })
+                  setTestResult(await sendTest())
                 }}
                 className="px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
               >
-                {testStatus === 'sending' ? 'Sending...' : testStatus === 'sent' ? 'Sent' : testStatus === 'error' ? 'Failed' : 'Test'}
+                Send test
               </button>
             )}
           </div>
+
+          {pushError && (
+            <p role="alert" className="text-[11px] text-red-400">{pushError}</p>
+          )}
+          {testResult && (
+            <p role="status" className={testResult.ok ? 'text-[11px] text-[var(--text-secondary)]' : 'text-[11px] text-red-400'}>
+              {testResult.message}
+              {testResult.ok && testResult.message.startsWith('Sent') && ' If nothing appears, check Focus / Do Not Disturb and the system notification settings.'}
+            </p>
+          )}
+          {pushSupported && (
+            <p className="text-[10px] text-[var(--text-tertiary)]">
+              Browser permission: {permission}
+            </p>
+          )}
 
           {!pushSupported && (
             <p className="text-[10px] text-[var(--text-tertiary)]">
               This browser can&apos;t receive notifications here. On iPhone or iPad, add Vibe Board to your Home Screen (Share, then Add to Home Screen) and open it from there.
             </p>
           )}
-          {pushSupported && permission === 'denied' && (
+          {pushSupported && permission === 'denied' && !pushError && (
             <p className="text-[10px] text-[var(--text-tertiary)]">
               Push is blocked for this site. Allow notifications for it in your browser or system settings, then come back to this page.
             </p>
