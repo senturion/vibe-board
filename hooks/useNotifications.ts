@@ -326,7 +326,14 @@ export function useNotifications() {
       if (body.failed > 0 && body.sent === 0) {
         return { ok: false, message: `The push service rejected all ${body.failed} device(s). Press Disable, then Enable Push.` }
       }
-      return { ok: true, message: `Sent to ${body.sent} device${body.sent === 1 ? '' : 's'}${body.failed ? `, ${body.failed} failed` : ''}.` }
+      const removed = body.removed
+        ? ` Removed ${body.removed} old registration${body.removed === 1 ? '' : 's'} that could no longer receive notifications.`
+        : ''
+      const stillFailing = body.failed - (body.removed ?? 0)
+      return {
+        ok: true,
+        message: `Sent to ${body.sent} device${body.sent === 1 ? '' : 's'}.${removed}${stillFailing > 0 ? ` ${stillFailing} other${stillFailing === 1 ? '' : 's'} failed.` : ''}`,
+      }
     } catch (error) {
       return { ok: false, message: `Could not reach the server: ${error instanceof Error ? error.message : String(error)}` }
     }

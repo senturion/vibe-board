@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Database } from '@/lib/supabase/types'
+import { subscriptionsToPrune } from '@/lib/push'
 
 type NotificationSettingsRow = Database['public']['Tables']['notification_settings']['Row']
 type PushSubscriptionRow = Database['public']['Tables']['push_subscriptions']['Row']
@@ -103,23 +104,16 @@ export async function GET(request: Request) {
     )
 
     const hadSuccess = results.some(r => r.status === 'fulfilled')
-    for (const [index, result] of results.entries()) {
-      if (result.status === 'fulfilled') {
-        sent++
-        continue
-      }
+    for (const result of results) {
+      if (result.status === 'fulfilled') sent++
+      else failed++
+    }
 
-      failed++
-      const statusCode = (result.reason as { statusCode?: number })?.statusCode
-      if (statusCode === 404 || statusCode === 410) {
-        const stale = userSubs[index]
-        if (stale) {
-          await supabase.from('push_subscriptions')
-            .delete()
-            .eq('user_id', stale.user_id)
-            .eq('endpoint', stale.endpoint)
-        }
-      }
+    for (const stale of subscriptionsToPrune(userSubs, results)) {
+      await supabase.from('push_subscriptions')
+        .delete()
+        .eq('user_id', stale.user_id)
+        .eq('endpoint', stale.endpoint)
     }
 
     if (hadSuccess) {

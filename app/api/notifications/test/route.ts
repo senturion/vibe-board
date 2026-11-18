@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createClient } from '@/lib/supabase/server'
 import { Database } from '@/lib/supabase/types'
+import { subscriptionsToPrune } from '@/lib/push'
 
 type PushSubscriptionRow = Database['public']['Tables']['push_subscriptions']['Row']
 
@@ -67,5 +68,14 @@ export async function POST(request: NextRequest) {
   const sent = results.filter(r => r.status === 'fulfilled').length
   const failed = results.length - sent
 
-  return NextResponse.json({ sent, failed })
+  // Remove registrations that can never receive anything again.
+  const stale = subscriptionsToPrune(subscriptions as PushSubscriptionRow[], results)
+  for (const sub of stale) {
+    await supabase.from('push_subscriptions')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('endpoint', sub.endpoint)
+  }
+
+  return NextResponse.json({ sent, failed, removed: stale.length })
 }
