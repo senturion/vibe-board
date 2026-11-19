@@ -2,6 +2,8 @@
 
 import { Target, ListChecks, BookOpen, Timer, CalendarDays } from 'lucide-react'
 import { AppSettings } from '@/hooks/useSettings'
+import { useCalendarDay } from '@/hooks/useCalendarDay'
+import { formatDateKey } from '@/lib/types'
 import { SectionHeader, Toggle, NumberInput, SettingsSection } from './shared'
 
 interface FeatureSectionProps {
@@ -98,7 +100,68 @@ export function CalendarSection({ expanded, onToggle, settings, updateSetting }:
         <div className="pb-4 space-y-2">
           <Toggle checked={settings.calendarShowWeekends} onChange={(val) => updateSetting('calendarShowWeekends', val)} label="Show weekends" />
           <Toggle checked={settings.calendarDefaultMonthView} onChange={(val) => updateSetting('calendarDefaultMonthView', val)} label="Default to month view" />
+          <ConnectedCalendars settings={settings} updateSetting={updateSetting} />
         </div>
+      )}
+    </div>
+  )
+}
+
+function ConnectedCalendars({ settings, updateSetting }: Pick<FeatureSectionProps, 'settings' | 'updateSetting'>) {
+  const { data, isLoading, isError } = useCalendarDay(formatDateKey(new Date()))
+  const hidden = new Set(settings.hiddenCalendarIds)
+
+  const setShown = (id: string, shown: boolean) => {
+    const next = new Set(hidden)
+    if (shown) next.delete(id)
+    else next.add(id)
+    updateSetting('hiddenCalendarIds', [...next])
+  }
+
+  return (
+    <div className="pt-3 mt-2 border-t border-[var(--border-subtle)]">
+      <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-tertiary)] mb-2">Shown on Today</p>
+      {isLoading ? (
+        <p className="text-[12px] text-[var(--text-tertiary)]">Loading calendars…</p>
+      ) : isError ? (
+        <p className="text-[12px] text-[var(--text-tertiary)]">Could not load your calendars.</p>
+      ) : !data?.configured ? (
+        <p className="text-[12px] leading-relaxed text-[var(--text-tertiary)]">
+          No calendars connected. Add <code>CALENDAR_ICS_URLS</code> (Google secret iCal links) or{' '}
+          <code>ICLOUD_USERNAME</code> and <code>ICLOUD_APP_PASSWORD</code> in Vercel, then redeploy.
+        </p>
+      ) : (
+        <>
+          {data.calendars.length === 0 && (
+            <p className="text-[12px] text-[var(--text-tertiary)]">No calendars found.</p>
+          )}
+          <ul>
+            {data.calendars.map(calendar => {
+              const id = `cal-shown-${calendar.id}`
+              return (
+                <li key={calendar.id} className="flex items-center gap-2.5 py-1.5">
+                  <input
+                    id={id}
+                    type="checkbox"
+                    checked={!hidden.has(calendar.id)}
+                    onChange={e => setShown(calendar.id, e.target.checked)}
+                    className="h-4 w-4 shrink-0 accent-[var(--accent)] cursor-pointer"
+                  />
+                  <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: calendar.color }} />
+                  <label htmlFor={id} className="flex-1 text-[12px] text-[var(--text-secondary)] cursor-pointer truncate">
+                    {calendar.name}
+                  </label>
+                  <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                    {calendar.source === 'icloud' ? 'iCloud' : calendar.source === 'google' ? 'Google' : 'Link'}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          {data.errors.length > 0 && (
+            <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">{data.errors.join(' ')}</p>
+          )}
+        </>
       )}
     </div>
   )

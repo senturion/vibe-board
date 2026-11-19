@@ -66,6 +66,8 @@ export interface AppSettings {
   // Calendar
   calendarShowWeekends: boolean
   calendarDefaultMonthView: boolean
+  /** Connected calendars left off the Today schedule. New calendars show until hidden. */
+  hiddenCalendarIds: string[]
 
   // AI
   aiProvider: GoalPlannerProvider
@@ -129,6 +131,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // Calendar
   calendarShowWeekends: true,
   calendarDefaultMonthView: true,
+  hiddenCalendarIds: [],
 
   // AI
   aiProvider: 'rules',
@@ -225,6 +228,10 @@ function normalizeSettings(raw: unknown, base: AppSettings = DEFAULT_SETTINGS): 
   }
 
   merged.boardColumnOrder = normalizedBoardColumnOrder
+
+  merged.hiddenCalendarIds = Array.isArray(payload.hiddenCalendarIds)
+    ? [...new Set(payload.hiddenCalendarIds.filter((id): id is string => typeof id === 'string' && id.length <= 80))].slice(0, 100)
+    : base.hiddenCalendarIds
 
   return merged
 }

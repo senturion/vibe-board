@@ -16,14 +16,15 @@ import { useWorkLocation } from '@/contexts/WorkLocationContext'
 import { KanbanTask, PRIORITIES, formatDateKey, parseDateKey } from '@/lib/types'
 import { selectTodayTasks, upcomingDeadlines } from '@/lib/today'
 import { cn } from '@/lib/utils'
+import { SECTION, SECTION_TITLE, ROW } from './styles'
+import { ScheduleCard } from './ScheduleCard'
+import { useSchedule } from './useSchedule'
+import { formatClock } from '@/lib/calendar/schedule'
 
 interface TodayPageProps {
   onFocusTask: (taskId: string) => void
 }
 
-const SECTION = 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] px-5 sm:px-6'
-const SECTION_TITLE = 'text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]'
-const ROW = 'flex items-center gap-3.5 py-3 border-t border-[var(--border-subtle)]'
 const CHECKBOX = 'h-5 w-5 shrink-0 accent-[var(--success)] cursor-pointer'
 const OUTLINE_BUTTON = 'shrink-0 px-3.5 py-2.5 sm:py-2 text-[12px] uppercase tracking-[0.1em] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors'
 
@@ -65,9 +66,12 @@ export function TodayPage({ onFocusTask }: TodayPageProps) {
   const focusedTask = focusedTaskId ? tasks.find(t => t.id === focusedTaskId) : undefined
   const nextTask: KanbanTask | undefined = focusedTask ?? overdue[0] ?? dueToday[0]
   const focusMinutes = timer.getTodaysFocusTime()
+  const schedule = useSchedule()
+  const showSchedule = schedule.configured || schedule.failed
 
   const summary = [
     `${taskCount} task${taskCount === 1 ? '' : 's'} due`,
+    schedule.events.length > 0 ? `${schedule.remaining} event${schedule.remaining === 1 ? '' : 's'} left` : null,
     habits.length > 0 ? `${habitsDone} of ${habits.length} habits done` : null,
     ...routines.map(r => {
       const p = getRoutineProgress(r.id)
@@ -135,6 +139,9 @@ export function TodayPage({ onFocusTask }: TodayPageProps) {
             ? `${focusedTask ? 'Focusing on' : 'Next up'}: ${nextTask.title}`
             : 'Nothing due today'}
       </p>
+      {schedule.freeUntil && timer.currentSessionType === 'work' && (
+        <p className="mt-1 text-[13px] text-[var(--text-secondary)]">Free until {formatClock(schedule.freeUntil)}</p>
+      )}
       <div className="mt-4 flex flex-wrap gap-2.5">
         {!timer.isRunning && (
           <button
@@ -321,16 +328,17 @@ export function TodayPage({ onFocusTask }: TodayPageProps) {
             order-* class (timer first). From lg up the wrappers become columns. */}
         <div className="flex flex-col gap-4 lg:flex-row lg:gap-6 lg:items-start">
           <div className="contents lg:flex lg:flex-[999_1_560px] lg:min-w-0 lg:flex-col lg:gap-6">
-            <div className="order-2 lg:order-none">{tasksCard}</div>
+            <div className="order-3 lg:order-none">{tasksCard}</div>
             {routineCards.length > 0 && (
-              <div className="order-4 lg:order-none flex flex-col gap-4 lg:gap-6">{routineCards}</div>
+              <div className="order-5 lg:order-none flex flex-col gap-4 lg:gap-6">{routineCards}</div>
             )}
           </div>
           <div className="contents lg:flex lg:flex-[1_1_340px] lg:min-w-0 lg:flex-col lg:gap-6">
             <div className="order-1 lg:order-none">{focusCard}</div>
-            <div className="order-3 lg:order-none">{habitsCard}</div>
-            <div className="order-5 lg:order-none">{journalCard}</div>
-            <div className="order-6 lg:order-none">{comingUpCard}</div>
+            {showSchedule && <div className="order-2 lg:order-none"><ScheduleCard schedule={schedule} /></div>}
+            <div className="order-4 lg:order-none">{habitsCard}</div>
+            <div className="order-6 lg:order-none">{journalCard}</div>
+            <div className="order-7 lg:order-none">{comingUpCard}</div>
           </div>
         </div>
       </div>

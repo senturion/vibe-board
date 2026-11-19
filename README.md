@@ -49,6 +49,8 @@ CI runs lint, typecheck, tests and build on every pull request and on `main`.
 | `MCP_OWNER_TIMEZONE` | MCP server (optional) | IANA name such as `America/Toronto`. Decides what "today" means for habit tools |
 | `CRON_SECRET` | Reminders | The reminders endpoint refuses to run without it |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Reminders | Web push keys |
+| `CALENDAR_ICS_URLS` | Today schedule (optional) | Private iCal links, such as Google's "secret address in iCal format". Separate several with spaces or commas |
+| `ICLOUD_USERNAME`, `ICLOUD_APP_PASSWORD` | Today schedule (optional) | Your Apple ID and an app-specific password, for iCloud calendars over CalDAV |
 | `GOAL_PLANNER_PROVIDER`, `GOAL_PLANNER_MODEL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `GOAL_PLANNER_TIMEOUT_MS` | AI features (optional) | Server-side defaults; see below |
 
 Set them in `.env.local` for local work and in the Vercel dashboard for production. A change in Vercel takes effect on the next deployment.
@@ -71,6 +73,15 @@ To connect from Claude: Settings → Connectors → Add custom connector, with t
 To revoke access, set `revoked_at` on the rows in `mcp_oauth_tokens` (or delete them) in the Supabase dashboard.
 
 Task tools accept a column id as the status (`backlog`, `todo`, `in-progress`, `complete`, or a custom column of that board) and map common names such as `done` onto them. Due dates are `YYYY-MM-DD`.
+
+## Calendar on Today
+
+The Today view can show your calendar events in a Schedule card. It is read-only and refreshes every 15 minutes. The server reads the calendars, so the links and password stay in Vercel and never reach the browser. Set any of these in Vercel (as Secrets) and redeploy:
+
+- **Google:** in Google Calendar on the web, open the calendar's Settings and sharing, copy **Secret address in iCal format**, and add it to `CALENDAR_ICS_URLS`. One link per calendar. Anyone with that link can read the calendar, so treat it like a password.
+- **iCloud:** create an app-specific password at account.apple.com (Sign-In and Security → App-Specific Passwords), then set `ICLOUD_USERNAME` to your Apple ID email and `ICLOUD_APP_PASSWORD` to that password. Every iCloud calendar with events is read.
+
+Choose which calendars appear on Today under Settings → Calendar → Shown on Today.
 
 ## Reminders
 
