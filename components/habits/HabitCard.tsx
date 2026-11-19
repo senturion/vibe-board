@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import { Check, X, MoreHorizontal, Edit2, Trash2, Archive, TrendingUp, AlertTriangle, Ban } from 'lucide-react'
-import { Habit, DAYS_OF_WEEK, getWeekStart, isHabitActiveToday } from '@/lib/types'
+import { Habit, DAYS_OF_WEEK, formatDateKey, getWeekStart, isHabitActiveToday } from '@/lib/types'
+import { useHabits } from '@/hooks/useHabits'
+import { dayProgress, habitActionLabel } from '@/lib/habitRing'
+import { HabitRing } from './HabitRing'
 import { cn } from '@/lib/utils'
 import { HabitIcon } from './IconPicker'
 import { StreakBadge } from '@/components/ui/Badge'
@@ -20,6 +23,8 @@ interface HabitCardProps {
   onViewStats: () => void
   compact?: boolean
   showRisk?: boolean
+  /** The day being logged; the ring shows that day's progress. */
+  logDate?: Date
 }
 
 export function HabitCard({
@@ -33,9 +38,12 @@ export function HabitCard({
   onViewStats,
   compact = false,
   showRisk = false,
+  logDate,
 }: HabitCardProps) {
   const [showMenu, setShowMenu] = useState(false)
   const { settings } = useSettings()
+  const { completions } = useHabits()
+  const day = dayProgress(habit, completions, formatDateKey(logDate ?? new Date()))
   const showWeeklyProgress = habit.frequencyType === 'weekly'
   const showTargetProgress = habit.targetCount > 1 && !showWeeklyProgress
   const isAvoid = habit.habitType === 'avoid'
@@ -102,6 +110,7 @@ export function HabitCard({
         )}
       >
         {/* Checkbox */}
+        {isAvoid && isAutoComplete ? (
         <button
           onClick={onToggle}
           className={cn(
@@ -123,6 +132,16 @@ export function HabitCard({
           {!isSlip && completionStatus.completed && <Check size={14} className="text-[var(--bg-primary)]" />}
           {!completionStatus.completed && isAvoid && isAutoComplete && <Check size={14} className="text-[var(--success)]" />}
         </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={habitActionLabel(habit.name, day.count, day.target)}
+            className="tap-target flex-shrink-0 flex items-center justify-center"
+          >
+            <HabitRing count={day.count} target={day.target} color={habit.color} />
+          </button>
+        )}
 
         {/* Name */}
         {habit.icon && (
@@ -187,6 +206,7 @@ export function HabitCard({
 
       <div className="flex items-start gap-3 pl-2">
         {/* Checkbox / Slip toggle */}
+        {isAvoid && isAutoComplete ? (
         <button
           onClick={onToggle}
           className={cn(
@@ -208,6 +228,16 @@ export function HabitCard({
           {!isSlip && completionStatus.completed && <Check size={16} className="text-[var(--bg-primary)]" />}
           {!completionStatus.completed && isAvoid && isAutoComplete && <Check size={14} className="text-[var(--success)]" />}
         </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={habitActionLabel(habit.name, day.count, day.target)}
+            className="tap-target flex-shrink-0 flex items-center justify-center mt-0.5"
+          >
+            <HabitRing count={day.count} target={day.target} color={habit.color} size={28} />
+          </button>
+        )}
 
         {/* Content */}
         <div className="flex-1 min-w-0">

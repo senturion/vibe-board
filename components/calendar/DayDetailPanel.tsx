@@ -7,6 +7,8 @@ import { useRoutines } from '@/hooks/useRoutines'
 import { useNavigation } from '@/contexts/NavigationContext'
 import { CalendarDay, parseDateKey, formatDateKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { HabitRing } from '@/components/habits/HabitRing'
+import { habitActionLabel } from '@/lib/habitRing'
 import { MoodIcon, getMoodOption } from '@/components/journal/moods'
 
 interface DayDetailPanelProps {
@@ -111,25 +113,15 @@ export function DayDetailPanel({ date, data, onClose }: DayDetailPanelProps) {
                   <button
                     key={habit.id}
                     onClick={() => isToday && toggleHabit(habit.id, dateObj)}
+                    aria-label={isToday ? habitActionLabel(habit.name, status.count, status.target) : undefined}
                     disabled={!isToday}
                     className={cn(
                       'w-full flex items-center gap-3 p-2 border transition-colors',
-                      status.isComplete
-                        ? 'border-green-500/20 bg-green-500/5'
-                        : 'border-[var(--border)] hover:border-[var(--text-tertiary)]',
+                      isToday ? 'border-[var(--border)] hover:border-[var(--text-tertiary)]' : 'border-[var(--border)]',
                       !isToday && 'cursor-default'
                     )}
                   >
-                    <div
-                      className={cn(
-                        'w-5 h-5 rounded-sm border flex items-center justify-center flex-shrink-0',
-                        status.isComplete
-                          ? 'bg-green-500 border-green-500'
-                          : 'border-[var(--border)]'
-                      )}
-                    >
-                      {status.isComplete && <Check size={12} className="text-white" />}
-                    </div>
+                    <HabitRing count={status.count} target={status.target} size={20} />
                     <span className={cn(
                       'flex-1 text-left text-[12px]',
                       status.isComplete

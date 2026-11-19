@@ -4,6 +4,8 @@ import { useMemo } from 'react'
 import { useKanban } from '@/hooks/useKanban'
 import { useBoards } from '@/hooks/useBoards'
 import { useHabits } from '@/hooks/useHabits'
+import { HabitRing } from '@/components/habits/HabitRing'
+import { dayProgress, habitActionLabel } from '@/lib/habitRing'
 import { useRoutines } from '@/hooks/useRoutines'
 import { useJournal } from '@/hooks/useJournal'
 import { useGoals } from '@/hooks/useGoals'
@@ -11,7 +13,7 @@ import { useFocusTimer } from '@/hooks/useFocusTimer'
 import { useNavigation } from '@/contexts/NavigationContext'
 import { useUIStateContext } from '@/contexts/UIStateContext'
 import { useWorkLocation } from '@/contexts/WorkLocationContext'
-import { KanbanTask, PRIORITIES, parseDateKey } from '@/lib/types'
+import { KanbanTask, PRIORITIES, formatDateKey, parseDateKey } from '@/lib/types'
 import { selectTodayTasks, upcomingDeadlines } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
@@ -38,7 +40,8 @@ function formatDay(date: Date) {
 export function TodayPage({ onFocusTask }: TodayPageProps) {
   const { tasks, moveTask, loading: tasksLoading } = useKanban()
   const { boards } = useBoards()
-  const { getTodaysHabits, getCompletionStatus, getStreak, toggleHabit, loading: habitsLoading } = useHabits()
+  const { getTodaysHabits, getCompletionStatus, getStreak, toggleHabit, completions, loading: habitsLoading } = useHabits()
+  const todayKey = formatDateKey(new Date())
   const { getTodaysRoutines, getRoutineItems, isItemCompleted, toggleItem, getRoutineProgress } = useRoutines()
   const { getTodaysEntry } = useJournal()
   const { goals, milestones } = useGoals()
@@ -200,45 +203,28 @@ export function TodayPage({ onFocusTask }: TodayPageProps) {
         <p className="py-3 text-[14px] text-[var(--text-secondary)]">No habits scheduled today.</p>
       ) : (
         habits.map(habit => {
-          const status = getCompletionStatus(habit.id)
+          const { count, target, isComplete } = dayProgress(habit, completions, todayKey)
           const streak = getStreak(habit.id)?.currentStreak ?? 0
-          const id = `today-habit-${habit.id}`
-          if (status.target > 1) {
-            return (
-              <div key={habit.id} className={ROW}>
-                <span className="w-5 text-center text-[13px] font-semibold text-[var(--text-secondary)] tabular-nums">
-                  {status.count}/{status.target}
-                </span>
-                <span className={cn('flex-1 text-[15px]', status.isComplete ? 'text-[var(--text-secondary)] line-through' : 'text-[var(--text-primary)]')}>
-                  {habit.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => toggleHabit(habit.id)}
-                  aria-label={status.isComplete ? `Reset ${habit.name} for today` : `Log one ${habit.name}`}
-                  className="min-w-[44px] h-10 sm:h-9 text-[13px] text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--text-tertiary)] transition-colors"
-                >
-                  {status.isComplete ? 'Undo' : '+1'}
-                </button>
-              </div>
-            )
-          }
+          const meta = [
+            target > 1 ? `${Math.min(count, target)}/${target}` : null,
+            streak > 0 ? `${streak} day${streak === 1 ? '' : 's'}` : null,
+          ].filter(Boolean).join(' · ')
           return (
-            <div key={habit.id} className={ROW}>
-              <input
-                id={id}
-                type="checkbox"
-                className={CHECKBOX}
-                checked={status.isComplete}
-                onChange={() => toggleHabit(habit.id)}
-              />
-              <label htmlFor={id} className={cn('flex-1 text-[15px] cursor-pointer', status.isComplete ? 'text-[var(--text-secondary)] line-through' : 'text-[var(--text-primary)]')}>
+            <button
+              key={habit.id}
+              type="button"
+              onClick={() => toggleHabit(habit.id)}
+              aria-label={habitActionLabel(habit.name, count, target)}
+              className={cn(ROW, 'w-full text-left min-h-[48px] cursor-pointer')}
+            >
+              <HabitRing count={count} target={target} />
+              <span className={cn('flex-1 text-[15px]', isComplete ? 'text-[var(--text-secondary)] line-through' : 'text-[var(--text-primary)]')}>
                 {habit.name}
-              </label>
-              {streak > 0 && (
-                <span className="text-[13px] text-[var(--text-secondary)]">{streak} day{streak === 1 ? '' : 's'}</span>
+              </span>
+              {meta && (
+                <span className="text-[13px] text-[var(--text-secondary)] tabular-nums">{meta}</span>
               )}
-            </div>
+            </button>
           )
         })
       )}

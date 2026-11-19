@@ -58,6 +58,7 @@ export function AllHabitsView({
                 onArchive={() => onArchive(habit.id)}
                 onViewStats={() => onViewStats(habit)}
                 showRisk={isLogDateToday}
+                logDate={logDate}
               />
             )
           })}
