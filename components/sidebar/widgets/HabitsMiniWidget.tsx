@@ -1,10 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Target, Check, ChevronRight } from 'lucide-react'
+import { Target, ChevronRight } from 'lucide-react'
 import { useHabits } from '@/hooks/useHabits'
 import { useNavigation } from '@/contexts/NavigationContext'
-import { isHabitActiveToday, formatDateKey } from '@/lib/types'
+import { Habit, isHabitActiveToday, formatDateKey } from '@/lib/types'
+import { dayProgress, habitActionLabel } from '@/lib/habitRing'
+import { HabitRing } from '@/components/habits/HabitRing'
 import { cn } from '@/lib/utils'
 
 export function HabitsMiniWidget() {
@@ -17,14 +19,7 @@ export function HabitsMiniWidget() {
     return habits.filter(h => isHabitActiveToday(h))
   }, [habits])
 
-  const getIsComplete = (habitId: string) => {
-    const todayCompletions = completions.filter(
-      c => c.habitId === habitId && c.completionDate === todayKey
-    )
-    const totalCount = todayCompletions.reduce((sum, c) => sum + c.count, 0)
-    const habit = habits.find(h => h.id === habitId)
-    return totalCount >= (habit?.targetCount || 1)
-  }
+  const getIsComplete = (habit: Habit) => dayProgress(habit, completions, todayKey).isComplete
 
   if (loading) {
     return (
@@ -34,7 +29,7 @@ export function HabitsMiniWidget() {
     )
   }
 
-  const completed = todaysHabits.filter(h => getIsComplete(h.id)).length
+  const completed = todaysHabits.filter(h => getIsComplete(h)).length
   const total = todaysHabits.length
 
   return (
@@ -61,32 +56,27 @@ export function HabitsMiniWidget() {
         <>
           <div className="space-y-1.5">
             {todaysHabits.slice(0, 5).map(habit => {
-              const isComplete = getIsComplete(habit.id)
+              const { count, target, isComplete } = dayProgress(habit, completions, todayKey)
               return (
                 <button
                   key={habit.id}
+                  type="button"
                   onClick={() => toggleHabit(habit.id)}
-                  className={cn(
-                    'w-full flex items-center gap-2 text-left transition-colors py-0.5',
-                    isComplete ? 'opacity-60' : 'opacity-100'
-                  )}
+                  aria-label={habitActionLabel(habit.name, count, target)}
+                  className="w-full flex items-center gap-2 text-left py-0.5"
                 >
-                  <div
-                    className={cn(
-                      'w-4 h-4 rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors',
-                      isComplete
-                        ? 'bg-[var(--success)] border-[var(--success)]'
-                        : 'border-[var(--border)] hover:border-[var(--text-tertiary)]'
-                    )}
-                  >
-                    {isComplete && <Check size={10} className="text-white" />}
-                  </div>
+                  <HabitRing count={count} target={target} size={16} />
                   <span className={cn(
-                    'text-[11px] truncate',
+                    'flex-1 text-[11px] truncate',
                     isComplete ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-secondary)]'
                   )}>
                     {habit.name}
                   </span>
+                  {target > 1 && (
+                    <span className="text-[10px] text-[var(--text-tertiary)] tabular-nums">
+                      {Math.min(count, target)}/{target}
+                    </span>
+                  )}
                 </button>
               )
             })}
